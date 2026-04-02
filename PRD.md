@@ -443,11 +443,19 @@ Design and verify using the Phase 2 toolchain.
 
 ### 3.7 Dead End Detection (Real-Time)
 
-- After each move, run a quick solvability check on the current state
-- For 3x3: run the full solver (should be <100ms)
-- For 4x4+: run a heuristic approximation (check reachability of all remaining lines from current dot, estimate minimum additional draws needed)
-- If dead end detected: undo button pulses with a warm amber glow for ~2 seconds
+**Do NOT run the full BFS solver after every move.** On 4x4+ grids this would drain batteries and cause micro-stutters.
+
+Instead, use the lightweight Euler parity heuristic (O(n), runs in microseconds):
+- After each move, recount odd-degree dots in the current graph state
+- For clear levels (targetLayers: 0): if odd-degree count increased from the previous move, the player likely made things worse
+- For reduce levels: if total remaining layers increased beyond a threshold above the target, signal trouble
+- Additionally check: are all remaining connections reachable from the player's current dot? (simple BFS on the graph structure, not on game states -- fast even on 5x5)
+
+If dead end detected:
+- Undo button pulses with a warm amber glow for ~2 seconds
 - No text, no popup, no interruption
+
+For 3x3 grids, the full solver can optionally run as well (<100ms) for a precise answer. But the parity heuristic is the primary mechanism on all grid sizes.
 
 ### 3.8 Daily Puzzle Infrastructure
 
@@ -539,8 +547,11 @@ Design and verify using the Phase 2 toolchain.
 
 Not fully specced. Key items for future PRDs:
 
-- Worlds 5-7 (directional lines, advanced interactive elements, hard modifiers)
-- **"Absorb" mechanic:** special dots that can consume one adjacent line without the player needing to traverse it. Breaks Euler parity constraints, enabling new puzzle designs. Introduced as a late-game power.
+- **World 5 "Signals":** Buttons, doors, walls (blocked connections), irregular grids (missing dots), disabled dots
+- **World 6 "Tools":** Power-ups (Shatter and Phase, 1-2 per level), 5x5 grids, directional lines
+- **World 7+ "Hard Mode":** Time limits, move limits, lift penalties, all mechanics combined
+- **Power-up details:** Shatter removes a connection without traversing (changes dot degree, can fix parity). Phase teleports to any dot without traversing (skip bridge cost on reduce levels). Freeze protects a connection from accidental draw for 5 moves. All earned through gameplay, never purchased, never trivialize a level.
+- **Grid modifiers:** Walls (connection can't exist or be drawn), missing dots (irregular topology), disabled dots (visible but unvisitable)
 - Cosmetic themes (Hacker, Neon, Paper, Ocean) as in-app purchases
 - Premium unlock ($3.99) to remove ads and unlock all content
 - Ad integration (interstitial between levels, never during gameplay)

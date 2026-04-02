@@ -104,4 +104,8 @@ export interface SolverResult {
   /** Composite difficulty score. null if unsolvable. */
   difficulty: number | null;
   sampleSolution: Move[] | null;
+  /** Absolute minimum total layers achievable across all explored states. */
+  minRemainingLayers: number;
+  /** True if the puzzle graph has 0 or 2 nodes with odd total degree (Euler path exists). */
+  eulerSolvable: boolean;
 }

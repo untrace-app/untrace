@@ -18,6 +18,8 @@ let redoBtnEl:         HTMLButtonElement | null = null;
 let moveCounterEl:     HTMLElement | null = null;
 let targetIndicatorEl: HTMLElement | null = null;
 let levelIndicatorEl:  HTMLElement | null = null;
+let _levelIndex = 0;
+let _levelTotal = 1;
 
 interface WinOverlay { show: (moveCount: number) => void; hide: () => void; }
 let winOverlay: WinOverlay | null = null;
@@ -321,11 +323,14 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   winOverlay  = buildWinOverlay(ui, callbacks.onNextLevel, callbacks.onReset);
   prevSolved  = false;
 
-  updateOverlay(state);
+  updateOverlay(state, _levelIndex, _levelTotal);
 }
 
 /** Call every frame to keep counter and button states current. */
 export function updateOverlay(state: GameState, levelIndex: number, levelTotal: number): void {
+  _levelIndex = levelIndex;
+  _levelTotal = levelTotal;
+
   if (levelIndicatorEl !== null) {
     levelIndicatorEl.textContent = `Level ${levelIndex + 1}/${levelTotal}`;
   }

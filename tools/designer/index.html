@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Untrace Designer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0A0A0F;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Left: canvas area ── */
+    #left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 24px;
+      min-width: 0;
+    }
+
+    #canvas {
+      cursor: crosshair;
+      border-radius: 6px;
+      display: block;
+    }
+
+    #hint {
+      color: rgba(255,255,255,0.3);
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ── Right: panel ── */
+    #panel {
+      width: 310px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.03);
+      border-left: 1px solid rgba(255,255,255,0.08);
+      overflow-y: auto;
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .section { margin-bottom: 18px; }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 8px;
+    }
+
+    hr.div {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 14px 0;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+
+    .field label {
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      flex-shrink: 0;
+      width: 96px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      flex: 1;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px;
+      color: #fff;
+      font-size: 12px;
+      font-family: inherit;
+      padding: 5px 8px;
+      outline: none;
+      min-width: 0;
+    }
+    input:focus, select:focus {
+      border-color: rgba(255,255,255,0.35);
+    }
+    select option { background: #16161f; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 14px;
+      width: 100%;
+      margin-bottom: 7px;
+      transition: opacity 0.12s;
+    }
+    button:hover:not(:disabled) { opacity: 0.82; }
+    button:disabled { opacity: 0.28; cursor: default; }
+    button:last-child { margin-bottom: 0; }
+
+    #btn-verify  { background: #4ECDC4; color: #000; }
+    #btn-export  { background: rgba(255,255,255,0.1); color: #fff; }
+    #btn-clear   { background: rgba(220,60,60,0.22); color: #ff8888; font-size: 12px; padding: 7px 12px; }
+
+    /* ── Results ── */
+    #results {
+      display: none;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 7px;
+      padding: 11px 12px;
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.9;
+    }
+    #results.show { display: block; }
+
+    .rrow { display: flex; justify-content: space-between; align-items: baseline; }
+    .rlabel { color: rgba(255,255,255,0.45); }
+    .rval { font-weight: 600; }
+    .ok   { color: #4ECDC4; }
+    .warn { color: #FFB347; }
+    .bad  { color: #FF6B6B; }
+
+    #solver-note {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      margin-top: 5px;
+      display: none;
+    }
+
+    /* ── Solution buttons row ── */
+    #solution-btns {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 7px;
+    }
+    #solution-btns button {
+      flex: 1;
+      margin-bottom: 0;
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+    #btn-solution { background: rgba(78,205,196,0.18); color: #4ECDC4; }
+    #btn-stop     { background: rgba(255,107,107,0.18); color: #FF6B6B; display: none; }
+
+    /* ── Move list ── */
+    #move-list {
+      display: none;
+      margin-top: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 7px;
+      padding: 10px 11px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      line-height: 1.85;
+      max-height: 220px;
+      overflow-y: auto;
+      color: rgba(255,255,255,0.55);
+    }
+    #move-list.show { display: block; }
+    #move-list .ml-active {
+      color: #4ECDC4;
+      font-weight: 700;
+    }
+    #move-list .ml-done {
+      color: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+
+<div id="left">
+  <canvas id="canvas" width="560" height="560"></canvas>
+  <div id="hint">
+    Click dot → dot to add connection (or cycle layers if exists) &nbsp;·&nbsp;
+    Click line to cycle layers &nbsp;·&nbsp; Right-click to remove
+  </div>
+</div>
+
+<div id="panel">
+
+  <div class="section">
+    <div class="section-title">Grid</div>
+    <div class="field">
+      <label>Size</label>
+      <select id="sel-size">
+        <option value="3" selected>3 × 3</option>
+        <option value="4">4 × 4</option>
+        <option value="5">5 × 5</option>
+      </select>
+    </div>
+    <button id="btn-clear" onclick="clearAll()">Clear All Connections</button>
+  </div>
+
+  <hr class="div">
+
+  <div class="section">
+    <div class="section-title">Metadata</div>
+    <div class="field">
+      <label>Level ID</label>
+      <input type="text" id="in-id" value="new-1">
+    </div>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="in-name" value="Untitled">
+    </div>
+    <div class="field">
+      <label>World</label>
+      <select id="sel-world">
+        <option>1</option><option>2</option><option>3</option>
+        <option>4</option><option>5</option><option>6</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Target layers</label>
+      <input type="number" id="in-target" value="0" min="0" max="99">
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div class="section">
+    <div class="section-title">Special</div>
+    <div class="field">
+      <label>Forced start</label>
+      <select id="sel-start"><option value="">None</option></select>
+    </div>
+    <div class="field">
+      <label>Forced end</label>
+      <select id="sel-end"><option value="">None</option></select>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div class="section">
+    <div class="section-title">Solver</div>
+    <button id="btn-verify" onclick="runVerify()">Verify</button>
+    <div id="solution-btns">
+      <button id="btn-solution" onclick="runShowSolution()" disabled>Show Solution</button>
+      <button id="btn-stop"     onclick="stopSolution()">Stop</button>
+    </div>
+    <div id="results"></div>
+    <div id="solver-note"></div>
+    <div id="move-list"></div>
+  </div>
+
+  <hr class="div">
+
+  <div class="section">
+    <button id="btn-export" onclick="runExport()" disabled>Export JSON</button>
+  </div>
+
+</div><!-- /panel -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// Constants — mirrored from src/constants.ts
+// ═══════════════════════════════════════════════════════════
+const LAYER_COLORS = ['', '#FF6B6B', '#FFB347', '#4ECDC4', '#9B6BFF', '#E8E8F0'];
+const DOT_RADIUS      = 12;
+const LINE_WIDTH_BASE =  6;
+const GRID_FILL       = 0.70;
+const HIT_DOT  = DOT_RADIUS + 10; // dot click radius
+const HIT_LINE = 10;              // line click proximity
+
+// ═══════════════════════════════════════════════════════════
+// Mutable state
+// ═══════════════════════════════════════════════════════════
+let gridN = 3;  // cols = rows = gridN
+
+// Map<CKey, {from:[c,r], to:[c,r], layers:number}>
+const connections = new Map();
+
+let selectedDot = null;  // [col, row] | null
+let forcedStart = null;  // [col, row] | null
+let forcedEnd   = null;  // [col, row] | null
+let lastResult  = null;  // most recent solver result
+
+// ── Solution animation state ──────────────────────────────
+let solAnim = {
+  running:   false,
+  stepIndex: 0,       // which move is currently active
+  trail:     [],      // [{from,to}] dots visited so far (for green trail)
+  timer:     null,    // setTimeout handle
+};
+
+// ═══════════════════════════════════════════════════════════
+// Connection key (same sort logic as game)
+// ═══════════════════════════════════════════════════════════
+function makeKey(a, b) {
+  const af = a[0] < b[0] || (a[0] === b[0] && a[1] <= b[1]);
+  const [f, s] = af ? [a, b] : [b, a];
+  return `${f[0]},${f[1]}-${s[0]},${s[1]}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Grid layout
+// ═══════════════════════════════════════════════════════════
+function getLayout() {
+  const canvas = document.getElementById('canvas');
+  const w = canvas.width, h = canvas.height;
+  const smaller   = Math.min(w, h);
+  const gridSpan  = smaller * GRID_FILL;
+  const spacing   = gridN > 1 ? gridSpan / (gridN - 1) : 0;
+  const gridEdge  = spacing * (gridN - 1);
+  return {
+    spacing,
+    ox: (w - gridEdge) / 2,
+    oy: (h - gridEdge) / 2,
+  };
+}
+
+function dotPos(col, row) {
+  const { spacing, ox, oy } = getLayout();
+  return { x: ox + col * spacing, y: oy + row * spacing };
+}
+
+// ═══════════════════════════════════════════════════════════
+// Rendering
+// ═══════════════════════════════════════════════════════════
+function render() {
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+
+  // Background
+  ctx.fillStyle = '#0A0A0F';
+  ctx.fillRect(0, 0, w, h);
+
+  // ── Connections ──────────────────────────────────────────
+  for (const [, conn] of connections) {
+    if (conn.layers < 1) continue;
+    const color = LAYER_COLORS[Math.min(conn.layers, 5)];
+    if (!color) continue;
+    const a = dotPos(conn.from[0], conn.from[1]);
+    const b = dotPos(conn.to[0],   conn.to[1]);
+    const lw = LINE_WIDTH_BASE + (conn.layers - 1) * 2;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lw;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer count badge (shown when > 1)
+    if (conn.layers > 1) {
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      // Perpendicular offset so badge doesn't sit on the line
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const px = -dy / len, py = dx / len;
+      const bx = mx + px * (lw * 0.9 + 7);
+      const by = my + py * (lw * 0.9 + 7);
+
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(conn.layers, bx, by);
+      ctx.restore();
+    }
+  }
+
+  // ── Dots ─────────────────────────────────────────────────
+  for (let row = 0; row < gridN; row++) {
+    for (let col = 0; col < gridN; col++) {
+      const { x, y } = dotPos(col, row);
+      const isSel   = selectedDot && selectedDot[0] === col && selectedDot[1] === row;
+      const isStart = forcedStart  && forcedStart[0]  === col && forcedStart[1]  === row;
+      const isEnd   = forcedEnd    && forcedEnd[0]    === col && forcedEnd[1]    === row;
+
+      ctx.save();
+
+      // Glow
+      if (isSel) {
+        ctx.shadowColor = '#FFFFFF'; ctx.shadowBlur = 18;
+      } else if (isStart) {
+        ctx.shadowColor = '#4CAF50'; ctx.shadowBlur = 14;
+      } else if (isEnd) {
+        ctx.shadowColor = '#FF6B6B'; ctx.shadowBlur = 14;
+      }
+
+      ctx.fillStyle = isSel ? '#FFFFFF' : (isStart ? '#5ADF6A' : (isEnd ? '#FF6B6B' : '#2A2A35'));
+      ctx.beginPath();
+      ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      // S / E label
+      if (isStart || isEnd) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle  = '#000';
+        ctx.font       = 'bold 9px sans-serif';
+        ctx.textAlign  = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isStart ? 'S' : 'E', x, y);
+      }
+
+      ctx.restore();
+
+      // Coordinate label below dot
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.font = `${Math.max(8, 11 - gridN)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${col},${row}`, x, y + DOT_RADIUS + 3);
+      ctx.restore();
+    }
+  }
+
+  // ── Solution overlay ─────────────────────────────────────
+  if (solAnim.running && solAnim.trail.length > 0) {
+    // Green trail lines
+    ctx.save();
+    ctx.strokeStyle = '#4CAF50';
+    ctx.lineWidth   = 4;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    const first = dotPos(solAnim.trail[0][0], solAnim.trail[0][1]);
+    ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < solAnim.trail.length; i++) {
+      const pt = dotPos(solAnim.trail[i][0], solAnim.trail[i][1]);
+      ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Move number labels along trail segments
+    ctx.save();
+    ctx.fillStyle = '#4CAF50';
+    ctx.font      = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 1; i < solAnim.trail.length; i++) {
+      const a = dotPos(solAnim.trail[i - 1][0], solAnim.trail[i - 1][1]);
+      const b = dotPos(solAnim.trail[i][0],     solAnim.trail[i][1]);
+      // Offset perpendicular so labels don't sit on the line
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const mx  = (a.x + b.x) / 2 + (-dy / len) * 12;
+      const my  = (a.y + b.y) / 2 + ( dx / len) * 12;
+      ctx.fillText(i, mx, my);
+    }
+    ctx.restore();
+
+    // Highlight the current (last) dot
+    const cur = solAnim.trail[solAnim.trail.length - 1];
+    const cp  = dotPos(cur[0], cur[1]);
+    ctx.save();
+    ctx.shadowColor = '#4CAF50';
+    ctx.shadowBlur  = 20;
+    ctx.fillStyle   = '#4CAF50';
+    ctx.beginPath();
+    ctx.arc(cp.x, cp.y, DOT_RADIUS + 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Hit detection
+// ═══════════════════════════════════════════════════════════
+function evtPos(evt) {
+  const c    = document.getElementById('canvas');
+  const rect = c.getBoundingClientRect();
+  return {
+    x: (evt.clientX - rect.left) * (c.width  / rect.width),
+    y: (evt.clientY - rect.top)  * (c.height / rect.height),
+  };
+}
+
+function nearestDot(px, py) {
+  let best = null, bd = Infinity;
+  for (let r = 0; r < gridN; r++) {
+    for (let c = 0; c < gridN; c++) {
+      const p = dotPos(c, r);
+      const d = Math.hypot(px - p.x, py - p.y);
+      if (d < HIT_DOT && d < bd) { bd = d; best = [c, r]; }
+    }
+  }
+  return best;
+}
+
+function distToSeg(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function nearestConn(px, py) {
+  let best = null, bd = Infinity;
+  for (const [key, conn] of connections) {
+    const a = dotPos(conn.from[0], conn.from[1]);
+    const b = dotPos(conn.to[0],   conn.to[1]);
+    const d = distToSeg(px, py, a.x, a.y, b.x, b.y);
+    if (d < HIT_LINE && d < bd) { bd = d; best = key; }
+  }
+  return best;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Connection mutation
+// ═══════════════════════════════════════════════════════════
+function cycleConn(key) {
+  const c = connections.get(key);
+  if (!c) return;
+  if (c.layers >= 5) { connections.delete(key); }
+  else               { c.layers++; }
+}
+
+function addOrCycle(a, b) {
+  const key = makeKey(a, b);
+  if (connections.has(key)) {
+    cycleConn(key);
+  } else {
+    connections.set(key, { from: [a[0], a[1]], to: [b[0], b[1]], layers: 1 });
+  }
+  invalidateResult();
+}
+
+function removeConn(key) {
+  connections.delete(key);
+  invalidateResult();
+}
+
+function invalidateResult() {
+  lastResult = null;
+  document.getElementById('btn-export').disabled  = true;
+  document.getElementById('btn-solution').disabled = true;
+  stopSolution();
+  document.getElementById('move-list').className  = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// Event handlers
+// ═══════════════════════════════════════════════════════════
+function onLeftClick(evt) {
+  const { x, y } = evtPos(evt);
+  const dot = nearestDot(x, y);
+
+  if (dot) {
+    if (!selectedDot) {
+      // Select this dot
+      selectedDot = dot;
+    } else if (selectedDot[0] === dot[0] && selectedDot[1] === dot[1]) {
+      // Clicked same dot — deselect
+      selectedDot = null;
+    } else {
+      // Second dot — add or cycle connection
+      addOrCycle(selectedDot, dot);
+      selectedDot = null;
+    }
+  } else {
+    // Check if clicking a connection line
+    const key = nearestConn(x, y);
+    if (key) {
+      cycleConn(key);
+      invalidateResult();
+    }
+    selectedDot = null;
+  }
+
+  render();
+}
+
+function onRightClick(evt) {
+  evt.preventDefault();
+  const { x, y } = evtPos(evt);
+
+  // Right-click connection → remove
+  const key = nearestConn(x, y);
+  if (key) {
+    removeConn(key);
+  }
+
+  selectedDot = null;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Controls
+// ═══════════════════════════════════════════════════════════
+function clearAll() {
+  connections.clear();
+  selectedDot = null;
+  lastResult  = null;
+  document.getElementById('btn-export').disabled = true;
+  document.getElementById('results').className   = '';
+  document.getElementById('solver-note').style.display = 'none';
+  render();
+}
+
+function onSizeChange() {
+  gridN = parseInt(document.getElementById('sel-size').value, 10);
+  connections.clear();
+  selectedDot = null;
+  forcedStart = null;
+  forcedEnd   = null;
+  lastResult  = null;
+  document.getElementById('btn-export').disabled = true;
+  document.getElementById('results').className   = '';
+  document.getElementById('sel-start').value     = '';
+  document.getElementById('sel-end').value       = '';
+  populateDotSelectors();
+  render();
+}
+
+function populateDotSelectors() {
+  const ss = document.getElementById('sel-start');
+  const se = document.getElementById('sel-end');
+  const cur = [ss.value, se.value];
+  ss.innerHTML = '<option value="">None</option>';
+  se.innerHTML = '<option value="">None</option>';
+  for (let r = 0; r < gridN; r++) {
+    for (let c = 0; c < gridN; c++) {
+      const v = `${c},${r}`;
+      const txt = `(${c}, ${r})`;
+      ss.innerHTML += `<option value="${v}">${txt}</option>`;
+      se.innerHTML += `<option value="${v}">${txt}</option>`;
+    }
+  }
+  ss.value = cur[0];
+  se.value = cur[1];
+}
+
+function onStartChange() {
+  const v = document.getElementById('sel-start').value;
+  if (!v) { forcedStart = null; }
+  else    { const [c, r] = v.split(',').map(Number); forcedStart = [c, r]; }
+  render();
+}
+
+function onEndChange() {
+  const v = document.getElementById('sel-end').value;
+  if (!v) { forcedEnd = null; }
+  else    { const [c, r] = v.split(',').map(Number); forcedEnd = [c, r]; }
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Solver  (JS port of src/solver/solver.ts)
+// ═══════════════════════════════════════════════════════════
+function sHash(layers, player) {
+  const parts = [];
+  for (const [k, v] of layers) if (v > 0) parts.push(`${k}:${v}`);
+  parts.sort();
+  const p = player ? `${player[0]},${player[1]}` : 'null';
+  return parts.join('|') + '@' + p;
+}
+
+function sTotal(layers) {
+  let s = 0; for (const v of layers.values()) s += v; return s;
+}
+
+function sApply(layers, from, to) {
+  const key    = makeKey(from, to);
+  const before = layers.get(key) ?? 0;
+  const after  = before > 0 ? before - 1 : 1;
+  const action = before > 0 ? 'erase' : 'draw';
+  const nl = new Map(layers);
+  nl.set(key, after);
+  return { nl, action, before, after };
+}
+
+function sNbrs(col, row, n) {
+  const r = [];
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const nc = col + dc, nr = row + dr;
+      if (nc >= 0 && nc < n && nr >= 0 && nr < n) r.push([nc, nr]);
+    }
+  return r;
+}
+
+function sEuler(layers) {
+  const deg = new Map();
+  for (const [key, cnt] of layers) {
+    if (!cnt) continue;
+    const d = key.indexOf('-');
+    const a = key.slice(0, d), b = key.slice(d + 1);
+    deg.set(a, (deg.get(a) || 0) + cnt);
+    deg.set(b, (deg.get(b) || 0) + cnt);
+  }
+  let odd = 0;
+  for (const v of deg.values()) if (v % 2) odd++;
+  return odd === 0 || odd === 2;
+}
+
+// ── Hierholzer helpers ────────────────────────────────────────────────────────
+
+function sAllSingle(layers) {
+  for (const v of layers.values()) if (v !== 1) return false;
+  return true;
+}
+
+function sParseNode(key) {
+  const c = key.indexOf(',');
+  return [parseInt(key.slice(0, c)), parseInt(key.slice(c + 1))];
+}
+
+function sBuildAdj(layers) {
+  const adj = new Map();
+  for (const [key, count] of layers) {
+    if (!count) continue;
+    const d = key.indexOf('-');
+    const a = key.slice(0, d), b = key.slice(d + 1);
+    if (!adj.has(a)) adj.set(a, []);
+    if (!adj.has(b)) adj.set(b, []);
+    for (let i = 0; i < count; i++) { adj.get(a).push(b); adj.get(b).push(a); }
+  }
+  return adj;
+}
+
+function sIsConnected(layers) {
+  const adj = new Map();
+  for (const [key, count] of layers) {
+    if (!count) continue;
+    const d = key.indexOf('-');
+    const a = key.slice(0, d), b = key.slice(d + 1);
+    if (!adj.has(a)) adj.set(a, new Set());
+    if (!adj.has(b)) adj.set(b, new Set());
+    adj.get(a).add(b); adj.get(b).add(a);
+  }
+  if (!adj.size) return true;
+  const start = adj.keys().next().value;
+  const seen = new Set([start]);
+  const q = [start];
+  while (q.length) {
+    for (const u of adj.get(q.pop())) if (!seen.has(u)) { seen.add(u); q.push(u); }
+  }
+  return seen.size === adj.size;
+}
+
+function sOddNodes(adj) {
+  const odd = [];
+  for (const [n, nb] of adj) if (nb.length % 2) odd.push(n);
+  return odd;
+}
+
+function sHierholzer(adjInput, start) {
+  const adj = new Map();
+  for (const [k, v] of adjInput) adj.set(k, [...v]);
+  const stack = [start], path = [];
+  while (stack.length) {
+    const v = stack[stack.length - 1];
+    const vn = adj.get(v) || [];
+    if (vn.length) {
+      const u = vn.pop();
+      const un = adj.get(u);
+      const idx = un.lastIndexOf(v);
+      if (idx !== -1) un.splice(idx, 1);
+      stack.push(u);
+    } else {
+      path.push(stack.pop());
+    }
+  }
+  return path.reverse();
+}
+
+function sPathToMoves(path) {
+  const moves = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const from = sParseNode(path[i]), to = sParseNode(path[i + 1]);
+    moves.push({ from, to, action: 'erase', layerBefore: 1, layerAfter: 0 });
+  }
+  return moves;
+}
+
+function sCountPaths(adj, start, totalEdges, cap) {
+  function dfs(cur, used) {
+    if (used === totalEdges) return 1;
+    const nbrs = adj.get(cur);
+    let count = 0;
+    for (let i = nbrs.length - 1; i >= 0; i--) {
+      const u = nbrs[i];
+      nbrs.splice(i, 1);
+      const un = adj.get(u);
+      const j = un.lastIndexOf(cur);
+      un.splice(j, 1);
+      count += dfs(u, used + 1);
+      nbrs.splice(i, 0, u);
+      un.splice(j, 0, cur);
+      if (count >= cap) return count;
+    }
+    return count;
+  }
+  return dfs(start, 0);
+}
+
+function sGreedyEuler(initLayers) {
+  // Build expanded adjacency list: each layer on an edge becomes a separate entry.
+  // This lets Hierholzer's traverse multi-layer edges correctly (one traversal per layer).
+  const adj  = sBuildAdj(initLayers);
+  const odds = sOddNodes(adj);
+
+  let startNode = '';
+  if (odds.length === 2) {
+    startNode = odds[0];
+  } else {
+    for (const [n, nb] of adj) { if (nb.length) { startNode = n; break; } }
+  }
+  if (!startNode) return [];
+
+  const path = sHierholzer(adj, startNode);
+
+  // Convert node-sequence path into Move objects, decrementing the layer of
+  // each connection by 1 per traversal (handles multi-layer correctly).
+  const layers = new Map(initLayers);
+  const moves  = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const from = sParseNode(path[i]), to = sParseNode(path[i + 1]);
+    const key  = makeKey(from, to);
+    const layerBefore = layers.get(key) || 0;
+    const layerAfter  = layerBefore - 1;
+    layers.set(key, layerAfter);
+    moves.push({ from, to, action: 'erase', layerBefore, layerAfter });
+  }
+  return moves;
+}
+
+function sDifficulty(minMoves, count, draw) {
+  const s = minMoves + (draw ? 5 : 0) + Math.log2(100 / Math.max(1, count));
+  return Math.max(1, Math.min(100, Math.round(s)));
+}
+
+function runSolver(level) {
+  const n = level.grid.cols;
+  const target = level.targetLayers;
+
+  const initL = new Map();
+  for (const c of level.connections) {
+    const k = makeKey(c.from, c.to);
+    initL.set(k, (initL.get(k) || 0) + c.layers);
+  }
+
+  const startTotal = sTotal(initL);
+  const drawBudget = Math.ceil(startTotal * 3.0);
+  const euler      = sEuler(initL);
+  let minRem = startTotal;
+
+  const visited = new Set();
+  const queue   = [];
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) {
+      const p = [c, r];
+      const h = sHash(initL, p);
+      if (!visited.has(h)) {
+        visited.add(h);
+        queue.push({ L: initL, p, moves: [], draw: false });
+      }
+    }
+
+  // ── Hierholzer fast path ───────────────────────────────────────────────────
+  if (euler && target === 0 && startTotal > 0 && sAllSingle(initL) && sIsConnected(initL)) {
+    const adj  = sBuildAdj(initL);
+    const odds = sOddNodes(adj);
+
+    let startNode = '';
+    if (odds.length === 2) {
+      startNode = odds[0];
+    } else {
+      for (const [n, nb] of adj) { if (nb.length) { startNode = n; break; } }
+    }
+
+    const pathNodes = sHierholzer(adj, startNode);
+    const sample    = sPathToMoves(pathNodes);
+
+    const startNodes = odds.length === 2
+      ? odds
+      : Array.from(adj.keys()).filter(n => (adj.get(n)?.length ?? 0) > 0);
+
+    let eulerCount = 0;
+    for (const sn of startNodes) {
+      eulerCount += sCountPaths(adj, sn, startTotal, 100 - eulerCount);
+      if (eulerCount >= 100) { eulerCount = 100; break; }
+    }
+
+    const diff = sDifficulty(sample.length, eulerCount, false);
+    return {
+      solvable: true, minMoves: sample.length, solutionCount: eulerCount,
+      requiresDraw: false, difficulty: diff, sampleSolution: sample,
+      minRemainingLayers: 0, eulerSolvable: true,
+      statesExplored: 0, hitStateLimit: false,
+    };
+  }
+
+  // ── Greedy multi-layer Euler fast path ────────────────────────────────────
+  // Applies when: multi-layer, eulerSolvable, targetLayers 0, connected.
+  // Uses Hierholzer's on the expanded adjacency list (each layer = separate edge)
+  // so it is guaranteed to find a solution — no null fallback needed.
+  if (euler && target === 0 && startTotal > 0 && !sAllSingle(initL) && sIsConnected(initL)) {
+    const greedyMoves = sGreedyEuler(initL);
+    const diff = sDifficulty(greedyMoves.length, 1, false);
+    return {
+      solvable: true, minMoves: greedyMoves.length, solutionCount: null,
+      requiresDraw: false, difficulty: diff, sampleSolution: greedyMoves,
+      minRemainingLayers: 0, eulerSolvable: true,
+      statesExplored: 0, hitStateLimit: false,
+    };
+  }
+
+  const CAP  = 100;
+  const MAX  = 700000;
+  let solvable = false, minMoves = null, count = 0, reqDraw = false, sample = null;
+  let head = 0;
+
+  while (head < queue.length && visited.size < MAX) {
+    const { L, p, moves, draw } = queue[head++];
+    const rem = sTotal(L);
+    if (rem < minRem) minRem = rem;
+
+    if (rem <= target) {
+      solvable = true;
+      const mc = moves.length;
+      if (minMoves === null || mc < minMoves) {
+        minMoves = mc; count = 1; reqDraw = draw; sample = moves;
+      } else if (mc === minMoves) {
+        count = Math.min(count + 1, CAP);
+        if (draw) reqDraw = true;
+      }
+      continue;
+    }
+
+    if (minMoves !== null && moves.length >= minMoves) continue;
+    if (rem > drawBudget) continue;
+
+    for (const nb of sNbrs(p[0], p[1], n)) {
+      const { nl, action, before, after } = sApply(L, p, nb);
+      const h = sHash(nl, nb);
+      if (visited.has(h)) continue;
+      visited.add(h);
+      queue.push({
+        L: nl, p: nb,
+        moves: [...moves, { from: [p[0], p[1]], to: [nb[0], nb[1]], action, layerBefore: before, layerAfter: after }],
+        draw: draw || action === 'draw',
+      });
+    }
+  }
+
+  // Euler fast-path: solvability is mathematically guaranteed when the graph
+  // satisfies the Euler path/circuit condition and targetLayers is 0.
+  if (!solvable && euler && target === 0) {
+    solvable = true;
+    // minMoves and sample remain null — BFS exhausted before finding the path.
+  }
+
+  const diff = solvable && minMoves !== null ? sDifficulty(minMoves, count, reqDraw) : null;
+
+  return {
+    solvable,
+    minMoves:            solvable ? minMoves : null,
+    solutionCount:       solvable ? count    : null,
+    requiresDraw:        reqDraw,
+    difficulty:          diff,
+    sampleSolution:      solvable ? sample   : null,
+    minRemainingLayers:  minRem,
+    eulerSolvable:       euler,
+    statesExplored:      visited.size,
+    hitStateLimit:       visited.size >= MAX,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// Build LevelData from current designer state
+// ═══════════════════════════════════════════════════════════
+function buildLevel() {
+  const id     = document.getElementById('in-id').value.trim()   || 'new-1';
+  const name   = document.getElementById('in-name').value.trim() || 'Untitled';
+  const world  = parseInt(document.getElementById('sel-world').value, 10);
+  const target = parseInt(document.getElementById('in-target').value, 10) || 0;
+
+  const conns = [];
+  for (const [, c] of connections) {
+    if (c.layers > 0) conns.push({ from: [c.from[0], c.from[1]], to: [c.to[0], c.to[1]], layers: c.layers });
+  }
+
+  return {
+    id, name, world,
+    grid: { cols: gridN, rows: gridN },
+    targetLayers: target,
+    connections:  conns,
+    special: {
+      forcedStart: forcedStart ? [forcedStart[0], forcedStart[1]] : null,
+      forcedEnd:   forcedEnd   ? [forcedEnd[0],   forcedEnd[1]]   : null,
+      buttons: [],
+      doors:   [],
+    },
+    constraints: { moveLimit: null, timeLimit: null, liftPenalty: false },
+    meta: {
+      difficulty: null, minMoves: null, solutionCount: null,
+      requiresDraw: false, minRemainingLayers: 0, eulerSolvable: false,
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// Verify
+// ═══════════════════════════════════════════════════════════
+function runVerify() {
+  const btn = document.getElementById('btn-verify');
+  btn.textContent = 'Solving…';
+  btn.disabled    = true;
+
+  // Yield to browser so button state repaints before synchronous BFS.
+  setTimeout(() => {
+    const level = buildLevel();
+
+    if (level.connections.length === 0) {
+      showResults(null, 'No connections to solve.');
+      btn.textContent = 'Verify';
+      btn.disabled    = false;
+      return;
+    }
+
+    const res  = runSolver(level);
+    lastResult = res;
+    showResults(res, null);
+
+    document.getElementById('btn-export').disabled   = !res.solvable;
+    document.getElementById('btn-solution').disabled  = !(res.solvable && res.sampleSolution);
+    btn.textContent = 'Verify';
+    btn.disabled    = false;
+  }, 12);
+}
+
+function showResults(res, errMsg) {
+  const el   = document.getElementById('results');
+  const note = document.getElementById('solver-note');
+  el.className = 'show';
+
+  if (errMsg) {
+    el.innerHTML = `<span class="rval warn">${errMsg}</span>`;
+    note.style.display = 'none';
+    return;
+  }
+
+  function row(label, val, cls) {
+    return `<div class="rrow"><span class="rlabel">${label}</span><span class="rval ${cls || ''}">${val}</span></div>`;
+  }
+
+  const sc = res.solutionCount === 100 ? '100+' : (res.solutionCount ?? '—');
+  el.innerHTML =
+    row('Solvable',        res.solvable ? 'Yes' : 'No',         res.solvable ? 'ok' : 'bad') +
+    row('Min moves',       res.minMoves       ?? '—') +
+    row('Solutions',       sc) +
+    row('Requires draw',   res.requiresDraw   ? 'Yes' : 'No',   res.requiresDraw ? 'warn' : '') +
+    row('Euler solvable',  res.eulerSolvable  ? 'Yes' : 'No',   res.eulerSolvable ? 'ok' : 'warn') +
+    row('Min remaining',   res.minRemainingLayers) +
+    row('Difficulty',      res.difficulty     ?? '—');
+
+  if (res.hitStateLimit) {
+    note.textContent   = `State limit reached (${res.statesExplored.toLocaleString()} states). Results may be incomplete.`;
+    note.style.display = 'block';
+  } else {
+    note.textContent   = `${res.statesExplored.toLocaleString()} states explored.`;
+    note.style.display = 'block';
+  }
+
+  // Populate the static move list
+  const mlEl = document.getElementById('move-list');
+  if (res.solvable && res.sampleSolution && res.sampleSolution.length > 0) {
+    mlEl.className = 'show';
+    mlEl.innerHTML = buildMoveListHTML(res.sampleSolution, 0);
+  } else {
+    mlEl.className = '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Solution animation
+// ═══════════════════════════════════════════════════════════
+function buildMoveListHTML(moves, activeIdx) {
+  if (!moves || moves.length === 0) return '<span style="opacity:.4">No moves.</span>';
+  return moves.map((m, i) => {
+    const num  = i + 1;
+    const from = `(${m.from[0]},${m.from[1]})`;
+    const to   = `(${m.to[0]},${m.to[1]})`;
+    const act  = m.action;
+    const lbl  = `${m.layerBefore}→${m.layerAfter}`;
+    const text = `Move ${num}: ${from} → ${to} &nbsp;${act} ${lbl}`;
+    if (i < activeIdx)       return `<div class="ml-done">${text}</div>`;
+    if (i === activeIdx - 1) return `<div class="ml-active">${text}</div>`;
+    return `<div>${text}</div>`;
+  }).join('');
+}
+
+function scrollMoveList(activeIdx) {
+  const el = document.getElementById('move-list');
+  // Each line is ~20px tall; keep the active row visible
+  const lineH = 20;
+  el.scrollTop = Math.max(0, (activeIdx - 4) * lineH);
+}
+
+function runShowSolution() {
+  if (!lastResult || !lastResult.sampleSolution) return;
+  stopSolution();
+
+  const moves = lastResult.sampleSolution;
+  solAnim.running   = true;
+  solAnim.stepIndex = 0;
+  solAnim.trail     = [];
+  solAnim.timer     = null;
+
+  // Seed trail with the starting dot of move 0
+  if (moves.length > 0) {
+    solAnim.trail = [[moves[0].from[0], moves[0].from[1]]];
+  }
+
+  document.getElementById('btn-solution').disabled = true;
+  document.getElementById('btn-stop').style.display = 'block';
+
+  const mlEl = document.getElementById('move-list');
+  mlEl.className = 'show';
+  mlEl.innerHTML = buildMoveListHTML(moves, 0);
+
+  render();
+  advanceSolution(moves);
+}
+
+function advanceSolution(moves) {
+  if (solAnim.stepIndex >= moves.length) {
+    // Animation complete
+    solAnim.timer = setTimeout(() => {
+      stopSolution();
+    }, 800);
+    return;
+  }
+
+  solAnim.timer = setTimeout(() => {
+    if (!solAnim.running) return;
+
+    const m = moves[solAnim.stepIndex];
+    solAnim.trail.push([m.to[0], m.to[1]]);
+    solAnim.stepIndex++;
+
+    // Update move list highlight
+    const mlEl = document.getElementById('move-list');
+    mlEl.innerHTML = buildMoveListHTML(moves, solAnim.stepIndex);
+    scrollMoveList(solAnim.stepIndex);
+
+    render();
+    advanceSolution(moves);
+  }, 500);
+}
+
+function stopSolution() {
+  if (solAnim.timer !== null) { clearTimeout(solAnim.timer); solAnim.timer = null; }
+  solAnim.running   = false;
+  solAnim.stepIndex = 0;
+  solAnim.trail     = [];
+
+  document.getElementById('btn-stop').style.display = 'none';
+  // Re-enable only if we still have a valid result
+  document.getElementById('btn-solution').disabled = !(lastResult && lastResult.solvable && lastResult.sampleSolution);
+
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Export JSON
+// ═══════════════════════════════════════════════════════════
+function runExport() {
+  if (!lastResult || !lastResult.solvable) return;
+  const level = buildLevel();
+  level.meta = {
+    difficulty:         lastResult.difficulty,
+    minMoves:           lastResult.minMoves,
+    solutionCount:      lastResult.solutionCount,
+    requiresDraw:       lastResult.requiresDraw,
+    minRemainingLayers: lastResult.minRemainingLayers,
+    eulerSolvable:      lastResult.eulerSolvable,
+  };
+
+  const json = JSON.stringify(level, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${level.id}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Initialisation
+// ═══════════════════════════════════════════════════════════
+(function init() {
+  const canvas = document.getElementById('canvas');
+  canvas.addEventListener('click',       onLeftClick);
+  canvas.addEventListener('contextmenu', onRightClick);
+
+  document.getElementById('sel-size').addEventListener('change', onSizeChange);
+  document.getElementById('sel-start').addEventListener('change', onStartChange);
+  document.getElementById('sel-end').addEventListener('change', onEndChange);
+
+  populateDotSelectors();
+  render();
+}());
+</script>
+</body>
+</html>

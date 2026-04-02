@@ -99,6 +99,8 @@ Connections between dots are keyed as strings with coordinates sorted lexicograp
 
 3x3 grid dot coordinates: `[0,0]` through `[2,2]`. Each dot can connect to up to 8 neighbors (orthogonal + diagonal). A connection exists between two dots only if it is defined in the level data. Not all possible connections are present in every level.
 
+**Dynamic snap radius:** SNAP_RADIUS (40px) is the maximum. On larger grids where dots are closer together, snap radius must scale down to avoid overlapping: `effectiveSnapRadius = min(SNAP_RADIUS, gridSpacing * 0.45)`. This prevents fat-finger errors on 4x4 and 5x5 grids.
+
 ## Level Data Format
 
 ```typescript
@@ -155,18 +157,32 @@ There is NO anti-trivial-backtrack rule. Every connection traversal always execu
 
 **"Reduce" levels (targetLayers: N where N > 0):** Some puzzle graphs are mathematically impossible to fully clear (Euler path parity). These levels have a target: reduce total remaining layers to N or fewer. Introduced in World 4+. The solver computes the theoretical minimum remaining layers for each puzzle, and targetLayers is set at or above that minimum.
 
-**Critical design rule:** Draw-to-solve (intentionally drawing bridge lines) is ONLY used in reduce levels (targetLayers > 0). A clear level (targetLayers: 0) must never require drawing because bridge lines always leave residual layers that make clearing to zero impossible. Worlds 1-3 are all clear levels. World 4+ introduces reduce levels and draw-to-solve together.
+**Critical design rule:** Draw-to-solve (intentionally drawing bridge lines) is ONLY used in reduce levels (targetLayers > 0). A clear level (targetLayers: 0) must never require drawing because bridge lines always leave residual layers that making clearing to zero impossible. Worlds 1-3 are all clear levels. World 4+ introduces reduce levels and draw-to-solve together.
 
 The checkWin function sums all connection layers and returns true when total <= targetLayers.
 
+## Euler Path Design Rules (For Solver and Level Design)
+
+**Degree of a dot** = sum of all layers on connections touching that dot.
+
+- **0 odd-degree dots:** Euler circuit. Any starting dot works. Easiest levels.
+- **2 odd-degree dots:** Euler path. Must start at one of the two odd dots. Starting elsewhere makes clearing impossible. Medium-hard.
+- **4+ odd-degree dots:** No Euler path. Cannot clear to zero. Must be a reduce level.
+
+**Forced start dots** are a hint mechanism: placing forced start on an odd-degree dot tells the player where to begin without explaining the math.
+
+**Multi-layer connections** contribute their layer count to each endpoint's degree. A 3-layer connection gives degree 3 to both endpoints. This makes traversal ORDER consequential, not just path choice.
+
+**Clear levels (targetLayers: 0)** must have 0 or 2 odd-degree dots. The solver MUST verify this.
+
+**Reduce levels (targetLayers: N)** can have any number of odd-degree dots. The solver computes minRemainingLayers as the theoretical floor.
+
 ## Current Phase
 
-**Phase 1: Core Prototype.** See PRD.md for full scope. Focus: tracing feel, erase/draw logic, layers, undo, audio. 5-10 hardcoded test levels. No solver, no designer, no menus, no save state.
+**Phase 2: Toolchain.** Phase 1 (core prototype) is complete: 10 playable levels with rendering, input, erase/draw logic, audio, animations, undo/redo, and win detection. See PRD.md Phase 2 for full scope. Focus: puzzle solver (BFS with Euler parity analysis) and puzzle designer (web tool for creating and verifying levels).
 
 ## What NOT to Build Yet
 
-- Puzzle solver (Phase 2)
-- Puzzle designer (Phase 2)
 - Level select screen (Phase 3)
 - Save state / localStorage persistence (Phase 3)
 - Hint system (Phase 3)
@@ -174,6 +190,8 @@ The checkWin function sums all connection layers and returns true when total <= 
 - Star ratings and celebration screen (Phase 3)
 - Capacitor / native wrap (Phase 4)
 - Monetization, ads, IAP (Phase 5)
+- Power-ups: Shatter, Phase, Freeze (Phase 5, World 6+)
+- Walls, missing dots, disabled dots (Phase 5, World 5+)
 
 ## Development Notes
 
