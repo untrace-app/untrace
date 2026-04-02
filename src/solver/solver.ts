@@ -114,25 +114,34 @@ function neighbours(col: number, row: number, cols: number, rows: number): [numb
 // ─── Euler solvability check ──────────────────────────────────────────────────
 
 /**
+ * Returns the node keys whose total degree (sum of incident layer counts) is odd.
+ * Used both for eulerSolvable determination and for validating forcedStart.
+ */
+function oddDegreeKeys(layers: Map<CKey, number>): string[] {
+  const degree = new Map<string, number>();
+  for (const [key, count] of layers) {
+    if (count === 0) continue;
+    const dash = key.indexOf('-');
+    const a = key.slice(0, dash);
+    const b = key.slice(dash + 1);
+    degree.set(a, (degree.get(a) ?? 0) + count);
+    degree.set(b, (degree.get(b) ?? 0) + count);
+  }
+  const result: string[] = [];
+  for (const [node, deg] of degree) {
+    if (deg % 2 !== 0) result.push(node);
+  }
+  return result;
+}
+
+/**
  * A puzzle graph has an Euler path (clearable to 0 in theory) iff at most
  * 2 nodes have odd total degree. Degree of a node is the sum of layers on
  * all connections incident to that node.
  */
 function computeEulerSolvable(layers: Map<CKey, number>): boolean {
-  const degree = new Map<string, number>();
-  for (const [key, count] of layers) {
-    if (count === 0) continue;
-    const dash = key.indexOf('-');
-    const aPart = key.slice(0, dash);
-    const bPart = key.slice(dash + 1);
-    degree.set(aPart, (degree.get(aPart) ?? 0) + count);
-    degree.set(bPart, (degree.get(bPart) ?? 0) + count);
-  }
-  let oddCount = 0;
-  for (const deg of degree.values()) {
-    if (deg % 2 !== 0) oddCount++;
-  }
-  return oddCount === 0 || oddCount === 2;
+  const n = oddDegreeKeys(layers).length;
+  return n === 0 || n === 2;
 }
 
 // ─── Hierholzer's algorithm ───────────────────────────────────────────────────
@@ -293,13 +302,15 @@ function countEulerPaths(
  * layer counts and decrementing by 1 on each traversal.
  * Guaranteed to succeed for any Euler-solvable connected graph.
  */
-function greedyEulerSolve(initLayers: Map<CKey, number>): Move[] {
+function greedyEulerSolve(initLayers: Map<CKey, number>, forcedStartKey: string | null = null): Move[] {
   // Expand multi-layer edges: each layer becomes a separate adjacency-list entry.
   const adj  = buildAdjList(initLayers);
   const odds = oddDegreeNodes(adj);
 
   let startNode = '';
-  if (odds.length === 2) {
+  if (forcedStartKey !== null && adj.has(forcedStartKey)) {
+    startNode = forcedStartKey;
+  } else if (odds.length === 2) {
     startNode = odds[0]!;
   } else {
     for (const [n, nbrs] of adj) {
@@ -366,6 +377,23 @@ export function solve(level: LevelData): SolverResult {
   // Euler solvability is a static property of the initial graph.
   const eulerSolvable = computeEulerSolvable(initLayers);
 
+  // Forced start / end dot keys (node-key format "col,row").
+  const forcedStart = level.special.forcedStart;
+  const forcedEnd   = level.special.forcedEnd;
+  const fsKey = forcedStart ? `${forcedStart[0]},${forcedStart[1]}` : null;
+  const feKey = forcedEnd   ? `${forcedEnd[0]},${forcedEnd[1]}`   : null;
+
+  // Odd-degree nodes of the initial graph, needed to validate forcedStart.
+  // A forcedStart is a valid Euler starting node when:
+  //   • it is not set (no constraint), OR
+  //   • the graph is an Euler circuit (0 odd-degree nodes) — any start is valid, OR
+  //   • the graph is an Euler path (2 odd-degree nodes) — start must be one of them.
+  const initOddKeys = oddDegreeKeys(initLayers);
+  const fsIsValidEulerStart =
+    fsKey === null ||
+    initOddKeys.length === 0 ||
+    initOddKeys.includes(fsKey);
+
   // Track the global minimum remaining layers seen across ALL states.
   let minRemainingLayers = startTotal;
 
@@ -375,15 +403,22 @@ export function solve(level: LevelData): SolverResult {
 
   const visited = new Set<string>();
 
-  // Initial states: one per dot in the grid (solver tries every start dot).
+  // Initial states: if forcedStart is set use only that dot, otherwise try all.
   const queue: State[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const player: [number, number] = [c, r];
-      const h = hashState(initLayers, player);
-      if (!visited.has(h)) {
-        visited.add(h);
-        queue.push({ layers: initLayers, player, moves: [], hasDraw: false });
+  if (forcedStart !== null) {
+    const player = forcedStart as [number, number];
+    const h = hashState(initLayers, player);
+    visited.add(h);
+    queue.push({ layers: initLayers, player, moves: [], hasDraw: false });
+  } else {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const player: [number, number] = [c, r];
+        const h = hashState(initLayers, player);
+        if (!visited.has(h)) {
+          visited.add(h);
+          queue.push({ layers: initLayers, player, moves: [], hasDraw: false });
+        }
       }
     }
   }
@@ -399,13 +434,31 @@ export function solve(level: LevelData): SolverResult {
     allSingleLayer(initLayers) &&
     isEdgeConnected(initLayers)
   ) {
+    // If forcedStart is set to an even-degree node on a path graph, it is not a
+    // valid Euler start — skip this fast path; BFS will correctly return unsolvable.
+    if (fsKey !== null && !fsIsValidEulerStart) {
+      // fall through to BFS
+    } else {
     const adj  = buildAdjList(initLayers);
     const odds = oddDegreeNodes(adj);
 
-    // Start at an odd-degree node if the graph has exactly two (Euler path),
-    // otherwise start at any node that has edges (Euler circuit).
+    // Choose start node: forcedStart overrides degree-based heuristic.
+    // When forcedEnd is set (no forcedStart), pick the start that causes the
+    // path to end at feKey: for Euler paths, start from the other odd node;
+    // for Euler circuits, start from feKey itself (a circuit ends at its start).
     let startNode = '';
-    if (odds.length === 2) {
+    if (fsKey !== null && adj.has(fsKey)) {
+      startNode = fsKey;
+    } else if (feKey !== null) {
+      if (odds.length === 2) {
+        startNode = odds.find(n => n !== feKey) ?? odds[0]!;
+      } else {
+        startNode = adj.has(feKey) ? feKey : '';
+        if (startNode === '') {
+          for (const [n, nbrs] of adj) { if (nbrs.length > 0) { startNode = n; break; } }
+        }
+      }
+    } else if (odds.length === 2) {
       startNode = odds[0]!;
     } else {
       for (const [n, nbrs] of adj) {
@@ -416,29 +469,54 @@ export function solve(level: LevelData): SolverResult {
     const pathNodes = hierholzer(adj, startNode);
     const sample    = pathToMoves(pathNodes);
 
-    // Count all distinct Euler paths from every valid starting node.
-    // For paths (2 odd nodes): count from both endpoints.
-    // For circuits (0 odd nodes): count from every node with edges.
-    const startNodes = odds.length === 2
-      ? odds
-      : Array.from(adj.keys()).filter(n => (adj.get(n)?.length ?? 0) > 0);
+    // Validate forcedEnd: if set, the path must end at feKey.
+    const pathEnd = pathNodes.length > 0 ? pathNodes[pathNodes.length - 1]! : '';
+    if (feKey !== null && pathEnd !== feKey) {
+      // End constraint not satisfied; fall through to BFS.
+    } else {
+      // Determine valid start nodes for solution counting, respecting constraints.
+      let countStartNodes: string[];
+      if (fsKey !== null && adj.has(fsKey)) {
+        if (feKey !== null) {
+          // Both constrained: valid only when the path from fsKey ends at feKey.
+          const compatible = odds.length === 2
+            ? feKey === odds.find(n => n !== fsKey)
+            : feKey === fsKey; // circuit ends at start
+          countStartNodes = compatible ? [fsKey] : [];
+        } else {
+          countStartNodes = [fsKey];
+        }
+      } else if (feKey !== null) {
+        // Only feKey constrained: start from node(s) whose path ends at feKey.
+        if (odds.length === 2) {
+          countStartNodes = odds.filter(n => n !== feKey);
+        } else {
+          countStartNodes = adj.has(feKey) ? [feKey] : [];
+        }
+      } else {
+        countStartNodes = odds.length === 2
+          ? odds
+          : Array.from(adj.keys()).filter(n => (adj.get(n)?.length ?? 0) > 0);
+      }
 
-    let eulerCount = 0;
-    for (const sn of startNodes) {
-      eulerCount += countEulerPaths(adj, sn, startTotal, 100 - eulerCount);
-      if (eulerCount >= 100) { eulerCount = 100; break; }
+      let eulerCount = 0;
+      for (const sn of countStartNodes) {
+        eulerCount += countEulerPaths(adj, sn, startTotal, 100 - eulerCount);
+        if (eulerCount >= 100) { eulerCount = 100; break; }
+      }
+
+      return {
+        solvable:           true,
+        minMoves:           sample.length,
+        solutionCount:      eulerCount,
+        requiresDraw:       false,
+        difficulty:         computeDifficulty(sample.length, eulerCount, false),
+        sampleSolution:     sample,
+        minRemainingLayers: 0,
+        eulerSolvable:      true,
+      };
     }
-
-    return {
-      solvable:           true,
-      minMoves:           sample.length,
-      solutionCount:      eulerCount,
-      requiresDraw:       false,
-      difficulty:         computeDifficulty(sample.length, eulerCount, false),
-      sampleSolution:     sample,
-      minRemainingLayers: 0,
-      eulerSolvable:      true,
-    };
+    } // end else (fsIsValidEulerStart)
   }
 
   // ── Greedy multi-layer Euler fast path ────────────────────────────────────
@@ -452,17 +530,27 @@ export function solve(level: LevelData): SolverResult {
     !allSingleLayer(initLayers) &&
     isEdgeConnected(initLayers)
   ) {
-    const greedyMoves = greedyEulerSolve(initLayers);
-    return {
-      solvable:           true,
-      minMoves:           greedyMoves.length,
-      solutionCount:      null,
-      requiresDraw:       false,
-      difficulty:         computeDifficulty(greedyMoves.length, 1, false),
-      sampleSolution:     greedyMoves,
-      minRemainingLayers: 0,
-      eulerSolvable:      true,
-    };
+    if (fsKey !== null && !fsIsValidEulerStart) {
+      // forcedStart is not a valid Euler start; fall through to BFS.
+    } else {
+      const greedyMoves = greedyEulerSolve(initLayers, fsKey);
+      // Validate forcedEnd: last move must end at feKey if set.
+      const lastMove = greedyMoves[greedyMoves.length - 1];
+      const lastToKey = lastMove ? `${lastMove.to[0]},${lastMove.to[1]}` : '';
+      if (feKey === null || lastToKey === feKey) {
+        return {
+          solvable:           true,
+          minMoves:           greedyMoves.length,
+          solutionCount:      null,
+          requiresDraw:       false,
+          difficulty:         computeDifficulty(greedyMoves.length, 1, false),
+          sampleSolution:     greedyMoves,
+          minRemainingLayers: 0,
+          eulerSolvable:      true,
+        };
+      }
+      // feKey not satisfied; fall through to BFS.
+    }
   }
 
   // BFS result accumulators.
@@ -484,6 +572,9 @@ export function solve(level: LevelData): SolverResult {
 
     // Win check.
     if (remaining <= target) {
+      // If forcedEnd is set the player must be on that dot.
+      if (feKey !== null && `${player![0]},${player![1]}` !== feKey) continue;
+
       solvable = true;
       const moveCount = moves.length;
 
@@ -539,9 +630,10 @@ export function solve(level: LevelData): SolverResult {
   }
 
   // Euler fast-path: if the graph satisfies the Euler path/circuit condition
-  // and targetLayers is 0, solvability is mathematically guaranteed even if
-  // BFS didn't find the solution within its exploration budget.
-  if (!solvable && eulerSolvable && target === 0) {
+  // and targetLayers is 0, solvability is mathematically guaranteed — unless
+  // forcedStart is set to an invalid Euler starting node, in which case the
+  // puzzle is genuinely unsolvable with that constraint.
+  if (!solvable && eulerSolvable && target === 0 && fsIsValidEulerStart) {
     solvable = true;
     // minMoves and sampleSolution remain null — BFS was exhausted before
     // finding the solution, so we can confirm solvable but not the path.

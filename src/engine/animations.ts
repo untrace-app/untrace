@@ -1,6 +1,6 @@
 // Animation queue and easing utilities
 
-import type { ConnectionKey } from '../types.ts';
+import type { ConnectionKey, GameState } from '../types.ts';
 import {
   LAYER_COLORS,
   COLOR_ACCIDENTAL_FLASH,
@@ -14,6 +14,7 @@ import {
 const GHOST_TRAIL_DURATION    = 500; // ms — longer than ANIM_GHOST_TRAIL_MS (300) for visibility
 const ACCIDENTAL_DRAW_DURATION = 200; // ms — longer than ANIM_ACCIDENTAL_FLASH_MS (100) for pop
 const DOT_ACTIVATION_DURATION  = 300; // ms — longer than ANIM_DOT_ACTIVATION_MS (150) for ripple
+const WRONG_DOT_DURATION       = 200; // ms — brief red flash on wrong dot tap
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,12 +54,20 @@ interface DotActivationAnim {
   elapsed: number;
 }
 
+interface WrongDotAnim {
+  type: 'wrongDot';
+  col: number;
+  row: number;
+  elapsed: number;
+}
+
 type AnimEntry =
   | EraseAnim
   | GhostTrailAnim
   | ShimmerAnim
   | AccidentalDrawAnim
-  | DotActivationAnim;
+  | DotActivationAnim
+  | WrongDotAnim;
 
 // ─── Easing ───────────────────────────────────────────────────────────────────
 
@@ -125,13 +134,15 @@ export class AnimationManager {
         (a.type === 'ghostTrail'     && a.elapsed >= GHOST_TRAIL_DURATION)     ||
         (a.type === 'shimmer'        && a.elapsed >= ANIM_SHIMMER_MS)          ||
         (a.type === 'accidentalDraw' && a.elapsed >= ACCIDENTAL_DRAW_DURATION) ||
-        (a.type === 'dotActivation'  && a.elapsed >= DOT_ACTIVATION_DURATION);
+        (a.type === 'dotActivation'  && a.elapsed >= DOT_ACTIVATION_DURATION)  ||
+        (a.type === 'wrongDot'       && a.elapsed >= WRONG_DOT_DURATION);
       if (done) _anims.splice(i, 1);
     }
   }
 
   /** Draw all active animation overlays on top of the already-rendered frame. */
-  draw(ctx: CanvasRenderingContext2D, gridToPixel: GridToPixelFn): void {
+  draw(ctx: CanvasRenderingContext2D, gridToPixel: GridToPixelFn, state?: GameState): void {
+    if (state) _drawLockedDotPulse(ctx, gridToPixel, state);
     for (const anim of _anims) {
       switch (anim.type) {
         case 'erase':          _drawErase(ctx, gridToPixel, anim);          break;
@@ -139,6 +150,7 @@ export class AnimationManager {
         case 'shimmer':        _drawShimmer(ctx, gridToPixel, anim);        break;
         case 'accidentalDraw': _drawAccidentalDraw(ctx, gridToPixel, anim); break;
         case 'dotActivation':  _drawDotActivation(ctx, gridToPixel, anim);  break;
+        case 'wrongDot':       _drawWrongDot(ctx, gridToPixel, anim);       break;
       }
     }
   }
@@ -261,6 +273,49 @@ function _drawDotActivation(
   ctx.restore();
 }
 
+function _drawLockedDotPulse(
+  ctx: CanvasRenderingContext2D,
+  g2p: GridToPixelFn,
+  state: GameState,
+): void {
+  if (!state.playerDot || state.isTracing || state.moveCount === 0) return;
+  const [col, row] = state.playerDot;
+  const { x, y } = g2p(col, row);
+  // Oscillate over a 1-second cycle using wall-clock time so the pulse is
+  // independent of dt accumulation and runs smoothly at any frame rate.
+  const phase = (performance.now() % 1000) / 1000; // 0..1 over 1 s
+  const t     = (Math.sin(phase * Math.PI * 2) + 1) / 2; // 0..1..0
+  const glowR = DOT_RADIUS * (1.0 + 0.8 * t);             // 1× → 1.8×
+  const alpha = 0.10 + 0.25 * t;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(x, y, glowR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function _drawWrongDot(
+  ctx: CanvasRenderingContext2D,
+  g2p: GridToPixelFn,
+  anim: WrongDotAnim,
+): void {
+  const { x, y } = g2p(anim.col, anim.row);
+  const t     = easeOut(clamp01(anim.elapsed / WRONG_DOT_DURATION));
+  // Expands from 3× to 3.6× dot radius while fading out — large enough to
+  // show beyond a fingertip covering the dot.
+  const radius = DOT_RADIUS * (3.0 + 0.6 * t);
+  const alpha  = 0.30 * (1 - t);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#FF4444';
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 // ─── Singleton + trigger functions ────────────────────────────────────────────
 
 export const animationManager = new AnimationManager();
@@ -290,4 +345,9 @@ export function triggerAccidentalDraw(key: ConnectionKey): void {
 export function triggerDotActivation(dot: [number, number]): void {
   console.log('[anim] dotActivation', dot);
   _anims.push({ type: 'dotActivation', col: dot[0], row: dot[1], elapsed: 0 });
+}
+
+/** Trigger the red flash when the player taps a dot that is not the locked dot. */
+export function triggerWrongDotFlash(col: number, row: number): void {
+  _anims.push({ type: 'wrongDot', col, row, elapsed: 0 });
 }

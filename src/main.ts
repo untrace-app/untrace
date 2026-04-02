@@ -4,7 +4,9 @@ import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
 import { initAudio, playErase, playFinalErase, playAccidentalDraw, playPuzzleComplete, playUndo } from './audio/audio.ts';
 import { initOverlay, updateOverlay } from './ui/overlay.ts';
-import { getCurrentLevel, getLevelCount } from './levels/levels.ts';
+import { initCelebration, showCelebration } from './ui/celebration.ts';
+import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
+import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO } from './constants.ts';
 
@@ -22,6 +24,11 @@ function resize(): void {
 
 resize();
 window.addEventListener('resize', resize);
+
+// Canvas stays invisible until the player selects a level from the level select.
+// This prevents a flash of game content before the level select screen appears.
+canvas.style.opacity    = '0';
+canvas.style.transition = 'opacity 0.25s ease';
 
 // ─── Level tracking ───────────────────────────────────────────────────────────
 
@@ -68,6 +75,7 @@ let initialConnections = new Map<ConnectionKey, ConnectionState>();
 
 function loadLevel(index: number): void {
   currentLevelIndex = index % getLevelCount();
+  setCurrentLevel(currentLevelIndex);
   const level = getCurrentLevel(currentLevelIndex);
 
   // Build connections map from level data.
@@ -116,9 +124,6 @@ function nextLevel(): void {
   loadLevel((currentLevelIndex + 1) % getLevelCount());
 }
 
-// Load the first level immediately.
-loadLevel(0);
-
 // ─── Grid-to-pixel helper ─────────────────────────────────────────────────────
 //
 // Mirrors the layout math in renderer.ts (computeLayout + gridToPixel).
@@ -148,49 +153,11 @@ function onFirstInteraction(): void {
 }
 document.addEventListener('pointerdown', onFirstInteraction);
 
-// ─── Input wiring ─────────────────────────────────────────────────────────────
-
-const inputState = initInput(canvas, gridToPixel, gameState, (from, to) => {
-  // Capture layer count before the move to drive audio decisions.
-  const key = makeConnectionKey(from, to);
-  const layersBefore = gameState.connections.get(key)?.layers ?? -1;
-
-  processMove(gameState, from, to);
-
-  const layersAfter = gameState.connections.get(key)?.layers ?? 0;
-  const won = checkWin(gameState);
-
-  if (won) {
-    playPuzzleComplete();
-  } else if (layersBefore <= 0) {
-    playAccidentalDraw();
-    triggerAccidentalDraw(key);
-  } else if (layersAfter === 0) {
-    playFinalErase();
-    triggerErase(key, layersBefore);
-  } else {
-    playErase(layersBefore);
-    triggerErase(key, layersBefore);
-  }
-  triggerDotActivation(to);
-});
-
-// ─── Overlay ──────────────────────────────────────────────────────────────────
-
-initOverlay(gameState, {
-  onUndo: () => {
-    undo(gameState);
-    playUndo();
-  },
-  onRedo: () => {
-    redo(gameState);
-  },
-  onReset: resetGame,
-  onNextLevel: nextLevel,
-});
-
 // ─── Render loop ──────────────────────────────────────────────────────────────
 
+// inputState is assigned inside the async startup below; loop() only runs after
+// requestAnimationFrame is called, so it is always populated by the first frame.
+let inputState!: ReturnType<typeof initInput>;
 let prevLoopTime = 0;
 
 function loop(time: number): void {
@@ -199,9 +166,109 @@ function loop(time: number): void {
 
   render(ctx, gameState, canvas, inputState.rawPointer);
   animationManager.update(dt);
-  animationManager.draw(ctx, gridToPixel);
+  animationManager.draw(ctx, gridToPixel, gameState);
   updateOverlay(gameState, currentLevelIndex, getLevelCount());
   requestAnimationFrame(loop);
 }
 
-requestAnimationFrame(loop);
+// ─── Async startup ────────────────────────────────────────────────────────────
+// Fetch level data before wiring input/overlay and starting the render loop.
+
+(async () => {
+  await loadLevels();
+
+  // Initialise celebration screen (before overlay so it exists when onWin fires).
+  initCelebration();
+
+  // Initialise level-select before loadLevel so setCurrentLevel works immediately.
+  initLevelSelect((index) => {
+    // Reveal canvas and start gameplay when a level is tapped.
+    canvas.style.opacity = '1';
+    loadLevel(index);
+  });
+
+  loadLevel(0);
+  showLevelSelect(); // Show level select on app start.
+
+  // Dismiss the splash cover once the level-select transition has completed.
+  // showLevelSelect() uses a double rAF + 0.22s CSS transition, so wait for
+  // the same two frames then let the transition finish before hiding.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const splash = document.getElementById('splash');
+        if (splash) splash.style.display = 'none';
+      }, 220);
+    });
+  });
+
+  inputState = initInput(canvas, gridToPixel, gameState, (from, to) => {
+    // Capture layer count before the move to drive audio decisions.
+    const key = makeConnectionKey(from, to);
+    const layersBefore = gameState.connections.get(key)?.layers ?? -1;
+
+    processMove(gameState, from, to);
+
+    const layersAfter = gameState.connections.get(key)?.layers ?? 0;
+    const won = checkWin(gameState);
+
+    if (won) {
+      // Win sound and celebration card are both triggered after a 300ms delay
+      // (see onWin callback below) so the final erase animation is visible first.
+    } else if (layersBefore <= 0) {
+      playAccidentalDraw();
+      triggerAccidentalDraw(key);
+    } else if (layersAfter === 0) {
+      playFinalErase();
+      triggerErase(key, layersBefore);
+    } else {
+      playErase(layersBefore);
+      triggerErase(key, layersBefore);
+    }
+    triggerDotActivation(to);
+  });
+
+  initOverlay(gameState, {
+    onUndo: () => {
+      undo(gameState);
+      playUndo();
+    },
+    onRedo: () => {
+      redo(gameState);
+    },
+    onReset: resetGame,
+    // onNextLevel is unused when onWin is provided, but required by the interface.
+    onNextLevel: nextLevel,
+    onLevelSelect: showLevelSelect,
+    onWin: (moveCount: number) => {
+      const level    = getCurrentLevel(currentLevelIndex);
+      const minMoves = level.meta.minMoves;
+      let stars = 1;
+      if (minMoves !== null && minMoves > 0) {
+        const twoStarThreshold = minMoves + Math.max(2, Math.floor(minMoves * 0.5));
+        if (moveCount <= minMoves)             stars = 3;
+        else if (moveCount <= twoStarThreshold) stars = 2;
+      }
+      const remainingLayers = Array.from(gameState.connections.values())
+        .reduce((sum, c) => sum + c.layers, 0);
+      completedLevel(currentLevelIndex, stars);
+      setTimeout(() => {
+        playPuzzleComplete();
+        showCelebration({
+          levelName:      level.name,
+          levelNumber:    currentLevelIndex + 1,
+          moveCount,
+          minMoves,
+          stars,
+          remainingLayers,
+          targetLayers:   level.targetLayers,
+          onNextLevel:    () => { nextLevel();       },
+          onReplay:       () => { resetGame();        },
+          onLevelSelect:  () => { showLevelSelect();  },
+        });
+      }, 150);
+    },
+  });
+
+  requestAnimationFrame(loop);
+})();

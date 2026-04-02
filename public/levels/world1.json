@@ -1,0 +1,292 @@
+[
+  {
+    "id": "1-1",
+    "name": "First Line",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 1,
+      "minMoves": 1,
+      "solutionCount": 2,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-2",
+    "name": "Corner",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 1,
+      "minMoves": 2,
+      "solutionCount": 2,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-3",
+    "name": "Path",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 1,
+      "minMoves": 3,
+      "solutionCount": 2,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-4",
+    "name": "The Zigzag",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 2,
+      "minMoves": 3,
+      "solutionCount": 2,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-5",
+    "name": "Thick",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 2,
+      "minMoves": 2,
+      "solutionCount": 2,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-6",
+    "name": "Square",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 2,
+      "minMoves": 4,
+      "solutionCount": 8,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-7",
+    "name": "Diagonal",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 2], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 2,
+      "minMoves": 2,
+      "solutionCount": 2,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-8",
+    "name": "Mixed",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 3,
+      "minMoves": 4,
+      "solutionCount": null,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-9",
+    "name": "The Knot",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 4,
+      "minMoves": 7,
+      "solutionCount": null,
+      "requiresDraw": false
+    }
+  },
+  {
+    "id": "1-10",
+    "name": "Remnant",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 1,
+    "special": {
+      "forcedStart": null,
+      "forcedEnd": null,
+      "buttons": [],
+      "doors": []
+    },
+    "constraints": {
+      "moveLimit": null,
+      "timeLimit": null,
+      "liftPenalty": false
+    },
+    "meta": {
+      "difficulty": 3,
+      "minMoves": 4,
+      "solutionCount": null,
+      "requiresDraw": false
+    }
+  }
+]

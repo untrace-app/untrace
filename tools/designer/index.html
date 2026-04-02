@@ -711,7 +711,7 @@ function sNbrs(col, row, n) {
   return r;
 }
 
-function sEuler(layers) {
+function sOddDegreeKeys(layers) {
   const deg = new Map();
   for (const [key, cnt] of layers) {
     if (!cnt) continue;
@@ -720,9 +720,14 @@ function sEuler(layers) {
     deg.set(a, (deg.get(a) || 0) + cnt);
     deg.set(b, (deg.get(b) || 0) + cnt);
   }
-  let odd = 0;
-  for (const v of deg.values()) if (v % 2) odd++;
-  return odd === 0 || odd === 2;
+  const result = [];
+  for (const [n, v] of deg) if (v % 2) result.push(n);
+  return result;
+}
+
+function sEuler(layers) {
+  const n = sOddDegreeKeys(layers).length;
+  return n === 0 || n === 2;
 }
 
 // ── Hierholzer helpers ────────────────────────────────────────────────────────
@@ -826,14 +831,16 @@ function sCountPaths(adj, start, totalEdges, cap) {
   return dfs(start, 0);
 }
 
-function sGreedyEuler(initLayers) {
+function sGreedyEuler(initLayers, forcedStartKey = null) {
   // Build expanded adjacency list: each layer on an edge becomes a separate entry.
   // This lets Hierholzer's traverse multi-layer edges correctly (one traversal per layer).
   const adj  = sBuildAdj(initLayers);
   const odds = sOddNodes(adj);
 
   let startNode = '';
-  if (odds.length === 2) {
+  if (forcedStartKey !== null && adj.has(forcedStartKey)) {
+    startNode = forcedStartKey;
+  } else if (odds.length === 2) {
     startNode = odds[0];
   } else {
     for (const [n, nb] of adj) { if (nb.length) { startNode = n; break; } }
@@ -877,25 +884,54 @@ function runSolver(level) {
   const euler      = sEuler(initL);
   let minRem = startTotal;
 
+  const fs = level.special?.forcedStart ?? null;
+  const fe = level.special?.forcedEnd   ?? null;
+  const fsKey = fs ? `${fs[0]},${fs[1]}` : null;
+  const feKey = fe ? `${fe[0]},${fe[1]}` : null;
+
+  const initOddKeys = sOddDegreeKeys(initL);
+  const fsIsValidEulerStart =
+    fsKey === null ||
+    initOddKeys.length === 0 ||
+    initOddKeys.includes(fsKey);
+
   const visited = new Set();
   const queue   = [];
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++) {
-      const p = [c, r];
-      const h = sHash(initL, p);
-      if (!visited.has(h)) {
-        visited.add(h);
-        queue.push({ L: initL, p, moves: [], draw: false });
+  if (fs !== null) {
+    const p = [fs[0], fs[1]];
+    visited.add(sHash(initL, p));
+    queue.push({ L: initL, p, moves: [], draw: false });
+  } else {
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) {
+        const p = [c, r];
+        const h = sHash(initL, p);
+        if (!visited.has(h)) {
+          visited.add(h);
+          queue.push({ L: initL, p, moves: [], draw: false });
+        }
       }
-    }
+  }
 
   // ── Hierholzer fast path ───────────────────────────────────────────────────
   if (euler && target === 0 && startTotal > 0 && sAllSingle(initL) && sIsConnected(initL)) {
+    if (fsKey !== null && !fsIsValidEulerStart) {
+      // forcedStart is not a valid Euler start; fall through to BFS.
+    } else {
     const adj  = sBuildAdj(initL);
     const odds = sOddNodes(adj);
 
     let startNode = '';
-    if (odds.length === 2) {
+    if (fsKey !== null && adj.has(fsKey)) {
+      startNode = fsKey;
+    } else if (feKey !== null) {
+      if (odds.length === 2) {
+        startNode = odds.find(n => n !== feKey) ?? odds[0];
+      } else {
+        startNode = adj.has(feKey) ? feKey : '';
+        if (!startNode) { for (const [n, nb] of adj) { if (nb.length) { startNode = n; break; } } }
+      }
+    } else if (odds.length === 2) {
       startNode = odds[0];
     } else {
       for (const [n, nb] of adj) { if (nb.length) { startNode = n; break; } }
@@ -903,24 +939,45 @@ function runSolver(level) {
 
     const pathNodes = sHierholzer(adj, startNode);
     const sample    = sPathToMoves(pathNodes);
+    const pathEnd   = pathNodes.length > 0 ? pathNodes[pathNodes.length - 1] : '';
 
-    const startNodes = odds.length === 2
-      ? odds
-      : Array.from(adj.keys()).filter(n => (adj.get(n)?.length ?? 0) > 0);
+    if (feKey === null || pathEnd === feKey) {
+      let countNodes;
+      if (fsKey !== null && adj.has(fsKey)) {
+        if (feKey !== null) {
+          const compatible = odds.length === 2
+            ? feKey === odds.find(n => n !== fsKey)
+            : feKey === fsKey;
+          countNodes = compatible ? [fsKey] : [];
+        } else {
+          countNodes = [fsKey];
+        }
+      } else if (feKey !== null) {
+        countNodes = odds.length === 2
+          ? odds.filter(n => n !== feKey)
+          : (adj.has(feKey) ? [feKey] : []);
+      } else {
+        countNodes = odds.length === 2
+          ? odds
+          : Array.from(adj.keys()).filter(n => (adj.get(n)?.length ?? 0) > 0);
+      }
 
-    let eulerCount = 0;
-    for (const sn of startNodes) {
-      eulerCount += sCountPaths(adj, sn, startTotal, 100 - eulerCount);
-      if (eulerCount >= 100) { eulerCount = 100; break; }
+      let eulerCount = 0;
+      for (const sn of countNodes) {
+        eulerCount += sCountPaths(adj, sn, startTotal, 100 - eulerCount);
+        if (eulerCount >= 100) { eulerCount = 100; break; }
+      }
+
+      const diff = sDifficulty(sample.length, eulerCount, false);
+      return {
+        solvable: true, minMoves: sample.length, solutionCount: eulerCount,
+        requiresDraw: false, difficulty: diff, sampleSolution: sample,
+        minRemainingLayers: 0, eulerSolvable: true,
+        statesExplored: 0, hitStateLimit: false,
+      };
     }
-
-    const diff = sDifficulty(sample.length, eulerCount, false);
-    return {
-      solvable: true, minMoves: sample.length, solutionCount: eulerCount,
-      requiresDraw: false, difficulty: diff, sampleSolution: sample,
-      minRemainingLayers: 0, eulerSolvable: true,
-      statesExplored: 0, hitStateLimit: false,
-    };
+    // feKey not satisfied; fall through to BFS.
+    } // end else (fsIsValidEulerStart)
   }
 
   // ── Greedy multi-layer Euler fast path ────────────────────────────────────
@@ -928,14 +985,23 @@ function runSolver(level) {
   // Uses Hierholzer's on the expanded adjacency list (each layer = separate edge)
   // so it is guaranteed to find a solution — no null fallback needed.
   if (euler && target === 0 && startTotal > 0 && !sAllSingle(initL) && sIsConnected(initL)) {
-    const greedyMoves = sGreedyEuler(initL);
-    const diff = sDifficulty(greedyMoves.length, 1, false);
-    return {
-      solvable: true, minMoves: greedyMoves.length, solutionCount: null,
-      requiresDraw: false, difficulty: diff, sampleSolution: greedyMoves,
-      minRemainingLayers: 0, eulerSolvable: true,
-      statesExplored: 0, hitStateLimit: false,
-    };
+    if (fsKey !== null && !fsIsValidEulerStart) {
+      // forcedStart is not a valid Euler start; fall through to BFS.
+    } else {
+      const greedyMoves = sGreedyEuler(initL, fsKey);
+      const lastMove  = greedyMoves[greedyMoves.length - 1];
+      const lastToKey = lastMove ? `${lastMove.to[0]},${lastMove.to[1]}` : '';
+      if (feKey === null || lastToKey === feKey) {
+        const diff = sDifficulty(greedyMoves.length, 1, false);
+        return {
+          solvable: true, minMoves: greedyMoves.length, solutionCount: null,
+          requiresDraw: false, difficulty: diff, sampleSolution: greedyMoves,
+          minRemainingLayers: 0, eulerSolvable: true,
+          statesExplored: 0, hitStateLimit: false,
+        };
+      }
+      // feKey not satisfied; fall through to BFS.
+    }
   }
 
   const CAP  = 100;
@@ -949,6 +1015,9 @@ function runSolver(level) {
     if (rem < minRem) minRem = rem;
 
     if (rem <= target) {
+      // If forcedEnd is set the player must be on that dot.
+      if (feKey !== null && `${p[0]},${p[1]}` !== feKey) continue;
+
       solvable = true;
       const mc = moves.length;
       if (minMoves === null || mc < minMoves) {
@@ -977,8 +1046,9 @@ function runSolver(level) {
   }
 
   // Euler fast-path: solvability is mathematically guaranteed when the graph
-  // satisfies the Euler path/circuit condition and targetLayers is 0.
-  if (!solvable && euler && target === 0) {
+  // satisfies the Euler path/circuit condition and targetLayers is 0 — unless
+  // forcedStart is set to an invalid Euler starting node.
+  if (!solvable && euler && target === 0 && fsIsValidEulerStart) {
     solvable = true;
     // minMoves and sample remain null — BFS exhausted before finding the path.
   }
@@ -1056,7 +1126,7 @@ function runVerify() {
     showResults(res, null);
 
     document.getElementById('btn-export').disabled   = !res.solvable;
-    document.getElementById('btn-solution').disabled  = !(res.solvable && res.sampleSolution);
+    document.getElementById('btn-solution').disabled  = !(res.solvable && res.sampleSolution != null);
     btn.textContent = 'Verify';
     btn.disabled    = false;
   }, 12);
@@ -1190,7 +1260,7 @@ function stopSolution() {
 
   document.getElementById('btn-stop').style.display = 'none';
   // Re-enable only if we still have a valid result
-  document.getElementById('btn-solution').disabled = !(lastResult && lastResult.solvable && lastResult.sampleSolution);
+  document.getElementById('btn-solution').disabled = !(lastResult && lastResult.solvable && lastResult.sampleSolution != null);
 
   render();
 }
@@ -1234,6 +1304,8 @@ function runExport() {
   document.getElementById('sel-start').addEventListener('change', onStartChange);
   document.getElementById('sel-end').addEventListener('change', onEndChange);
 
+  // Sync gridN with the dropdown's current value (browser may remember a previous selection).
+  gridN = parseInt(document.getElementById('sel-size').value, 10) || 3;
   populateDotSelectors();
   render();
 }());

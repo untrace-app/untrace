@@ -5,10 +5,14 @@ import { playUndo } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
 
 export interface OverlayCallbacks {
-  onUndo:       () => void;
-  onRedo:       () => void;
-  onReset:      () => void;
-  onNextLevel:  () => void;
+  onUndo:        () => void;
+  onRedo:        () => void;
+  onReset:       () => void;
+  onNextLevel:   () => void;
+  /** Called when the player taps the level-select back button (after confirmation if needed). */
+  onLevelSelect: () => void;
+  /** If provided, the built-in "Solved!" win card is suppressed and this is called instead. */
+  onWin?:        (moveCount: number) => void;
 }
 
 // ─── Module-level refs updated by updateOverlay ───────────────────────────────
@@ -25,6 +29,11 @@ interface WinOverlay { show: (moveCount: number) => void; hide: () => void; }
 let winOverlay: WinOverlay | null = null;
 let prevSolved = false;
 
+// Cached for the level-select back button's confirmation check.
+let _cachedMoveCount  = 0;
+let _onLevelSelect:   (() => void) | null = null;
+let _onWin:           ((moveCount: number) => void) | null = null;
+
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 
 const SVG_OPEN  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">';
@@ -33,6 +42,10 @@ const SVG_CLOSE = '</svg>';
 const UNDO_ICON  = `${SVG_OPEN}<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.5"/>${SVG_CLOSE}`;
 const REDO_ICON  = `${SVG_OPEN}<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.5"/>${SVG_CLOSE}`;
 const RESET_ICON = `${SVG_OPEN}<polyline points="1 4 1 10 7 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>${SVG_CLOSE}`;
+const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">'
+  + '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'
+  + '<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
+  + '</svg>';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
@@ -67,6 +80,26 @@ const BTN_INLINE = [
   'align-items:center',
   'justify-content:center',
   `background:${BG}`,
+  'border:none',
+  'border-radius:12px',
+  'color:#ffffff',
+  'cursor:pointer',
+  'padding:0',
+  '-webkit-tap-highlight-color:transparent',
+  'touch-action:manipulation',
+  'outline:none',
+  'transition:opacity 0.15s ease',
+].join(';');
+
+// Larger inline button for the back/level-select button specifically.
+const BTN_INLINE_BACK = [
+  'width:48px',
+  'height:48px',
+  'flex-shrink:0',
+  'display:flex',
+  'align-items:center',
+  'justify-content:center',
+  'background:rgba(255,255,255,0.1)',
   'border:none',
   'border-radius:12px',
   'color:#ffffff',
@@ -140,6 +173,64 @@ function buildResetDialog(ui: HTMLElement, onConfirm: () => void): () => void {
   btnRow.appendChild(cancelBtn);
   btnRow.appendChild(confirmBtn);
   card.appendChild(text);
+  card.appendChild(btnRow);
+  backdrop.appendChild(card);
+  ui.appendChild(backdrop);
+
+  return () => { backdrop.style.display = 'flex'; };
+}
+
+// ─── Leave level confirmation dialog ─────────────────────────────────────────
+
+function buildLeaveDialog(ui: HTMLElement, onConfirm: () => void): () => void {
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = [
+    'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.55)',
+    'display:none', 'align-items:center', 'justify-content:center', 'z-index:12',
+  ].join(';');
+
+  const card = document.createElement('div');
+  card.style.cssText = [
+    'background:rgba(18,18,30,0.97)', 'border-radius:16px',
+    'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
+    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+  ].join(';');
+
+  const text = document.createElement('p');
+  text.textContent = 'Return to level select?';
+  text.style.cssText = 'color:#ffffff;font-size:16px;font-weight:500;margin:0 0 6px;line-height:1.4;';
+
+  const sub = document.createElement('p');
+  sub.textContent = 'Progress on this level will be lost.';
+  sub.style.cssText = 'color:rgba(255,255,255,0.45);font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;';
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:12px;';
+
+  const DIALOG_BTN = [
+    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:10px',
+    'font-size:15px', 'font-weight:500', 'cursor:pointer',
+    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent', 'color:#ffffff',
+  ].join(';');
+
+  const stayBtn = document.createElement('button');
+  stayBtn.textContent = 'Stay';
+  stayBtn.style.cssText = `${DIALOG_BTN};background:rgba(255,255,255,0.12);`;
+
+  const leaveBtn = document.createElement('button');
+  leaveBtn.textContent = 'Leave';
+  leaveBtn.style.cssText = `${DIALOG_BTN};background:#ff6b6b;`;
+
+  function hide(): void { backdrop.style.display = 'none'; }
+  backdrop.addEventListener('click', hide);
+  card.addEventListener('click', (e) => e.stopPropagation());
+  stayBtn.addEventListener('click', hide);
+  leaveBtn.addEventListener('click', () => { hide(); onConfirm(); });
+
+  btnRow.appendChild(stayBtn);
+  btnRow.appendChild(leaveBtn);
+  card.appendChild(text);
+  card.appendChild(sub);
   card.appendChild(btnRow);
   backdrop.appendChild(card);
   ui.appendChild(backdrop);
@@ -244,13 +335,14 @@ export function setLevelIndicator(text: string): void {
 export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void {
   const ui = document.getElementById('ui')!;
 
+  // Cache callbacks needed by updateOverlay and the back button.
+  _onLevelSelect = callbacks.onLevelSelect;
+  _onWin         = callbacks.onWin ?? null;
+
   // ── Top bar: true three-column flex row ─────────────────────────────────
-  // Left (flex:1): level indicator — grows to fill left half.
+  // Left (flex:1): back button + level indicator — grows to fill left half.
   // Center (flex:0): move counter — natural width, stays centered.
   // Right (flex:1, end-aligned): reset button — grows to fill right half.
-  // flex:1 on both sides means equal remaining space on each side of the
-  // natural-width center item, achieving true centering at any screen width.
-  // Fully opaque background covers any elements rendered behind it.
 
   const topBar = document.createElement('div');
   topBar.style.cssText = [
@@ -270,14 +362,33 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'user-select:none', 'pointer-events:none',
   ].join(';');
 
-  // Left column — level indicator.
-  levelIndicatorEl = document.createElement('div');
-  levelIndicatorEl.style.cssText = `${LABEL_STYLE};flex:1;`;
-  levelIndicatorEl.textContent = '';
+  // Left column — back button only.
+  const leftCol = document.createElement('div');
+  leftCol.style.cssText = 'flex:1;display:flex;align-items:center;';
 
-  // Center column — move counter (top) + optional target indicator (below).
+  const showLeaveDialog = buildLeaveDialog(ui, () => _onLevelSelect?.());
+  const backBtn = document.createElement('button');
+  backBtn.style.cssText = BTN_INLINE_BACK;
+  backBtn.innerHTML = LEVELS_ICON;
+  backBtn.setAttribute('aria-label', 'Level select');
+  backBtn.addEventListener('click', () => {
+    console.log('[overlay] back button pressed, moveCount =', _cachedMoveCount);
+    if (_cachedMoveCount > 0) {
+      showLeaveDialog();
+    } else {
+      _onLevelSelect?.();
+    }
+  });
+  leftCol.appendChild(backBtn);
+
+  // Center column — level indicator (top) + move counter + optional target indicator.
   const centerCol = document.createElement('div');
   centerCol.style.cssText = 'flex:0;display:flex;flex-direction:column;align-items:center;gap:2px;';
+
+  levelIndicatorEl = document.createElement('div');
+  levelIndicatorEl.style.cssText = `${LABEL_STYLE}`;
+  levelIndicatorEl.textContent = '';
+  centerCol.appendChild(levelIndicatorEl);
 
   moveCounterEl = document.createElement('div');
   moveCounterEl.style.cssText = `${LABEL_STYLE};flex:0;`;
@@ -300,7 +411,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   resetBtn.addEventListener('click', showResetDialog);
   rightCol.appendChild(resetBtn);
 
-  topBar.appendChild(levelIndicatorEl);
+  topBar.appendChild(leftCol);
   topBar.appendChild(centerCol);
   topBar.appendChild(rightCol);
   ui.appendChild(topBar);
@@ -319,20 +430,21 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   redoBtnEl.addEventListener('click', () => { callbacks.onRedo(); playUndo(); });
   ui.appendChild(redoBtnEl);
 
-  // ── Win overlay ──────────────────────────────────────────────────────────
-  winOverlay  = buildWinOverlay(ui, callbacks.onNextLevel, callbacks.onReset);
-  prevSolved  = false;
+  // ── Win overlay (only when onWin is not provided) ────────────────────────
+  winOverlay = _onWin ? null : buildWinOverlay(ui, callbacks.onNextLevel, callbacks.onReset);
+  prevSolved = false;
 
   updateOverlay(state, _levelIndex, _levelTotal);
 }
 
 /** Call every frame to keep counter and button states current. */
 export function updateOverlay(state: GameState, levelIndex: number, levelTotal: number): void {
-  _levelIndex = levelIndex;
-  _levelTotal = levelTotal;
+  _levelIndex      = levelIndex;
+  _levelTotal      = levelTotal;
+  _cachedMoveCount = state.moveCount;
 
   if (levelIndicatorEl !== null) {
-    levelIndicatorEl.textContent = `Level ${levelIndex + 1}/${levelTotal}`;
+    levelIndicatorEl.textContent = `Level ${levelIndex + 1}`;
   }
 
   if (moveCounterEl !== null) {
@@ -351,9 +463,15 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
 
   const solved = checkWin(state);
 
-  if (winOverlay !== null) {
-    if (solved && !prevSolved) winOverlay.show(state.moveCount);
-    if (!solved && prevSolved) winOverlay.hide();
+  if (solved && !prevSolved) {
+    if (_onWin !== null) {
+      _onWin(state.moveCount);
+    } else if (winOverlay !== null) {
+      winOverlay.show(state.moveCount);
+    }
+  }
+  if (!solved && prevSolved && winOverlay !== null) {
+    winOverlay.hide();
   }
   prevSolved = solved;
 

@@ -3,6 +3,7 @@
 import type { GameState } from '../types.ts';
 import { SNAP_RADIUS, INPUT_DEBOUNCE_MS } from '../constants.ts';
 import { checkWin } from './logic.ts';
+import { triggerWrongDotFlash } from './animations.ts';
 
 type GridToPixel = (col: number, row: number) => { x: number; y: number };
 type OnMove = (from: [number, number], to: [number, number]) => void;
@@ -163,7 +164,10 @@ export function initInput(
     // Lock to the last dot only after the player has committed at least one move.
     // Before any move (moveCount === 0), any dot is freely selectable as a start.
     if (state.moveCount > 0 && state.playerDot !== null && !state.isTracing) {
-      if (snapped[0] !== state.playerDot[0] || snapped[1] !== state.playerDot[1]) return;
+      if (snapped[0] !== state.playerDot[0] || snapped[1] !== state.playerDot[1]) {
+        triggerWrongDotFlash(snapped[0], snapped[1]);
+        return;
+      }
     }
 
     activePointerId = e.pointerId;
