@@ -80,6 +80,85 @@ untrace/
 | Accidental flash   | #FF4444 |
 | UI text            | #FFFFFF |
 | UI text secondary  | #8888AA |
+| Star (earned)      | #FFD700 |
+| Star (empty)       | #333344 |
+| Success/win        | #4ECDC4 |
+| Warning/confirm    | #FF6B6B |
+| Button background  | rgba(255,255,255,0.08) |
+| Button hover       | rgba(255,255,255,0.15) |
+| Card background    | #141420 |
+| Card border        | rgba(255,255,255,0.06) |
+| Overlay backdrop   | rgba(0,0,0,0.75) |
+
+## Design Tokens
+
+### Typography
+- Font family: system-ui, -apple-system, "Segoe UI", sans-serif
+- Level title (top bar): 16px, weight 600, white
+- Move counter: 16px, weight 600, white
+- Reduce indicator number: 14px, weight 600, white
+- Reduce indicator label: 10px, weight 400, #8888AA
+- Celebration title: 28px, weight 700, white
+- Celebration stats: 16px, weight 500, white
+- Celebration stats secondary: 14px, weight 400, #8888AA
+- Button text (primary): 16px, weight 600, white
+- Button text (secondary): 14px, weight 500, #8888AA
+- Level select title "Untrace": 32px, weight 700, white
+- Level select world name: 14px, weight 500, #8888AA
+- Level circle number: 18px, weight 600, white
+- Level circle number (locked): 18px, weight 600, #333344
+
+### Spacing
+- Top bar height: 48px
+- Top bar horizontal padding: 12px
+- Bottom bar height: 56px
+- Bottom bar horizontal padding: 16px
+- Grid margin from screen edge: 15% of smaller dimension
+- Card padding: 24px
+- Card gap between elements: 16px
+- Button internal padding: 12px 24px
+- Level select grid gap: 12px
+- Level circle size: 72px
+
+### Corners
+- Buttons: 12px border-radius
+- Cards and modals: 16px border-radius
+- Level circles: 16px border-radius
+- Icon buttons (grid, reset): 10px border-radius
+- Dots: fully round
+
+### Opacity and Effects
+- Disabled buttons: 0.3 opacity
+- Locked levels: 0.4 opacity
+- Ghost trail: 0.4 opacity, fades to 0
+- Modal backdrop: 0.75 opacity
+- Inactive UI text: 0.6 opacity
+- Icon buttons background: rgba(255,255,255,0.08)
+- Line glow: 4px blur, same color as line at 60% opacity
+- Dot glow (active): 8px blur, white at 50% opacity
+- Card shadow: 0 8px 32px rgba(0,0,0,0.5)
+
+### Touch Targets
+- Minimum: 44x44px
+- Preferred: 48x48px
+- Level circles: 72x72px
+
+### Animations
+- Page transitions: 250ms ease-out
+- Card appear: 300ms ease-out, scale 0.95 to 1.0 + fade in
+- Card dismiss: 200ms ease-in, fade out
+- Star appear: staggered 200ms delay between each, scale 0 to 1 with bounce ease
+- Button press: scale 0.96 for 100ms
+- Glow pulse (locked dot): 1s ease-in-out infinite alternate, radius 1x to 1.8x
+
+### Visual Identity Rules
+- Lines are the light source. They glow against the dark background.
+- Every line has a subtle glow: 4px blur shadow in the line's own color at 60% opacity.
+- Dots have a faint inner glow, not a flat circle. Active dots are bright white with a soft radial glow.
+- No hard borders anywhere in the UI. Use subtle rgba borders (rgba(255,255,255,0.06)) or shadows instead.
+- No pure white backgrounds. Darkest surface is #0A0A0F, cards are #141420, elevated elements are #1A1A2E.
+- All transitions use ease-out. Nothing should feel snappy or mechanical.
+- The game should feel like glowing threads on a dark surface. Every visual decision supports this metaphor.
 
 ## Audio Pitch Map (Layer Erase)
 
