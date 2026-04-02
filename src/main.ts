@@ -12,14 +12,30 @@ import { GRID_FILL_RATIO } from './constants.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;
+const boardBgEl = document.getElementById('board-bg')!;
+
+function resizeBoardBg(): void {
+  const iw   = window.innerWidth;
+  const ih   = window.innerHeight;
+  // Grid span + 40px padding on each side so outermost dots aren't clipped.
+  const size = Math.min(iw, ih) * GRID_FILL_RATIO + 80;
+  // Center matches the renderer's grid center (full-screen midpoint).
+  const left = (iw - size) / 2;
+  const top  = (ih - size) / 2;
+  boardBgEl.style.width  = `${size}px`;
+  boardBgEl.style.height = `${size}px`;
+  boardBgEl.style.left   = `${left}px`;
+  boardBgEl.style.top    = `${top}px`;
+}
 
 function resize(): void {
   const dpr = window.devicePixelRatio ?? 1;
-  canvas.width = Math.floor(window.innerWidth * dpr);
+  canvas.width  = Math.floor(window.innerWidth  * dpr);
   canvas.height = Math.floor(window.innerHeight * dpr);
-  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.width  = `${window.innerWidth}px`;
   canvas.style.height = `${window.innerHeight}px`;
   ctx.scale(dpr, dpr);
+  resizeBoardBg();
 }
 
 resize();
@@ -292,13 +308,14 @@ function loop(time: number): void {
 
   // Initialise level-select before loadLevel so setCurrentLevel works immediately.
   initLevelSelect((index) => {
-    // Reveal canvas and start gameplay when a level is tapped.
-    canvas.style.opacity = '1';
+    // Reveal canvas, show board background, and start gameplay when a level is tapped.
+    canvas.style.opacity      = '1';
+    boardBgEl.style.display   = 'block';
     loadLevel(index);
   });
 
   loadLevel(0);
-  showLevelSelect(); // Show level select on app start.
+  showLevelSelect(); // Show level select on app start (board-bg stays hidden).
 
   // Dismiss the splash cover once the level-select transition has completed.
   // showLevelSelect() uses a double rAF + 0.22s CSS transition, so wait for
@@ -353,7 +370,7 @@ function loop(time: number): void {
     onReset: resetGame,
     // onNextLevel is unused when onWin is provided, but required by the interface.
     onNextLevel: nextLevel,
-    onLevelSelect: showLevelSelect,
+    onLevelSelect: () => { boardBgEl.style.display = 'none'; showLevelSelect(); },
     onWin: (moveCount: number) => {
       const level    = getCurrentLevel(currentLevelIndex);
       clearSave(level.id);
@@ -379,7 +396,7 @@ function loop(time: number): void {
           targetLayers:   level.targetLayers,
           onNextLevel:    () => { nextLevel();       },
           onReplay:       () => { resetGame();        },
-          onLevelSelect:  () => { showLevelSelect();  },
+          onLevelSelect:  () => { boardBgEl.style.display = 'none'; showLevelSelect(); },
         });
       }, 150);
     },

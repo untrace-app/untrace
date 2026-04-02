@@ -286,10 +286,10 @@ function _drawLockedDotPulse(
   const phase = (performance.now() % 1000) / 1000; // 0..1 over 1 s
   const t     = (Math.sin(phase * Math.PI * 2) + 1) / 2; // 0..1..0
   const glowR = DOT_RADIUS * (1.0 + 0.8 * t);             // 1× → 1.8×
-  const alpha = 0.10 + 0.25 * t;
+  const alpha = 0.35 * t;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = '#993c49';
   ctx.beginPath();
   ctx.arc(x, y, glowR, 0, Math.PI * 2);
   ctx.fill();

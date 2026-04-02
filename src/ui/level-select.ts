@@ -4,7 +4,12 @@ import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+const FONT         = "'Manrope', system-ui, sans-serif";
+const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
+const C_TEXT       = '#2e2f2c';
+const C_TEXT_SEC   = '#888780';
+const C_RECESSED   = '#e9e8e4';
+const C_PRIMARY    = '#993c49';
 const LS_UNLOCKED = 'untrace_unlocked'; // highest unlocked level index (0-based)
 const LS_STARS    = 'untrace_stars';    // JSON object: { [levelId]: starCount (0–3) }
 
@@ -44,22 +49,21 @@ function persistStars(levelIndex: number, stars: number): void {
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
-let overlayEl:       HTMLDivElement    | null = null;
-let gridEl:          HTMLDivElement    | null = null;
-let activeLevelIdx   = 0;
-let onSelectCb:      ((index: number) => void) | null = null;
+let overlayEl:  HTMLDivElement | null = null;
+let gridEl:     HTMLDivElement | null = null;
+let onSelectCb: ((index: number) => void) | null = null;
 
 // ─── Star dots row ────────────────────────────────────────────────────────────
 
 function makeStarDots(count: number): HTMLElement {
   const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:4px;align-items:center;height:8px;';
+  row.style.cssText = 'display:flex;gap:3px;align-items:center;height:8px;';
   for (let i = 0; i < 3; i++) {
     const dot = document.createElement('div');
     const filled = i < count;
     dot.style.cssText = [
       'width:5px', 'height:5px', 'border-radius:50%', 'flex-shrink:0',
-      `background:${filled ? '#4ECDC4' : 'rgba(255,255,255,0.14)'}`,
+      `background:${filled ? '#DAA520' : '#d3d1c7'}`,
     ].join(';');
     row.appendChild(dot);
   }
@@ -70,101 +74,120 @@ function makeStarDots(count: number): HTMLElement {
 
 function renderGrid(): void {
   if (!gridEl) return;
-  const count      = getLevelCount();
-  const starsMap   = loadStars();
-  const unlockedTo = loadUnlockedUpTo();
+  const count    = getLevelCount();
+  const starsMap = loadStars();
+
+  // Unlock logic: level 0 always unlocked; each subsequent level requires
+  // the previous level to have at least 1 star saved.
+  function isUnlocked(i: number): boolean {
+    if (i === 0) return true;
+    return (starsMap[getCurrentLevel(i - 1).id] ?? 0) > 0;
+  }
+
+  // "Current" level: the first unlocked-but-not-yet-completed level.
+  // This gets the accent highlight (state 2).
+  let currentIdx = -1;
+  for (let i = 0; i < count; i++) {
+    if (isUnlocked(i) && (starsMap[getCurrentLevel(i).id] ?? 0) === 0) {
+      currentIdx = i;
+      break;
+    }
+  }
 
   gridEl.innerHTML = '';
 
   for (let i = 0; i < count; i++) {
     const levelData = getCurrentLevel(i);
-    const isLocked  = i > unlockedTo;
-    const isActive  = i === activeLevelIdx;
+    const locked    = !isUnlocked(i);
     const stars     = starsMap[levelData.id] ?? 0;
     const completed = stars > 0;
+    const isCurrent = i === currentIdx;
 
     // ── Cell wrapper ─────────────────────────────────────────────────────────
     const cell = document.createElement('div');
     cell.style.cssText = [
       'display:flex', 'flex-direction:column', 'align-items:center', 'gap:7px',
-      `cursor:${isLocked ? 'default' : 'pointer'}`,
+      `cursor:${locked ? 'default' : 'pointer'}`,
       '-webkit-tap-highlight-color:transparent',
       'touch-action:manipulation',
     ].join(';');
 
-    // ── Circle ───────────────────────────────────────────────────────────────
-    const circle = document.createElement('div');
-
-    let bg: string;
-    let border: string;
+    // ── Rounded-square tile ───────────────────────────────────────────────────
+    // Four states:
+    //   1. Completed  – #e9e8e4 bg, #2e2f2c text, no border, star dots
+    //   2. Current    – #ffffff bg, #993c49 text, 2px #993c49 border, no stars
+    //   3. Unlocked   – #ffffff bg, #2e2f2c text, 1px #d3d1c7 border, no stars
+    //   4. Locked     – #e9e8e4 bg @ 0.4 opacity, lock icon, no stars
+    const tile = document.createElement('div');
+    let bg:        string;
+    let border:    string;
     let textColor: string;
 
-    if (isLocked) {
-      bg        = 'rgba(255,255,255,0.02)';
-      border    = '1.5px solid rgba(255,255,255,0.07)';
-      textColor = 'rgba(255,255,255,0.18)';
-    } else if (isActive) {
-      bg        = 'rgba(78,205,196,0.14)';
-      border    = '1.5px solid #4ECDC4';
-      textColor = '#4ECDC4';
+    if (locked) {
+      bg        = C_RECESSED;
+      border    = 'none';
+      textColor = '#b4b2a9';
     } else if (completed) {
-      bg        = 'rgba(255,255,255,0.06)';
-      border    = '1.5px solid rgba(255,255,255,0.22)';
-      textColor = '#FFFFFF';
+      bg        = C_RECESSED;
+      border    = 'none';
+      textColor = C_TEXT;
+    } else if (isCurrent) {
+      bg        = '#ffffff';
+      border    = `2px solid ${C_PRIMARY}`;
+      textColor = C_PRIMARY;
     } else {
-      bg        = 'rgba(255,255,255,0.03)';
-      border    = '1.5px solid rgba(255,255,255,0.1)';
-      textColor = 'rgba(255,255,255,0.65)';
+      bg        = '#ffffff';
+      border    = '1px solid #d3d1c7';
+      textColor = C_TEXT;
     }
 
-    circle.style.cssText = [
+    tile.style.cssText = [
       'width:62px', 'height:62px',
-      'border-radius:50%',
+      'border-radius:16px',
       `background:${bg}`,
       `border:${border}`,
       'display:flex', 'align-items:center', 'justify-content:center',
       'flex-shrink:0',
-      'transition:transform 0.12s ease, border-color 0.12s ease, background 0.12s ease',
+      locked ? 'opacity:0.4' : 'opacity:1',
+      'transition:transform 0.12s ease',
     ].join(';');
 
-    if (isLocked) {
-      circle.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" `
-        + `stroke="${textColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`
-        + `<rect x="3" y="11" width="18" height="11" rx="2"/>`
-        + `<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+    if (locked) {
+      tile.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
+        + 'stroke="#888780" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+        + '<rect x="3" y="11" width="18" height="11" rx="2"/>'
+        + '<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     } else {
       const num = document.createElement('span');
       num.textContent = String(i + 1);
       num.style.cssText = [
         `color:${textColor}`,
-        'font-size:18px', 'font-weight:600',
-        `font-family:${FONT}`,
+        'font-size:18px', 'font-weight:700',
+        `font-family:${FONT_HEADING}`,
         'line-height:1', 'user-select:none',
       ].join(';');
-      circle.appendChild(num);
+      tile.appendChild(num);
     }
 
-    // ── Interaction ──────────────────────────────────────────────────────────
-    if (!isLocked) {
-      cell.addEventListener('pointerdown', () => {
-        circle.style.transform = 'scale(0.94)';
-      });
-      cell.addEventListener('pointerup', () => {
-        circle.style.transform = 'scale(1)';
-      });
-      cell.addEventListener('pointercancel', () => {
-        circle.style.transform = 'scale(1)';
-      });
+    // ── Interaction (unlocked only) ───────────────────────────────────────────
+    if (!locked) {
+      cell.addEventListener('pointerdown',   () => { tile.style.transform = 'scale(0.94)'; });
+      cell.addEventListener('pointerup',     () => { tile.style.transform = 'scale(1)'; });
+      cell.addEventListener('pointercancel', () => { tile.style.transform = 'scale(1)'; });
       cell.addEventListener('click', () => {
-        if (onSelectCb) {
-          hideLevelSelect();
-          onSelectCb(i);
-        }
+        if (onSelectCb) { hideLevelSelect(); onSelectCb(i); }
       });
     }
 
-    cell.appendChild(circle);
-    cell.appendChild(makeStarDots(isLocked ? 0 : stars));
+    cell.appendChild(tile);
+    // Show star dots only for completed levels; spacer keeps grid alignment.
+    if (completed) {
+      cell.appendChild(makeStarDots(stars));
+    } else {
+      const spacer = document.createElement('div');
+      spacer.style.cssText = 'height:8px;';
+      cell.appendChild(spacer);
+    }
     gridEl.appendChild(cell);
   }
 }
@@ -175,7 +198,7 @@ function buildOverlay(ui: HTMLElement): void {
   overlayEl = document.createElement('div');
   overlayEl.style.cssText = [
     'position:fixed', 'inset:0',
-    'background:#0A0A0F',
+    'background:#f8f6f2',
     'z-index:50',
     'display:flex', 'flex-direction:column',
     'overflow:hidden',
@@ -198,16 +221,16 @@ function buildOverlay(ui: HTMLElement): void {
   const title = document.createElement('h1');
   title.textContent = 'Untrace';
   title.style.cssText = [
-    'color:#FFFFFF',
+    `color:${C_TEXT}`,
     'font-size:34px', 'font-weight:700', 'letter-spacing:-0.03em',
-    `font-family:${FONT}`, 'line-height:1',
+    `font-family:${FONT_HEADING}`, 'line-height:1',
     'margin:0 0 6px', 'user-select:none',
   ].join(';');
 
   const worldLabel = document.createElement('p');
   worldLabel.style.cssText = [
-    'color:rgba(255,255,255,0.38)',
-    'font-size:12px', 'font-weight:600', 'letter-spacing:0.1em',
+    `color:${C_TEXT_SEC}`,
+    'font-size:12px', 'font-weight:500', 'letter-spacing:0.08em',
     'text-transform:uppercase',
     `font-family:${FONT}`,
     'margin:0', 'user-select:none',
@@ -233,7 +256,7 @@ function buildOverlay(ui: HTMLElement): void {
   const divider = document.createElement('div');
   divider.style.cssText = [
     'height:1px',
-    'background:linear-gradient(90deg,rgba(78,205,196,0.35) 0%,rgba(78,205,196,0.08) 60%,transparent 100%)',
+    `background:${C_RECESSED}`,
     'flex-shrink:0',
     'margin:0 28px',
   ].join(';');
@@ -306,8 +329,9 @@ export function initLevelSelect(onSelect: (index: number) => void): void {
  * Tell level-select which level is currently loaded so it can highlight it.
  * Call inside loadLevel() in main.ts.
  */
-export function setCurrentLevel(index: number): void {
-  activeLevelIdx = index;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function setCurrentLevel(_index: number): void {
+  // Current level is now derived from star data in renderGrid(); no state needed here.
 }
 
 /**

@@ -3,6 +3,7 @@
 import type { GameState } from '../types.ts';
 import { playUndo } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
+import { getCurrentLevel } from '../levels/levels.ts';
 
 export interface OverlayCallbacks {
   onUndo:        () => void;
@@ -23,6 +24,7 @@ let moveCounterEl:        HTMLElement | null = null;
 let remainingIndicatorEl: HTMLElement | null = null;
 let _reduceNumEl:         HTMLElement | null = null;
 let levelIndicatorEl:     HTMLElement | null = null;
+let levelNameEl:          HTMLElement | null = null;
 // targetIndicatorEl removed — target value is now shown inline inside remainingIndicatorEl.
 let _levelIndex = 0;
 let _levelTotal = 1;
@@ -47,7 +49,7 @@ const SVG_CLOSE = '</svg>';
 
 const UNDO_ICON  = `${SVG_OPEN}<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.5"/>${SVG_CLOSE}`;
 const REDO_ICON  = `${SVG_OPEN}<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.5"/>${SVG_CLOSE}`;
-const RESET_ICON = `${SVG_OPEN}<polyline points="1 4 1 10 7 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>${SVG_CLOSE}`;
+const RESET_ICON = '<svg width="18" height="18" viewBox="0 0 512 512" fill="#888780"><path d="M65.9 228.5c13.3-93 93.4-164.5 190.1-164.5 53 0 101 21.5 135.8 56.2 .2 .2 .4 .4 .6 .6l7.6 7.2-47.9 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 53.4-11.3-10.7C390.5 28.6 326.5 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1zm443.5 64c2.5-17.5-9.7-33.7-27.1-36.2s-33.7 9.7-36.2 27.1c-13.3 93-93.4 164.5-190.1 164.5-53 0-101-21.5-135.8-56.2-.2-.2-.4-.4-.6-.6l-7.6-7.2 47.9 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 320c-8.5 0-16.7 3.4-22.7 9.5S-.1 343.7 0 352.3l1 127c.1 17.7 14.6 31.9 32.3 31.7S65.2 496.4 65 478.7l-.4-51.5 10.7 10.1c46.3 46.1 110.2 74.7 180.7 74.7 129 0 235.7-95.4 253.4-219.5z"/></svg>';
 const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">'
   + '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'
   + '<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
@@ -55,29 +57,14 @@ const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
-const BG   = 'rgba(10,10,20,0.72)';
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+const FONT         = "'Manrope', system-ui, sans-serif";
+const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
+const C_TEXT       = '#2e2f2c';
+const C_TEXT_SEC   = '#888780';
+const C_RECESSED   = '#e9e8e4';
+const GRAD_PRIMARY = 'linear-gradient(135deg, #993c49, #ff8c98)';
 
-const BTN_BASE = [
-  'position:fixed',
-  'width:44px',
-  'height:44px',
-  'display:flex',
-  'align-items:center',
-  'justify-content:center',
-  `background:${BG}`,
-  'border:none',
-  'border-radius:12px',
-  'color:#ffffff',
-  'cursor:pointer',
-  'padding:0',
-  '-webkit-tap-highlight-color:transparent',
-  'touch-action:manipulation',
-  'outline:none',
-  'transition:opacity 0.15s ease',
-].join(';');
-
-// Inline button for use inside the top bar (no position:fixed).
+// Inline button for use inside the top/bottom bar (no position:fixed).
 const BTN_INLINE = [
   'width:44px',
   'height:44px',
@@ -85,19 +72,19 @@ const BTN_INLINE = [
   'display:flex',
   'align-items:center',
   'justify-content:center',
-  `background:${BG}`,
+  `background:${C_RECESSED}`,
   'border:none',
-  'border-radius:12px',
-  'color:#ffffff',
+  'border-radius:9999px',
+  `color:${C_TEXT}`,
   'cursor:pointer',
   'padding:0',
   '-webkit-tap-highlight-color:transparent',
   'touch-action:manipulation',
   'outline:none',
-  'transition:opacity 0.15s ease',
+  'transition:opacity 0.2s ease-out',
 ].join(';');
 
-// Larger inline button for the back/level-select button specifically.
+// Back/level-select button — slightly larger tap target.
 const BTN_INLINE_BACK = [
   'width:48px',
   'height:48px',
@@ -105,25 +92,47 @@ const BTN_INLINE_BACK = [
   'display:flex',
   'align-items:center',
   'justify-content:center',
-  'background:rgba(255,255,255,0.1)',
+  `background:${C_RECESSED}`,
   'border:none',
-  'border-radius:12px',
-  'color:#ffffff',
+  'border-radius:9999px',
+  `color:${C_TEXT}`,
   'cursor:pointer',
   'padding:0',
   '-webkit-tap-highlight-color:transparent',
   'touch-action:manipulation',
   'outline:none',
-  'transition:opacity 0.15s ease',
+  'transition:opacity 0.2s ease-out',
 ].join(';');
 
-function makeBtn(icon: string, label: string): HTMLButtonElement {
-  const btn = document.createElement('button');
-  btn.style.cssText = BTN_BASE;
-  btn.innerHTML = icon;
-  btn.setAttribute('aria-label', label);
-  return btn;
-}
+// Shared dialog card style.
+const CARD_STYLE = [
+  'background:#ffffff',
+  'border-radius:24px',
+  'padding:28px 24px 24px',
+  'max-width:280px',
+  'width:calc(100% - 48px)',
+  'text-align:center',
+  `font-family:${FONT}`,
+  'box-shadow:0 8px 32px rgba(46,47,44,0.06)',
+].join(';');
+
+// Shared dialog backdrop style (base; display set per-use).
+const BACKDROP_STYLE_BASE = [
+  'position:fixed', 'inset:0',
+  'background:rgba(248,246,242,0.85)',
+  'backdrop-filter:blur(20px)',
+  '-webkit-backdrop-filter:blur(20px)',
+  'align-items:center', 'justify-content:center',
+].join(';');
+
+// Shared dialog button base.
+const DIALOG_BTN_BASE = [
+  'flex:1', 'padding:13px 0', 'border:none', 'border-radius:9999px',
+  'font-size:15px', 'font-weight:600', 'cursor:pointer',
+  `font-family:${FONT}`,
+  'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
+  'transition:opacity 0.2s ease-out',
+].join(';');
 
 function makeInlineBtn(icon: string, label: string): HTMLButtonElement {
   const btn = document.createElement('button');
@@ -137,38 +146,25 @@ function makeInlineBtn(icon: string, label: string): HTMLButtonElement {
 
 function buildResetDialog(ui: HTMLElement, onConfirm: () => void): () => void {
   const backdrop = document.createElement('div');
-  backdrop.style.cssText = [
-    'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.55)',
-    'display:none', 'align-items:center', 'justify-content:center', 'z-index:10',
-  ].join(';');
+  backdrop.style.cssText = `${BACKDROP_STYLE_BASE};display:none;z-index:10;`;
 
   const card = document.createElement('div');
-  card.style.cssText = [
-    'background:rgba(18,18,30,0.97)', 'border-radius:16px',
-    'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
-    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
-  ].join(';');
+  card.style.cssText = CARD_STYLE;
 
   const text = document.createElement('p');
   text.textContent = 'Reset this puzzle?';
-  text.style.cssText = 'color:#ffffff;font-size:16px;font-weight:500;margin:0 0 24px;line-height:1.4;';
+  text.style.cssText = `color:${C_TEXT};font-size:16px;font-weight:600;margin:0 0 24px;line-height:1.4;font-family:${FONT_HEADING};`;
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:12px;';
-
-  const DIALOG_BTN = [
-    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:10px',
-    'font-size:15px', 'font-weight:500', 'cursor:pointer',
-    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent', 'color:#ffffff',
-  ].join(';');
+  btnRow.style.cssText = 'display:flex;gap:10px;';
 
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
-  cancelBtn.style.cssText = `${DIALOG_BTN};background:rgba(255,255,255,0.12);`;
+  cancelBtn.style.cssText = `${DIALOG_BTN_BASE};background:${C_RECESSED};color:${C_TEXT};`;
 
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = 'Reset';
-  confirmBtn.style.cssText = `${DIALOG_BTN};background:#ff6b6b;`;
+  confirmBtn.style.cssText = `${DIALOG_BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;`;
 
   function hide(): void { backdrop.style.display = 'none'; }
   backdrop.addEventListener('click', hide);
@@ -190,42 +186,29 @@ function buildResetDialog(ui: HTMLElement, onConfirm: () => void): () => void {
 
 function buildLeaveDialog(ui: HTMLElement, onConfirm: () => void): () => void {
   const backdrop = document.createElement('div');
-  backdrop.style.cssText = [
-    'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.55)',
-    'display:none', 'align-items:center', 'justify-content:center', 'z-index:12',
-  ].join(';');
+  backdrop.style.cssText = `${BACKDROP_STYLE_BASE};display:none;z-index:12;`;
 
   const card = document.createElement('div');
-  card.style.cssText = [
-    'background:rgba(18,18,30,0.97)', 'border-radius:16px',
-    'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
-    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
-  ].join(';');
+  card.style.cssText = CARD_STYLE;
 
   const text = document.createElement('p');
   text.textContent = 'Return to level select?';
-  text.style.cssText = 'color:#ffffff;font-size:16px;font-weight:500;margin:0 0 6px;line-height:1.4;';
+  text.style.cssText = `color:${C_TEXT};font-size:16px;font-weight:600;margin:0 0 6px;line-height:1.4;font-family:${FONT_HEADING};`;
 
   const sub = document.createElement('p');
   sub.textContent = 'Progress on this level will be lost.';
-  sub.style.cssText = 'color:rgba(255,255,255,0.45);font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;';
+  sub.style.cssText = `color:${C_TEXT_SEC};font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;`;
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:12px;';
-
-  const DIALOG_BTN = [
-    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:10px',
-    'font-size:15px', 'font-weight:500', 'cursor:pointer',
-    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent', 'color:#ffffff',
-  ].join(';');
+  btnRow.style.cssText = 'display:flex;gap:10px;';
 
   const stayBtn = document.createElement('button');
   stayBtn.textContent = 'Stay';
-  stayBtn.style.cssText = `${DIALOG_BTN};background:rgba(255,255,255,0.12);`;
+  stayBtn.style.cssText = `${DIALOG_BTN_BASE};background:${C_RECESSED};color:${C_TEXT};`;
 
   const leaveBtn = document.createElement('button');
   leaveBtn.textContent = 'Leave';
-  leaveBtn.style.cssText = `${DIALOG_BTN};background:#ff6b6b;`;
+  leaveBtn.style.cssText = `${DIALOG_BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;`;
 
   function hide(): void { backdrop.style.display = 'none'; }
   backdrop.addEventListener('click', hide);
@@ -252,52 +235,50 @@ function buildWinOverlay(
   onReplay: () => void,
 ): WinOverlay {
   const backdrop = document.createElement('div');
-  backdrop.style.cssText = [
-    'position:fixed', 'inset:0',
-    'display:none', 'align-items:center', 'justify-content:center',
-    'z-index:20',
-  ].join(';');
+  backdrop.style.cssText = `${BACKDROP_STYLE_BASE};display:none;z-index:20;`;
 
   const card = document.createElement('div');
   card.style.cssText = [
-    'background:rgba(18,18,30,0.97)',
-    'border-radius:20px',
+    'background:#ffffff',
+    'border-radius:24px',
     'padding:36px 28px 28px',
     'max-width:300px',
     'width:calc(100% - 48px)',
     'text-align:center',
     `font-family:${FONT}`,
-    'box-shadow:0 12px 48px rgba(0,0,0,0.75)',
+    'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
     'will-change:opacity,transform',
   ].join(';');
 
   const title = document.createElement('p');
   title.textContent = 'Solved!';
   title.style.cssText = [
-    'color:#ffffff', 'font-size:34px', 'font-weight:700',
+    `color:${C_TEXT}`, 'font-size:34px', 'font-weight:700',
     'margin:0 0 8px', 'letter-spacing:-0.01em',
+    `font-family:${FONT_HEADING}`,
   ].join(';');
 
   const movesEl = document.createElement('p');
   movesEl.style.cssText = [
-    'color:rgba(255,255,255,0.5)', 'font-size:15px',
+    `color:${C_TEXT_SEC}`, 'font-size:15px',
     'font-weight:400', 'margin:0 0 28px',
   ].join(';');
 
   const WIN_BTN = [
-    'width:100%', 'padding:14px 0', 'border:none', 'border-radius:12px',
+    'width:100%', 'padding:14px 0', 'border:none', 'border-radius:9999px',
     'font-size:16px', 'font-weight:600', 'cursor:pointer',
     'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
-    'color:#ffffff', 'display:block', 'box-sizing:border-box',
+    'display:block', 'box-sizing:border-box',
+    `font-family:${FONT}`,
   ].join(';');
 
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next Level';
-  nextBtn.style.cssText = `${WIN_BTN};background:#4ECDC4;margin-bottom:12px;`;
+  nextBtn.style.cssText = `${WIN_BTN};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
 
   const replayBtn = document.createElement('button');
   replayBtn.textContent = 'Replay';
-  replayBtn.style.cssText = `${WIN_BTN};background:rgba(255,255,255,0.12);`;
+  replayBtn.style.cssText = `${WIN_BTN};background:${C_RECESSED};color:${C_TEXT};`;
 
   nextBtn.addEventListener('click',   () => { hide(); onNextLevel(); });
   replayBtn.addEventListener('click', () => { hide(); onReplay();    });
@@ -356,16 +337,17 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'height:60px',
     'display:flex', 'align-items:center', 'justify-content:space-between',
     'padding:0 16px',
-    'background:#0A0A14',
+    'background:#f8f6f2',
     'z-index:5',
     `font-family:${FONT}`,
     'box-sizing:border-box',
   ].join(';');
 
   const LABEL_STYLE = [
-    'color:#ffffff', 'font-size:14px', 'font-weight:500',
-    'letter-spacing:0.04em', 'white-space:nowrap',
+    `color:${C_TEXT}`, 'font-size:14px', 'font-weight:600',
+    'letter-spacing:0.02em', 'white-space:nowrap',
     'user-select:none', 'pointer-events:none',
+    `font-family:${FONT_HEADING}`,
   ].join(';');
 
   // Left column — back button only.
@@ -391,10 +373,23 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   const centerCol = document.createElement('div');
   centerCol.style.cssText = 'flex:0;display:flex;align-items:center;';
 
+  const levelLabelWrap = document.createElement('div');
+  levelLabelWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
+
   levelIndicatorEl = document.createElement('div');
   levelIndicatorEl.style.cssText = `${LABEL_STYLE}`;
   levelIndicatorEl.textContent = '';
-  centerCol.appendChild(levelIndicatorEl);
+
+  levelNameEl = document.createElement('div');
+  levelNameEl.style.cssText = [
+    `font-family:${FONT}`, 'font-size:12px', 'font-weight:400',
+    `color:${C_TEXT_SEC}`, 'user-select:none', 'pointer-events:none',
+    'white-space:nowrap', 'line-height:1',
+  ].join(';');
+
+  levelLabelWrap.appendChild(levelIndicatorEl);
+  levelLabelWrap.appendChild(levelNameEl);
+  centerCol.appendChild(levelLabelWrap);
 
   // Right column — reset button, right-aligned inside its flex:1 container.
   const rightCol = document.createElement('div');
@@ -416,6 +411,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'height:80px',
     'display:flex', 'align-items:center', 'justify-content:space-between',
     'padding:0 24px',
+    'background:#f8f6f2',
     `font-family:${FONT}`,
     'box-sizing:border-box',
   ].join(';');
@@ -439,7 +435,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   remainingIndicatorEl.style.cssText = [
     'position:absolute', 'bottom:calc(100% + 10px)', 'left:50%', 'transform:translateX(-50%)',
     'display:none', 'flex-direction:column', 'align-items:center', 'gap:1px',
-    'color:rgba(255,255,255,0.55)', 'transition:color 0.15s ease',
+    `color:${C_TEXT_SEC}`, 'transition:color 0.15s ease',
     'white-space:nowrap',
   ].join(';');
 
@@ -484,6 +480,12 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
     levelIndicatorEl.textContent = `Level ${levelIndex + 1}`;
   }
 
+  if (levelNameEl !== null) {
+    const name = getCurrentLevel(levelIndex)?.name ?? '';
+    levelNameEl.textContent = name || '';
+    levelNameEl.style.display = name ? 'block' : 'none';
+  }
+
   if (moveCounterEl !== null) {
     moveCounterEl.textContent = `Moves: ${state.moveCount}`;
   }
@@ -502,18 +504,18 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
       remainingIndicatorEl.style.display = 'flex';
       if (justMet) {
         remainingIndicatorEl.style.transition = 'color 0.1s ease';
-        remainingIndicatorEl.style.color      = '#4ECDC4';
+        remainingIndicatorEl.style.color      = '#6cb5a4';
         setTimeout(() => {
           if (remainingIndicatorEl) {
             remainingIndicatorEl.style.transition = 'color 0.5s ease';
             remainingIndicatorEl.style.color      = goalMet
-              ? 'rgba(78,205,196,0.75)'
-              : 'rgba(255,255,255,0.55)';
+              ? '#6cb5a4'
+              : C_TEXT_SEC;
           }
         }, 400);
       } else if (!goalMet) {
         remainingIndicatorEl.style.transition = 'color 0.3s ease';
-        remainingIndicatorEl.style.color      = 'rgba(255,255,255,0.55)';
+        remainingIndicatorEl.style.color      = C_TEXT_SEC;
       }
     }
 

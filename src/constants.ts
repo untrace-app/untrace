@@ -2,18 +2,18 @@
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
-export const COLOR_BACKGROUND = '#0A0A0F';
+export const COLOR_BACKGROUND = '#f8f6f2';
 
 // Dots
-export const COLOR_DOT_INACTIVE = '#2A2A35';
-export const COLOR_DOT_ACTIVE   = '#FFFFFF';
+export const COLOR_DOT_INACTIVE = '#d3d1c7';
+export const COLOR_DOT_ACTIVE   = '#993c49';
 
 // Layer colors (index 1–5 maps to red–white)
-export const COLOR_LAYER_RED    = '#FF6B6B';
-export const COLOR_LAYER_AMBER  = '#FFB347';
-export const COLOR_LAYER_TEAL   = '#4ECDC4';
-export const COLOR_LAYER_VIOLET = '#9B6BFF';
-export const COLOR_LAYER_WHITE  = '#E8E8F0';
+export const COLOR_LAYER_RED    = '#e07a7a';
+export const COLOR_LAYER_AMBER  = '#e8b76e';
+export const COLOR_LAYER_TEAL   = '#6cb5a4';
+export const COLOR_LAYER_VIOLET = '#9b8bc7';
+export const COLOR_LAYER_WHITE  = '#b4b2a9';
 
 // Ordered array: index 0 unused (0 = empty), indices 1–5 match layer numbers
 export const LAYER_COLORS: readonly string[] = [
@@ -26,11 +26,11 @@ export const LAYER_COLORS: readonly string[] = [
 ];
 
 // Feedback
-export const COLOR_ACCIDENTAL_FLASH = '#FF4444';
+export const COLOR_ACCIDENTAL_FLASH = '#cc5555';
 
 // UI text
-export const COLOR_UI_TEXT           = '#FFFFFF';
-export const COLOR_UI_TEXT_SECONDARY = '#8888AA';
+export const COLOR_UI_TEXT           = '#2e2f2c';
+export const COLOR_UI_TEXT_SECONDARY = '#888780';
 
 // ─── Sizes ────────────────────────────────────────────────────────────────────
 

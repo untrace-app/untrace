@@ -1,6 +1,11 @@
 // Win celebration screen (Phase 3)
 
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+const FONT         = "'Manrope', system-ui, sans-serif";
+const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
+const C_TEXT       = '#2e2f2c';
+const C_TEXT_SEC   = '#888780';
+const C_RECESSED   = '#e9e8e4';
+const GRAD_PRIMARY = 'linear-gradient(135deg, #993c49, #ff8c98)';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,20 +38,21 @@ export function initCelebration(): void {
     'display:none',
     'align-items:center', 'justify-content:center',
     'z-index:30',
-    'background:rgba(10,10,15,0.85)',
+    'background:rgba(248,246,242,0.85)',
+    'backdrop-filter:blur(20px)',
+    '-webkit-backdrop-filter:blur(20px)',
   ].join(';');
 
   cardEl = document.createElement('div');
   cardEl.style.cssText = [
-    'background:rgba(16,16,28,0.98)',
-    'border:1px solid rgba(255,255,255,0.08)',
+    'background:#ffffff',
     'border-radius:24px',
     'padding:32px 28px 24px',
     'max-width:320px',
     'width:calc(100% - 48px)',
     'text-align:center',
     `font-family:${FONT}`,
-    'box-shadow:0 24px 64px rgba(0,0,0,0.75)',
+    'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
     'will-change:opacity,transform',
     'opacity:0',
     'transform:scale(0.88)',
@@ -89,21 +95,20 @@ export function showCelebration(params: CelebrationParams): void {
   const checkEl = document.createElement('div');
   checkEl.style.cssText = [
     'width:48px', 'height:48px', 'border-radius:50%',
-    'background:rgba(78,205,196,0.12)',
-    'border:1.5px solid rgba(78,205,196,0.35)',
+    'background:#fff0f1',
     'display:flex', 'align-items:center', 'justify-content:center',
     'margin:0 auto 14px',
   ].join(';');
   checkEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" '
-    + 'stroke="#4ECDC4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+    + 'stroke="#993c49" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
     + '<polyline points="20 6 9 17 4 12"/></svg>';
 
   // Level name
   const nameEl = document.createElement('p');
   nameEl.textContent = params.levelName;
   nameEl.style.cssText = [
-    'color:rgba(255,255,255,0.4)',
-    'font-size:11px', 'font-weight:600', 'letter-spacing:0.1em',
+    `color:${C_TEXT_SEC}`,
+    'font-size:11px', 'font-weight:500', 'letter-spacing:0.08em',
     'text-transform:uppercase', 'margin:0 0 4px', 'user-select:none',
   ].join(';');
 
@@ -111,9 +116,10 @@ export function showCelebration(params: CelebrationParams): void {
   const titleEl = document.createElement('p');
   titleEl.textContent = 'Level Cleared';
   titleEl.style.cssText = [
-    'color:#FFFFFF',
+    `color:${C_TEXT}`,
     'font-size:26px', 'font-weight:700', 'letter-spacing:-0.02em',
     'margin:0 0 18px', 'user-select:none',
+    `font-family:${FONT_HEADING}`,
   ].join(';');
 
   // Stars row
@@ -130,8 +136,8 @@ export function showCelebration(params: CelebrationParams): void {
       'transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease',
     ].join(';');
     star.innerHTML = filled
-      ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
-      : '<svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+      ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="#e8b76e" stroke="#e8b76e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      : `<svg width="28" height="28" viewBox="0 0 24 24" fill="${C_RECESSED}" stroke="#d3d1c7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
     starsRow.appendChild(star);
     starEls.push(star);
   }
@@ -139,8 +145,8 @@ export function showCelebration(params: CelebrationParams): void {
   // Stats pill
   const statsEl = document.createElement('div');
   statsEl.style.cssText = [
-    'background:rgba(255,255,255,0.04)',
-    'border-radius:12px', 'padding:12px 16px',
+    `background:${C_RECESSED}`,
+    'border-radius:16px', 'padding:14px 16px',
     'margin:0 0 22px',
     'display:flex', 'justify-content:space-around',
   ].join(';');
@@ -150,11 +156,11 @@ export function showCelebration(params: CelebrationParams): void {
     cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;';
     const v = document.createElement('span');
     v.textContent = value;
-    v.style.cssText = 'color:#FFFFFF;font-size:22px;font-weight:700;line-height:1;user-select:none;';
+    v.style.cssText = `color:${C_TEXT};font-size:22px;font-weight:700;line-height:1;user-select:none;font-family:${FONT_HEADING};`;
     const l = document.createElement('span');
     l.textContent = label;
     l.style.cssText = [
-      'color:rgba(255,255,255,0.38)', 'font-size:10px', 'font-weight:600',
+      `color:${C_TEXT_SEC}`, 'font-size:10px', 'font-weight:500',
       'letter-spacing:0.08em', 'text-transform:uppercase', 'user-select:none',
     ].join(';');
     cell.appendChild(v);
@@ -170,7 +176,7 @@ export function showCelebration(params: CelebrationParams): void {
   // ── Buttons ───────────────────────────────────────────────────────────────
   const BTN_BASE = [
     'width:100%', 'padding:14px 0',
-    'border:none', 'border-radius:12px',
+    'border:none', 'border-radius:9999px',
     'font-size:15px', 'font-weight:600', 'cursor:pointer',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'display:block', 'box-sizing:border-box',
@@ -181,17 +187,17 @@ export function showCelebration(params: CelebrationParams): void {
 
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next Level';
-  nextBtn.style.cssText = `${BTN_BASE};background:#4ECDC4;color:#0A0A14;margin-bottom:10px;`;
+  nextBtn.style.cssText = `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
   nextBtn.addEventListener('click', () => dismiss(onNextLevel));
 
   const replayBtn = document.createElement('button');
   replayBtn.textContent = 'Replay';
-  replayBtn.style.cssText = `${BTN_BASE};background:rgba(255,255,255,0.1);color:#FFFFFF;margin-bottom:10px;`;
+  replayBtn.style.cssText = `${BTN_BASE};background:${C_RECESSED};color:${C_TEXT};margin-bottom:10px;`;
   replayBtn.addEventListener('click', () => dismiss(onReplay));
 
   const selectBtn = document.createElement('button');
   selectBtn.textContent = 'Level Select';
-  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:rgba(255,255,255,0.42);margin-bottom:0;`;
+  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT_SEC};margin-bottom:0;`;
   selectBtn.addEventListener('click', () => dismiss(onLevelSelect));
 
   cardEl.appendChild(checkEl);

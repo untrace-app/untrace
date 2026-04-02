@@ -2,7 +2,6 @@
 
 import type { GameState } from '../types.ts';
 import {
-  COLOR_BACKGROUND,
   COLOR_DOT_INACTIVE,
   COLOR_DOT_ACTIVE,
   LAYER_COLORS,
@@ -128,9 +127,8 @@ export function render(
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
 
-  // Clear to background.
-  ctx.fillStyle = COLOR_BACKGROUND;
-  ctx.fillRect(0, 0, w, h);
+  // Clear to transparent so the board-bg div shows through behind the canvas.
+  ctx.clearRect(0, 0, w, h);
 
   const layout = computeLayout(canvas, state.grid.cols, state.grid.rows);
 
@@ -160,7 +158,7 @@ export function render(
   if (state.isTracing && state.playerDot !== null && rawPointer !== null) {
     const from = gridToPixel(state.playerDot[0], state.playerDot[1], layout);
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.strokeStyle = 'rgba(136, 135, 128, 0.6)'; // #888780 at 60% opacity
     ctx.lineWidth   = 2;
     ctx.lineCap     = 'round';
     ctx.beginPath();
