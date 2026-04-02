@@ -158,7 +158,9 @@ export const TEST_LEVELS: readonly LevelData[] = [
       { from: [1, 0], to: [1, 1], layers: 1 }, // 2-5
     ],
     special: NO_SPECIAL, constraints: OPEN, targetLayers: 1,
-    meta: { difficulty: 3, minMoves: 4, solutionCount: null, requiresDraw: false },
+    // NOTE: meta values (minMoves, solutionCount, minRemainingLayers, eulerSolvable) must
+    // match solver output exactly. Do not hand-edit them — run the solver and copy results.
+    meta: { difficulty: 3, minMoves: 2, solutionCount: null, requiresDraw: false },
   },
 
 ];

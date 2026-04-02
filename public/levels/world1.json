@@ -284,7 +284,7 @@
     },
     "meta": {
       "difficulty": 3,
-      "minMoves": 4,
+      "minMoves": 2,
       "solutionCount": null,
       "requiresDraw": false
     }

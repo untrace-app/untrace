@@ -556,6 +556,7 @@ Not fully specced. Key items for future PRDs:
 - Premium unlock ($3.99) to remove ads and unlock all content
 - Ad integration (interstitial between levels, never during gameplay)
 - Community level editor (derived from internal designer tool)
+- **Procedural level generation:** Random walk algorithm for clear levels (walk = guaranteed solution), random graph + solver for reduce levels. Use for daily puzzles, endless mode, and bulk level screening. Worlds 1-4 remain hand-designed.
 - Global daily leaderboard (requires a lightweight backend, possibly Supabase)
 - Teleporters, mirrors, ice (new interactive element types)
 - Analytics (level completion rates, hint usage, drop-off points)

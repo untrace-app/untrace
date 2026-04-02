@@ -68,6 +68,108 @@ function updateLevelIndicator(): void {
   levelIndicatorEl.textContent = `Level ${currentLevelIndex + 1}/${total} — ${level.name}`;
 }
 
+// ─── Save state ───────────────────────────────────────────────────────────────
+
+interface SavedState {
+  levelId:     string;
+  connections: Array<[string, number]>; // [ConnectionKey, layers]
+  playerDot:   [number, number] | null;
+  moveCount:   number;
+}
+
+function _saveKey(levelId: string): string {
+  return 'untrace-save-' + levelId;
+}
+
+function saveGameState(levelId: string): void {
+  const data: SavedState = {
+    levelId,
+    connections: Array.from(gameState.connections, ([k, v]) => [k, v.layers] as [string, number]),
+    playerDot:   gameState.playerDot,
+    moveCount:   gameState.moveCount,
+  };
+  try { localStorage.setItem(_saveKey(levelId), JSON.stringify(data)); } catch { /* ignore */ }
+}
+
+function loadSave(levelId: string): SavedState | null {
+  try {
+    const raw = localStorage.getItem(_saveKey(levelId));
+    return raw ? (JSON.parse(raw) as SavedState) : null;
+  } catch { return null; }
+}
+
+function clearSave(levelId: string): void {
+  localStorage.removeItem(_saveKey(levelId));
+}
+
+function applySave(save: SavedState): void {
+  const connections = new Map<ConnectionKey, ConnectionState>();
+  for (const [k, layers] of save.connections) {
+    connections.set(k as ConnectionKey, { layers });
+  }
+  gameState.connections              = connections;
+  gameState.playerDot                = save.playerDot;
+  gameState.moveCount                = save.moveCount;
+  gameState.isTracing                = false;
+  gameState.undoStack                = [];
+  gameState.redoStack                = [];
+  gameState.currentStrokeConnections = new Set();
+}
+
+function showResumeDialog(levelId: string, save: SavedState): void {
+  const ui = document.getElementById('ui')!;
+
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = [
+    'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.65)',
+    'display:flex', 'align-items:center', 'justify-content:center', 'z-index:15',
+  ].join(';');
+
+  const card = document.createElement('div');
+  card.style.cssText = [
+    'background:rgba(18,18,30,0.97)', 'border-radius:16px',
+    'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
+    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+  ].join(';');
+
+  const title = document.createElement('p');
+  title.textContent = 'Resume where you left off?';
+  title.style.cssText = 'color:#ffffff;font-size:16px;font-weight:500;margin:0 0 6px;line-height:1.4;';
+
+  const sub = document.createElement('p');
+  sub.textContent = `${save.moveCount} move${save.moveCount === 1 ? '' : 's'} in progress`;
+  sub.style.cssText = 'color:rgba(255,255,255,0.45);font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;';
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:12px;';
+
+  const DIALOG_BTN = [
+    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:10px',
+    'font-size:15px', 'font-weight:500', 'cursor:pointer',
+    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
+  ].join(';');
+
+  function dismiss(): void { backdrop.remove(); }
+
+  const restartBtn = document.createElement('button');
+  restartBtn.textContent = 'Restart';
+  restartBtn.style.cssText = `${DIALOG_BTN};background:rgba(255,255,255,0.12);color:#ffffff;`;
+  restartBtn.addEventListener('click', () => { clearSave(levelId); dismiss(); });
+
+  const resumeBtn = document.createElement('button');
+  resumeBtn.textContent = 'Resume';
+  resumeBtn.style.cssText = `${DIALOG_BTN};background:#4ECDC4;color:#0A0A14;`;
+  resumeBtn.addEventListener('click', () => { applySave(save); dismiss(); });
+
+  btnRow.appendChild(restartBtn);
+  btnRow.appendChild(resumeBtn);
+  card.appendChild(title);
+  card.appendChild(sub);
+  card.appendChild(btnRow);
+  backdrop.appendChild(card);
+  ui.appendChild(backdrop);
+}
+
 // ─── Level loading ────────────────────────────────────────────────────────────
 
 // Snapshot of initial connections for the current level (used by resetGame).
@@ -106,9 +208,17 @@ function loadLevel(index: number): void {
   gameState.currentStrokeConnections  = new Set();
 
   updateLevelIndicator();
+
+  // If gameplay is already active (canvas visible), check for a mid-level save.
+  // Skips silently on the startup loadLevel(0) call when the canvas is still hidden.
+  if (canvas.style.opacity === '1') {
+    const save = loadSave(level.id);
+    if (save) showResumeDialog(level.id, save);
+  }
 }
 
 function resetGame(): void {
+  clearSave(getCurrentLevel(currentLevelIndex).id);
   gameState.connections = new Map<ConnectionKey, ConnectionState>(
     Array.from(initialConnections, ([k, v]): [ConnectionKey, ConnectionState] => [k, { ...v }])
   );
@@ -211,9 +321,13 @@ function loop(time: number): void {
 
     const layersAfter = gameState.connections.get(key)?.layers ?? 0;
     const won = checkWin(gameState);
+    const levelId = getCurrentLevel(currentLevelIndex).id;
+
+    // Persist progress after every non-winning move. Cleared in onWin.
+    if (!won) saveGameState(levelId);
 
     if (won) {
-      // Win sound and celebration card are both triggered after a 300ms delay
+      // Win sound and celebration card are both triggered after a 150ms delay
       // (see onWin callback below) so the final erase animation is visible first.
     } else if (layersBefore <= 0) {
       playAccidentalDraw();
@@ -242,6 +356,7 @@ function loop(time: number): void {
     onLevelSelect: showLevelSelect,
     onWin: (moveCount: number) => {
       const level    = getCurrentLevel(currentLevelIndex);
+      clearSave(level.id);
       const minMoves = level.meta.minMoves;
       let stars = 1;
       if (minMoves !== null && minMoves > 0) {

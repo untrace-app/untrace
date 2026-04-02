@@ -166,10 +166,6 @@ export function showCelebration(params: CelebrationParams): void {
   if (params.minMoves !== null) {
     statsEl.appendChild(statCell('Best', String(params.minMoves)));
   }
-  if (params.targetLayers !== undefined && params.targetLayers > 0) {
-    statsEl.appendChild(statCell('Remaining', String(params.remainingLayers ?? 0)));
-    statsEl.appendChild(statCell('Target', String(params.targetLayers)));
-  }
 
   // ── Buttons ───────────────────────────────────────────────────────────────
   const BTN_BASE = [

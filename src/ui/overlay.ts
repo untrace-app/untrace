@@ -17,11 +17,13 @@ export interface OverlayCallbacks {
 
 // ─── Module-level refs updated by updateOverlay ───────────────────────────────
 
-let undoBtnEl:         HTMLButtonElement | null = null;
-let redoBtnEl:         HTMLButtonElement | null = null;
-let moveCounterEl:     HTMLElement | null = null;
-let targetIndicatorEl: HTMLElement | null = null;
-let levelIndicatorEl:  HTMLElement | null = null;
+let undoBtnEl:            HTMLButtonElement | null = null;
+let redoBtnEl:            HTMLButtonElement | null = null;
+let moveCounterEl:        HTMLElement | null = null;
+let remainingIndicatorEl: HTMLElement | null = null;
+let _reduceNumEl:         HTMLElement | null = null;
+let levelIndicatorEl:     HTMLElement | null = null;
+// targetIndicatorEl removed — target value is now shown inline inside remainingIndicatorEl.
 let _levelIndex = 0;
 let _levelTotal = 1;
 
@@ -33,6 +35,10 @@ let prevSolved = false;
 let _cachedMoveCount  = 0;
 let _onLevelSelect:   (() => void) | null = null;
 let _onWin:           ((moveCount: number) => void) | null = null;
+
+// For the remaining-layers flash: track previous value to detect threshold crossing.
+let _prevRemaining    = Infinity;
+let _prevTargetLayers = -1;
 
 // ─── SVG icons ────────────────────────────────────────────────────────────────
 
@@ -381,27 +387,14 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   });
   leftCol.appendChild(backBtn);
 
-  // Center column — level indicator (top) + move counter + optional target indicator.
+  // Center column — level name only (single row, no stacking).
   const centerCol = document.createElement('div');
-  centerCol.style.cssText = 'flex:0;display:flex;flex-direction:column;align-items:center;gap:2px;';
+  centerCol.style.cssText = 'flex:0;display:flex;align-items:center;';
 
   levelIndicatorEl = document.createElement('div');
   levelIndicatorEl.style.cssText = `${LABEL_STYLE}`;
   levelIndicatorEl.textContent = '';
   centerCol.appendChild(levelIndicatorEl);
-
-  moveCounterEl = document.createElement('div');
-  moveCounterEl.style.cssText = `${LABEL_STYLE};flex:0;`;
-
-  targetIndicatorEl = document.createElement('div');
-  targetIndicatorEl.style.cssText = [
-    'color:rgba(255,255,255,0.55)', 'font-size:11px', 'font-weight:500',
-    'letter-spacing:0.04em', 'white-space:nowrap',
-    'user-select:none', 'pointer-events:none', 'display:none',
-  ].join(';');
-
-  centerCol.appendChild(moveCounterEl);
-  centerCol.appendChild(targetIndicatorEl);
 
   // Right column — reset button, right-aligned inside its flex:1 container.
   const rightCol = document.createElement('div');
@@ -416,19 +409,63 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   topBar.appendChild(rightCol);
   ui.appendChild(topBar);
 
-  // ── Undo button (bottom-left) ────────────────────────────────────────────
-  undoBtnEl = makeBtn(UNDO_ICON, 'Undo');
-  undoBtnEl.style.bottom = '24px';
-  undoBtnEl.style.left   = '24px';
-  undoBtnEl.addEventListener('click', () => callbacks.onUndo());
-  ui.appendChild(undoBtnEl);
+  // ── Bottom bar: undo | move counter (+ reduce indicator) | redo ──────────
+  const bottomBar = document.createElement('div');
+  bottomBar.style.cssText = [
+    'position:fixed', 'bottom:0', 'left:0', 'right:0',
+    'height:80px',
+    'display:flex', 'align-items:center', 'justify-content:space-between',
+    'padding:0 24px',
+    `font-family:${FONT}`,
+    'box-sizing:border-box',
+  ].join(';');
 
-  // ── Redo button (next to undo) ───────────────────────────────────────────
-  redoBtnEl = makeBtn(REDO_ICON, 'Redo');
-  redoBtnEl.style.bottom = '24px';
-  redoBtnEl.style.left   = '80px';
+  undoBtnEl = makeInlineBtn(UNDO_ICON, 'Undo');
+  undoBtnEl.addEventListener('click', () => callbacks.onUndo());
+
+  redoBtnEl = makeInlineBtn(REDO_ICON, 'Redo');
   redoBtnEl.addEventListener('click', () => { callbacks.onRedo(); playUndo(); });
-  ui.appendChild(redoBtnEl);
+
+  // Center cluster: moves counter is the in-flow anchor, always vertically centered.
+  // The reduce indicator floats above it via absolute positioning — never shifts the row.
+  const bottomCenter = document.createElement('div');
+  bottomCenter.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;';
+
+  moveCounterEl = document.createElement('div');
+  moveCounterEl.style.cssText = `${LABEL_STYLE}`;
+
+  // Reduce indicator: absolutely positioned above the moves counter, out of flow.
+  remainingIndicatorEl = document.createElement('div');
+  remainingIndicatorEl.style.cssText = [
+    'position:absolute', 'bottom:calc(100% + 10px)', 'left:50%', 'transform:translateX(-50%)',
+    'display:none', 'flex-direction:column', 'align-items:center', 'gap:1px',
+    'color:rgba(255,255,255,0.55)', 'transition:color 0.15s ease',
+    'white-space:nowrap',
+  ].join(';');
+
+  _reduceNumEl = document.createElement('div');
+  _reduceNumEl.style.cssText = [
+    'font-size:14px', 'font-weight:600', 'letter-spacing:0.04em',
+    'user-select:none', 'pointer-events:none',
+  ].join(';');
+
+  const reduceLblEl = document.createElement('div');
+  reduceLblEl.textContent = 'left / target';
+  reduceLblEl.style.cssText = [
+    'font-size:10px', 'font-weight:500', 'letter-spacing:0.06em',
+    'opacity:0.5', 'user-select:none', 'pointer-events:none',
+  ].join(';');
+
+  remainingIndicatorEl.appendChild(_reduceNumEl);
+  remainingIndicatorEl.appendChild(reduceLblEl);
+
+  bottomCenter.appendChild(moveCounterEl);
+  bottomCenter.appendChild(remainingIndicatorEl);
+
+  bottomBar.appendChild(undoBtnEl);
+  bottomBar.appendChild(bottomCenter);
+  bottomBar.appendChild(redoBtnEl);
+  ui.appendChild(bottomBar);
 
   // ── Win overlay (only when onWin is not provided) ────────────────────────
   winOverlay = _onWin ? null : buildWinOverlay(ui, callbacks.onNextLevel, callbacks.onReset);
@@ -451,14 +488,41 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
     moveCounterEl.textContent = `Moves: ${state.moveCount}`;
   }
 
-  if (targetIndicatorEl !== null) {
-    const t = state.targetLayers;
-    if (t > 0) {
-      targetIndicatorEl.textContent = `Target: ${t} line${t === 1 ? '' : 's'} left`;
-      targetIndicatorEl.style.display = 'block';
-    } else {
-      targetIndicatorEl.style.display = 'none';
+  const t = state.targetLayers;
+  if (t > 0) {
+    const remaining    = Array.from(state.connections.values()).reduce((sum, c) => sum + c.layers, 0);
+    const goalMet      = remaining <= t;
+    const levelChanged = t !== _prevTargetLayers;
+    const justMet      = goalMet && _prevRemaining > t && !levelChanged;
+
+    if (_reduceNumEl !== null) {
+      _reduceNumEl.textContent = `${remaining} / ${t}`;
     }
+    if (remainingIndicatorEl !== null) {
+      remainingIndicatorEl.style.display = 'flex';
+      if (justMet) {
+        remainingIndicatorEl.style.transition = 'color 0.1s ease';
+        remainingIndicatorEl.style.color      = '#4ECDC4';
+        setTimeout(() => {
+          if (remainingIndicatorEl) {
+            remainingIndicatorEl.style.transition = 'color 0.5s ease';
+            remainingIndicatorEl.style.color      = goalMet
+              ? 'rgba(78,205,196,0.75)'
+              : 'rgba(255,255,255,0.55)';
+          }
+        }, 400);
+      } else if (!goalMet) {
+        remainingIndicatorEl.style.transition = 'color 0.3s ease';
+        remainingIndicatorEl.style.color      = 'rgba(255,255,255,0.55)';
+      }
+    }
+
+    _prevRemaining    = levelChanged ? Infinity : remaining;
+    _prevTargetLayers = t;
+  } else {
+    if (remainingIndicatorEl !== null) remainingIndicatorEl.style.display = 'none';
+    _prevRemaining    = Infinity;
+    _prevTargetLayers = 0;
   }
 
   const solved = checkWin(state);
