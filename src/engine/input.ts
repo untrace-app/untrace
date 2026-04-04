@@ -12,6 +12,8 @@ type OnMove = (from: [number, number], to: [number, number]) => void;
 export interface InputState {
   /** Raw CSS-pixel position of the active pointer, or null when not tracing. */
   rawPointer: { x: number; y: number } | null;
+  /** Remove all pointer listeners from the canvas. */
+  destroy: () => void;
 }
 
 // ─── Nearest dot ─────────────────────────────────────────────────────────────
@@ -110,7 +112,11 @@ export function initInput(
   // Prevent the browser from claiming touch events for scrolling.
   canvas.style.touchAction = 'none';
 
-  const inputState: InputState = { rawPointer: null };
+  const ac = new AbortController();
+  const inputState: InputState = {
+    rawPointer: null,
+    destroy: () => ac.abort(),
+  };
 
   let currentDot: [number, number] | null = null;
   let activePointerId: number | null = null;
@@ -177,7 +183,7 @@ export function initInput(
     state.playerDot      = snapped;
     state.isTracing      = true;
     inputState.rawPointer = getPointerPos(e);
-  });
+  }, { signal: ac.signal });
 
   // ── pointermove ────────────────────────────────────────────────────────────
 
@@ -208,7 +214,7 @@ export function initInput(
         }
       }, INPUT_DEBOUNCE_MS - (now - lastMoveTime));
     }
-  });
+  }, { signal: ac.signal });
 
   // ── pointerup / pointercancel ──────────────────────────────────────────────
 
@@ -222,8 +228,8 @@ export function initInput(
     state.currentStrokeConnections = new Set();
   }
 
-  canvas.addEventListener('pointerup',     endStroke);
-  canvas.addEventListener('pointercancel', endStroke);
+  canvas.addEventListener('pointerup',     endStroke, { signal: ac.signal });
+  canvas.addEventListener('pointercancel', endStroke, { signal: ac.signal });
 
   return inputState;
 }

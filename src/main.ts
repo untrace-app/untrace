@@ -9,6 +9,7 @@ import { initCelebration, showCelebration, hideCelebration } from './ui/celebrat
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
 import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
 import { showLevelTransition } from './ui/level-transition.ts';
+import { isTutorialComplete, startTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO } from './constants.ts';
 
@@ -458,12 +459,19 @@ function loop(time: number): void {
   });
 
   loadLevel(0);
-  showLevelSelect();
 
   // Fade out splash, then remove it.
   splash.style.transition = 'opacity 0.3s ease';
   splash.style.opacity    = '0';
   setTimeout(() => { splash.style.display = 'none'; }, 300);
+
+  // Show tutorial on first launch, otherwise go straight to level select.
+  if (!isTutorialComplete()) {
+    levelIndicatorEl.style.display = 'none';
+    await startTutorial(canvas, ctx, boardBgEl);
+    levelIndicatorEl.style.display = '';
+  }
+  showLevelSelect();
 
   inputState = initInput(canvas, gridToPixel, gameState, (from, to) => {
     if (!inputEnabled) return;
