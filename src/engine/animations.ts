@@ -204,7 +204,7 @@ function _drawGhostTrail(
 
   // White ghost trail at 40% opacity, fading to 0 over 500ms.
   const alpha = 0.40 * (1 - t);
-  drawSegment(ctx, a.x, a.y, b.x, b.y, '#E8E8F0', LINE_WIDTH_BASE, alpha);
+  drawSegment(ctx, a.x, a.y, b.x, b.y, '#a68168', LINE_WIDTH_BASE, alpha);
 }
 
 function _drawShimmer(
@@ -289,7 +289,7 @@ function _drawLockedDotPulse(
   const alpha = 0.35 * t;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#993c49';
+  ctx.fillStyle = '#fb5607';
   ctx.beginPath();
   ctx.arc(x, y, glowR, 0, Math.PI * 2);
   ctx.fill();
@@ -309,7 +309,7 @@ function _drawWrongDot(
   const alpha  = 0.30 * (1 - t);
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#FF4444';
+  ctx.fillStyle = '#d4726a';
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();

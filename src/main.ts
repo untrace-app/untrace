@@ -153,30 +153,31 @@ function showResumeDialog(levelId: string, save: SavedState): void {
 
   const backdrop = document.createElement('div');
   backdrop.style.cssText = [
-    'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.65)',
+    'position:fixed', 'inset:0', 'background:rgba(255,237,205,0.85)',
+    'backdrop-filter:blur(20px)', '-webkit-backdrop-filter:blur(20px)',
     'display:flex', 'align-items:center', 'justify-content:center', 'z-index:15',
   ].join(';');
 
   const card = document.createElement('div');
   card.style.cssText = [
-    'background:rgba(18,18,30,0.97)', 'border-radius:16px',
+    'background:#ffffff', 'border-radius:24px',
     'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
-    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(46,47,44,0.06)',
   ].join(';');
 
   const title = document.createElement('p');
   title.textContent = 'Resume where you left off?';
-  title.style.cssText = 'color:#ffffff;font-size:16px;font-weight:500;margin:0 0 6px;line-height:1.4;';
+  title.style.cssText = 'color:#b17025;font-size:16px;font-weight:500;margin:0 0 6px;line-height:1.4;';
 
   const sub = document.createElement('p');
   sub.textContent = `${save.moveCount} move${save.moveCount === 1 ? '' : 's'} in progress`;
-  sub.style.cssText = 'color:rgba(255,255,255,0.45);font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;';
+  sub.style.cssText = 'color:#7f7c6c;font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;';
 
   const btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex;gap:12px;';
 
   const DIALOG_BTN = [
-    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:10px',
+    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:9999px',
     'font-size:15px', 'font-weight:500', 'cursor:pointer',
     'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
   ].join(';');
@@ -185,12 +186,12 @@ function showResumeDialog(levelId: string, save: SavedState): void {
 
   const restartBtn = document.createElement('button');
   restartBtn.textContent = 'Restart';
-  restartBtn.style.cssText = `${DIALOG_BTN};background:rgba(255,255,255,0.12);color:#ffffff;`;
+  restartBtn.style.cssText = `${DIALOG_BTN};background:#f0d2a8;color:#b17025;`;
   restartBtn.addEventListener('click', () => { clearSave(levelId, 'restart'); dismiss(); resetGame(); });
 
   const resumeBtn = document.createElement('button');
   resumeBtn.textContent = 'Resume';
-  resumeBtn.style.cssText = `${DIALOG_BTN};background:#4ECDC4;color:#0A0A14;`;
+  resumeBtn.style.cssText = `${DIALOG_BTN};background:#fb5607;color:#ffffff;`;
   resumeBtn.addEventListener('click', () => { dismiss(); });
 
   btnRow.appendChild(restartBtn);
@@ -326,33 +327,75 @@ function loop(time: number): void {
 // Fetch level data before wiring input/overlay and starting the render loop.
 
 (async () => {
-  await loadLevels();
+  // ── Splash screen ─────────────────────────────────────────────────────────
+  const splash       = document.getElementById('splash')!;
+  const splashLogo   = document.getElementById('splash-logo')! as HTMLImageElement;
+  const splashSub    = document.getElementById('splash-sub')!;
+  const splashLoader = document.getElementById('splash-loader')!;
 
-  // Initialise celebration screen (before overlay so it exists when onWin fires).
+  // Fade in logo immediately, subtitle 200ms later.
+  requestAnimationFrame(() => {
+    splashLogo.style.opacity = '1';
+    setTimeout(() => { splashSub.style.opacity = '1'; }, 200);
+  });
+
+  // Pulse animation for the loader dot.
+  let loaderInterval: ReturnType<typeof setInterval> | null = null;
+  function showLoader(): void {
+    splashLoader.style.opacity = '1';
+    loaderInterval = setInterval(() => {
+      splashLoader.style.opacity = splashLoader.style.opacity === '1' ? '0.3' : '1';
+    }, 600);
+  }
+  function hideLoader(): void {
+    if (loaderInterval !== null) { clearInterval(loaderInterval); loaderInterval = null; }
+    splashLoader.style.opacity = '0';
+  }
+
+  // Load assets in parallel with the minimum display time.
+  const splashStart = performance.now();
+  const assetsReady = Promise.all([loadLevels(), document.fonts.ready]);
+  let userSkipped = false;
+
+  // Show loader if assets take longer than 1.5s.
+  const loaderTimeout = setTimeout(showLoader, 1500);
+
+  // Tap-to-skip: removes the time requirement but still waits for assets.
+  splash.addEventListener('pointerdown', () => { userSkipped = true; }, { once: true });
+
+  await assetsReady;
+  clearTimeout(loaderTimeout);
+  hideLoader();
+
+  // Wait for the remaining minimum time unless the user tapped to skip.
+  const elapsed = performance.now() - splashStart;
+  const remaining = 1500 - elapsed;
+  if (remaining > 0 && !userSkipped) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, remaining);
+      splash.addEventListener('pointerdown', () => {
+        clearTimeout(timer);
+        resolve();
+      }, { once: true });
+    });
+  }
+
+  // ── Initialize game behind the splash ─────────────────────────────────────
   initCelebration();
 
-  // Initialise level-select before loadLevel so setCurrentLevel works immediately.
   initLevelSelect((index) => {
-    // Reveal canvas, show board background, and start gameplay when a level is tapped.
     canvas.style.opacity      = '1';
     boardBgEl.style.display   = 'block';
     loadLevel(index);
   });
 
   loadLevel(0);
-  showLevelSelect(); // Show level select on app start (board-bg stays hidden).
+  showLevelSelect();
 
-  // Dismiss the splash cover once the level-select transition has completed.
-  // showLevelSelect() uses a double rAF + 0.22s CSS transition, so wait for
-  // the same two frames then let the transition finish before hiding.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const splash = document.getElementById('splash');
-        if (splash) splash.style.display = 'none';
-      }, 220);
-    });
-  });
+  // Fade out splash, then remove it.
+  splash.style.transition = 'opacity 0.3s ease';
+  splash.style.opacity    = '0';
+  setTimeout(() => { splash.style.display = 'none'; }, 300);
 
   inputState = initInput(canvas, gridToPixel, gameState, (from, to) => {
     // Capture layer count before the move to drive audio decisions.

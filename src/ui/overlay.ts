@@ -47,7 +47,7 @@ const SVG_CLOSE = '</svg>';
 
 const UNDO_ICON  = `${SVG_OPEN}<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.5"/>${SVG_CLOSE}`;
 const REDO_ICON  = `${SVG_OPEN}<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.5"/>${SVG_CLOSE}`;
-const RESET_ICON = '<svg width="18" height="18" viewBox="0 0 512 512" fill="#888780"><path d="M65.9 228.5c13.3-93 93.4-164.5 190.1-164.5 53 0 101 21.5 135.8 56.2 .2 .2 .4 .4 .6 .6l7.6 7.2-47.9 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 53.4-11.3-10.7C390.5 28.6 326.5 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1zm443.5 64c2.5-17.5-9.7-33.7-27.1-36.2s-33.7 9.7-36.2 27.1c-13.3 93-93.4 164.5-190.1 164.5-53 0-101-21.5-135.8-56.2-.2-.2-.4-.4-.6-.6l-7.6-7.2 47.9 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 320c-8.5 0-16.7 3.4-22.7 9.5S-.1 343.7 0 352.3l1 127c.1 17.7 14.6 31.9 32.3 31.7S65.2 496.4 65 478.7l-.4-51.5 10.7 10.1c46.3 46.1 110.2 74.7 180.7 74.7 129 0 235.7-95.4 253.4-219.5z"/></svg>';
+const RESET_ICON = '<svg width="18" height="18" viewBox="0 0 512 512" fill="#7f7c6c"><path d="M65.9 228.5c13.3-93 93.4-164.5 190.1-164.5 53 0 101 21.5 135.8 56.2 .2 .2 .4 .4 .6 .6l7.6 7.2-47.9 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 53.4-11.3-10.7C390.5 28.6 326.5 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1zm443.5 64c2.5-17.5-9.7-33.7-27.1-36.2s-33.7 9.7-36.2 27.1c-13.3 93-93.4 164.5-190.1 164.5-53 0-101-21.5-135.8-56.2-.2-.2-.4-.4-.6-.6l-7.6-7.2 47.9 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 320c-8.5 0-16.7 3.4-22.7 9.5S-.1 343.7 0 352.3l1 127c.1 17.7 14.6 31.9 32.3 31.7S65.2 496.4 65 478.7l-.4-51.5 10.7 10.1c46.3 46.1 110.2 74.7 180.7 74.7 129 0 235.7-95.4 253.4-219.5z"/></svg>';
 const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">'
   + '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'
   + '<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
@@ -56,11 +56,11 @@ const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
 const FONT         = "'Manrope', system-ui, sans-serif";
-const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
-const C_TEXT       = '#2e2f2c';
-const C_TEXT_SEC   = '#888780';
-const C_RECESSED   = '#e9e8e4';
-const GRAD_PRIMARY = 'linear-gradient(135deg, #993c49, #ff8c98)';
+const FONT_HEADING = "'Lexend', system-ui, sans-serif";
+const C_TEXT       = '#b17025';
+const C_TEXT_SEC   = '#7f7c6c';
+const C_RECESSED   = '#f0d2a8';
+const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
 
 // Inline button for use inside the top/bottom bar (no position:fixed).
 const BTN_INLINE = [
@@ -97,7 +97,7 @@ const CARD_STYLE = [
 // Shared dialog backdrop style (base; display set per-use).
 const BACKDROP_STYLE_BASE = [
   'position:fixed', 'inset:0',
-  'background:rgba(248,246,242,0.85)',
+  'background:rgba(255,237,205,0.85)',
   'backdrop-filter:blur(20px)',
   '-webkit-backdrop-filter:blur(20px)',
   'align-items:center', 'justify-content:center',
@@ -297,7 +297,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'height:52px',
     'display:flex', 'align-items:center', 'justify-content:space-between',
     'padding-left:16px', 'padding-right:16px',
-    'background:#f8f6f2',
+    'background:#ffedcd',
     'z-index:5',
     `font-family:${FONT}`,
     'box-sizing:content-box',
@@ -364,7 +364,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'height:48px',
     'display:flex', 'align-items:center', 'justify-content:space-between',
     'padding-left:24px', 'padding-right:24px',
-    'background:#f8f6f2',
+    'background:#ffedcd',
     `font-family:${FONT}`,
     'box-sizing:content-box',
   ].join(';');
@@ -456,12 +456,12 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
       remainingIndicatorEl.style.display = 'flex';
       if (justMet) {
         remainingIndicatorEl.style.transition = 'color 0.1s ease';
-        remainingIndicatorEl.style.color      = '#6cb5a4';
+        remainingIndicatorEl.style.color      = '#fb5607';
         setTimeout(() => {
           if (remainingIndicatorEl) {
             remainingIndicatorEl.style.transition = 'color 0.5s ease';
             remainingIndicatorEl.style.color      = goalMet
-              ? '#6cb5a4'
+              ? '#fb5607'
               : C_TEXT_SEC;
           }
         }, 400);

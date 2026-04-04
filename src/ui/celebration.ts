@@ -4,11 +4,11 @@ import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 
 const FONT         = "'Manrope', system-ui, sans-serif";
-const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
-const C_TEXT       = '#2e2f2c';
-const C_TEXT_SEC   = '#888780';
-const C_RECESSED   = '#e9e8e4';
-const GRAD_PRIMARY = 'linear-gradient(135deg, #993c49, #ff8c98)';
+const FONT_HEADING = "'Lexend', system-ui, sans-serif";
+const C_TEXT       = '#b17025';
+const C_TEXT_SEC   = '#7f7c6c';
+const C_RECESSED   = '#f0d2a8';
+const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ export function initCelebration(): void {
     'display:none',
     'align-items:center', 'justify-content:center',
     'z-index:30',
-    'background:rgba(248,246,242,0.85)',
+    'background:rgba(255,237,205,0.85)',
     'backdrop-filter:blur(20px)',
     '-webkit-backdrop-filter:blur(20px)',
   ].join(';');
@@ -98,12 +98,12 @@ export function showCelebration(params: CelebrationParams): void {
   const checkEl = document.createElement('div');
   checkEl.style.cssText = [
     'width:48px', 'height:48px', 'border-radius:50%',
-    'background:#fff0f1',
+    'background:#fde8d0',
     'display:flex', 'align-items:center', 'justify-content:center',
     'margin:0 auto 14px',
   ].join(';');
   checkEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" '
-    + 'stroke="#993c49" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+    + 'stroke="#fb5607" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
     + '<polyline points="20 6 9 17 4 12"/></svg>';
 
   // Level name
@@ -139,7 +139,7 @@ export function showCelebration(params: CelebrationParams): void {
       'transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease',
     ].join(';');
     star.innerHTML = filled
-      ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="#e8b76e" stroke="#e8b76e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="#ffbe0b" stroke="#ffbe0b" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
       : `<svg width="28" height="28" viewBox="0 0 24 24" fill="${C_RECESSED}" stroke="#d3d1c7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
     starsRow.appendChild(star);
     starEls.push(star);

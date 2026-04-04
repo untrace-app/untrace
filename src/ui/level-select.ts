@@ -7,11 +7,11 @@ import { addPressFeedback } from './overlay.ts';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const FONT         = "'Manrope', system-ui, sans-serif";
-const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
-const C_TEXT       = '#2e2f2c';
-const C_TEXT_SEC   = '#888780';
-const C_RECESSED   = '#e9e8e4';
-const C_PRIMARY    = '#993c49';
+const FONT_HEADING = "'Lexend', system-ui, sans-serif";
+const C_TEXT       = '#b17025';
+const C_TEXT_SEC   = '#7f7c6c';
+const C_RECESSED   = '#f0d2a8';
+const C_PRIMARY    = '#fb5607';
 const LS_UNLOCKED = 'untrace_unlocked'; // highest unlocked level index (0-based)
 const LS_STARS    = 'untrace_stars';    // JSON object: { [levelId]: starCount (0–3) }
 
@@ -65,7 +65,7 @@ function makeStarDots(count: number): HTMLElement {
     const filled = i < count;
     dot.style.cssText = [
       'width:5px', 'height:5px', 'border-radius:50%', 'flex-shrink:0',
-      `background:${filled ? '#DAA520' : '#d3d1c7'}`,
+      `background:${filled ? '#ffbe0b' : '#d3d1c7'}`,
     ].join(';');
     row.appendChild(dot);
   }
@@ -128,7 +128,7 @@ function renderGrid(): void {
     if (locked) {
       bg        = C_RECESSED;
       border    = 'none';
-      textColor = '#b4b2a9';
+      textColor = '#a68168';
     } else if (completed) {
       bg        = C_RECESSED;
       border    = 'none';
@@ -156,7 +156,7 @@ function renderGrid(): void {
 
     if (locked) {
       tile.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
-        + 'stroke="#888780" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+        + 'stroke="#7f7c6c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
         + '<rect x="3" y="11" width="18" height="11" rx="2"/>'
         + '<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     } else {
@@ -198,7 +198,7 @@ function buildOverlay(ui: HTMLElement): void {
   overlayEl = document.createElement('div');
   overlayEl.style.cssText = [
     'position:fixed', 'inset:0',
-    'background:#f8f6f2',
+    'background:#ffedcd',
     'z-index:50',
     'display:flex', 'flex-direction:column',
     'overflow:hidden',

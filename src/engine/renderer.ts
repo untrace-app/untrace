@@ -152,14 +152,13 @@ export function render(
     drawLine(ctx, a.x, a.y, b.x, b.y, color, width);
   }
 
-  drawDots(ctx, state, layout);
-
-  // Ghost trail: thin line from the snapped dot to the raw pointer position.
+  // Ghost trail: line from the snapped dot to the raw pointer position.
+  // Drawn before dots so it renders behind them.
   if (state.isTracing && state.playerDot !== null && rawPointer !== null) {
     const from = gridToPixel(state.playerDot[0], state.playerDot[1], layout);
     ctx.save();
-    ctx.strokeStyle = 'rgba(136, 135, 128, 0.6)'; // #888780 at 60% opacity
-    ctx.lineWidth   = 2;
+    ctx.strokeStyle = 'rgba(127, 124, 108, 0.6)'; // #7f7c6c at 60% opacity
+    ctx.lineWidth   = LINE_WIDTH_BASE;
     ctx.lineCap     = 'round';
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
@@ -167,4 +166,6 @@ export function render(
     ctx.stroke();
     ctx.restore();
   }
+
+  drawDots(ctx, state, layout);
 }
