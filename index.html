@@ -20,8 +20,69 @@
     <canvas id="game-canvas"></canvas>
     <div id="board-bg" style="position:absolute;background:#f7e6ca;border-radius:20px;display:none;pointer-events:none;z-index:0;"></div>
     <div id="ui"></div>
-    <div id="splash" style="position:fixed;inset:0;background:#f8f6f2;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:28vh;">
-      <img id="splash-logo" src="/untrace-logo.svg" alt="Untrace" style="max-width:80%;height:auto;opacity:0;transition:opacity 0.4s ease;" />
+    <div id="splash" style="position:fixed;inset:0;background:#f8f6f2;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;">
+      <link rel="stylesheet" href="/splash-animation.css" />
+      <svg width="825" height="110" viewBox="0 0 825 110" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width:80%;height:auto;">
+        <line class="svg-elem-1" x1="701" y1="10" x2="601" y2="10" stroke="#FB5607" stroke-width="10"/>
+        <line class="svg-elem-2" x1="701" y1="100" x2="601" y2="100" stroke="#FB5607" stroke-width="10"/>
+        <line class="svg-elem-3" x1="606" y1="5.00003" x2="606" y2="105" stroke="#FB5607" stroke-width="10"/>
+        <circle class="svg-elem-4" cx="606" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-5" cx="696" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-6" cx="606" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-7" cx="696" cy="10" r="10" fill="#EEDACC"/>
+        <line class="svg-elem-8" x1="487" y1="105" x2="487" y2="5" stroke="#8338EC" stroke-width="10"/>
+        <line class="svg-elem-9" x1="582" y1="10" x2="482" y2="9.99999" stroke="#8338EC" stroke-width="10"/>
+        <line class="svg-elem-10" x1="582" y1="55" x2="482" y2="55" stroke="#8338EC" stroke-width="10"/>
+        <line class="svg-elem-11" x1="577" y1="105" x2="577" y2="5" stroke="#8338EC" stroke-width="10"/>
+        <circle class="svg-elem-12" cx="577" cy="55" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-13" cx="487" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-14" cx="577" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-15" cx="487" cy="55" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-16" cx="487" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-17" cx="577" cy="100" r="10" fill="#EEDACC"/>
+        <line class="svg-elem-18" x1="820" y1="10" x2="720" y2="9.99999" stroke="#3A86FF" stroke-width="10"/>
+        <line class="svg-elem-19" x1="820" y1="55" x2="720" y2="55" stroke="#3A86FF" stroke-width="10"/>
+        <line class="svg-elem-20" x1="820" y1="100" x2="720" y2="100" stroke="#3A86FF" stroke-width="10"/>
+        <line class="svg-elem-21" x1="725" y1="5" x2="725" y2="105" stroke="#3A86FF" stroke-width="10"/>
+        <circle class="svg-elem-22" cx="725" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-23" cx="815" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-24" cx="725" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-25" cx="815" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-26" cx="725" cy="55" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-27" cx="815" cy="55" r="10" fill="#EEDACC"/>
+        <line class="svg-elem-28" x1="130" y1="5" x2="130" y2="105" stroke="#FFBE0B" stroke-width="10"/>
+        <path class="svg-elem-29" d="M131.347 8.44522L218.649 101.585" stroke="#FFBE0B" stroke-width="10"/>
+        <line class="svg-elem-30" x1="220" y1="5" x2="220" y2="105" stroke="#FFBE0B" stroke-width="10"/>
+        <circle class="svg-elem-31" cx="130" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-32" cx="219" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-33" cx="130" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-34" cx="220" cy="10" r="10" fill="#EEDACC"/>
+        <line class="svg-elem-35" x1="293" y1="5" x2="293" y2="105" stroke="#FB5607" stroke-width="10"/>
+        <line class="svg-elem-36" x1="244" y1="10" x2="344" y2="10" stroke="#FB5607" stroke-width="10"/>
+        <circle class="svg-elem-37" cx="293" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-38" cx="249" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-39" cx="339" cy="10" r="10" fill="#EEDACC"/>
+        <path class="svg-elem-40" d="M456.649 101.585L412.127 54.0861" stroke="#FF006E" stroke-width="10"/>
+        <line class="svg-elem-41" x1="458" y1="5" x2="458" y2="55" stroke="#FF006E" stroke-width="10"/>
+        <line class="svg-elem-42" x1="363" y1="10" x2="463" y2="10" stroke="#FF006E" stroke-width="10"/>
+        <line class="svg-elem-43" x1="363" y1="55" x2="463" y2="55" stroke="#FF006E" stroke-width="10"/>
+        <line class="svg-elem-44" x1="368" y1="5" x2="368" y2="105" stroke="#FF006E" stroke-width="10"/>
+        <circle class="svg-elem-45" cx="368" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-46" cx="458" cy="10" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-47" cx="368" cy="55" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-48" cx="458" cy="55" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-49" cx="413" cy="55" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-50" cx="368" cy="100" r="10" fill="#EEDACC"/>
+        <circle class="svg-elem-51" cx="458" cy="100" r="10" fill="#EEDACC"/>
+        <line class="svg-elem-52" x1="10" y1="5" x2="10" y2="105" stroke="#FB5607" stroke-width="10"/>
+        <line class="svg-elem-53" x1="100" y1="5" x2="100" y2="105" stroke="#FB5607" stroke-width="10"/>
+        <line class="svg-elem-54" x1="5.00002" y1="100" x2="105" y2="100" stroke="#FB5607" stroke-width="10"/>
+        <circle class="svg-elem-55" cx="100" cy="100" r="10" transform="rotate(-90 100 100)" fill="#EEDACC"/>
+        <circle class="svg-elem-56" cx="100" cy="10" r="10" transform="rotate(-90 100 10)" fill="#EEDACC"/>
+        <circle class="svg-elem-57" cx="10" cy="100" r="10" transform="rotate(-90 10 100)" fill="#EEDACC"/>
+        <circle class="svg-elem-58" cx="10" cy="10" r="10" transform="rotate(-90 10 10)" fill="#EEDACC"/>
+        <circle class="svg-elem-59" cx="100" cy="55" r="10" fill="#EEDACC"/>
+      </svg>
       <p id="splash-sub" style="font-family:'Manrope',system-ui,sans-serif;font-size:14px;font-weight:400;color:#888780;letter-spacing:0.1em;text-transform:uppercase;margin:16px 0 0;opacity:0;transition:opacity 0.4s ease;">a line puzzle</p>
       <div id="splash-loader" style="margin-top:24px;width:8px;height:8px;border-radius:50%;background:#888780;opacity:0;transition:opacity 0.3s ease;"></div>
     </div>

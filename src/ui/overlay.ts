@@ -84,7 +84,7 @@ const BTN_INLINE = [
 
 // Shared dialog card style.
 const CARD_STYLE = [
-  'background:#ffffff',
+  'background:#feffe5',
   'border-radius:24px',
   'padding:28px 24px 24px',
   'max-width:280px',
@@ -195,7 +195,7 @@ function buildWinOverlay(
 
   const card = document.createElement('div');
   card.style.cssText = [
-    'background:#ffffff',
+    'background:#feffe5',
     'border-radius:24px',
     'padding:36px 28px 28px',
     'max-width:300px',

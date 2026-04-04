@@ -66,7 +66,12 @@ const gameState: GameState = {
 
 // ─── Level indicator (top-left) ───────────────────────────────────────────────
 
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+const FONT         = "'Manrope', system-ui, sans-serif";
+const FONT_HEADING = "'Lexend', system-ui, sans-serif";
+const C_TEXT       = '#b17025';
+const C_TEXT_SEC   = '#7f7c6c';
+const C_RECESSED   = '#f0d2a8';
+const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
 const BG   = 'rgba(10,10,20,0.72)';
 
 const levelIndicatorEl = document.createElement('div');
@@ -151,48 +156,66 @@ function applySave(save: SavedState): void {
 function showResumeDialog(levelId: string, save: SavedState): void {
   const ui = document.getElementById('ui')!;
 
-  const backdrop = document.createElement('div');
-  backdrop.style.cssText = [
-    'position:fixed', 'inset:0', 'background:rgba(255,237,205,0.85)',
+  const BACKDROP_STYLE = [
+    'position:fixed', 'inset:0',
+    'background:rgba(255,237,205,0.85)',
     'backdrop-filter:blur(20px)', '-webkit-backdrop-filter:blur(20px)',
-    'display:flex', 'align-items:center', 'justify-content:center', 'z-index:15',
+    'align-items:center', 'justify-content:center',
+    'display:flex', 'z-index:15',
   ].join(';');
 
-  const card = document.createElement('div');
-  card.style.cssText = [
-    'background:#ffffff', 'border-radius:24px',
+  const CARD_STYLE = [
+    'background:#feffe5', 'border-radius:24px',
     'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
-    'text-align:center', `font-family:${FONT}`, 'box-shadow:0 8px 32px rgba(46,47,44,0.06)',
+    'text-align:center', `font-family:${FONT}`,
+    'box-shadow:0 8px 32px rgba(46,47,44,0.06)',
   ].join(';');
+
+  const DIALOG_BTN = [
+    'flex:1', 'padding:13px 0', 'border:none', 'border-radius:9999px',
+    'font-size:15px', 'font-weight:600', 'cursor:pointer',
+    `font-family:${FONT}`,
+    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
+  ].join(';');
+
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = BACKDROP_STYLE;
+
+  const card = document.createElement('div');
+  card.style.cssText = CARD_STYLE;
 
   const title = document.createElement('p');
   title.textContent = 'Resume where you left off?';
-  title.style.cssText = 'color:#b17025;font-size:16px;font-weight:500;margin:0 0 6px;line-height:1.4;';
+  title.style.cssText = `color:${C_TEXT};font-size:16px;font-weight:600;margin:0 0 6px;line-height:1.4;font-family:${FONT_HEADING};`;
 
   const sub = document.createElement('p');
   sub.textContent = `${save.moveCount} move${save.moveCount === 1 ? '' : 's'} in progress`;
-  sub.style.cssText = 'color:#7f7c6c;font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;';
+  sub.style.cssText = `color:${C_TEXT_SEC};font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;`;
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:12px;';
-
-  const DIALOG_BTN = [
-    'flex:1', 'padding:12px 0', 'border:none', 'border-radius:9999px',
-    'font-size:15px', 'font-weight:500', 'cursor:pointer',
-    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
-  ].join(';');
+  btnRow.style.cssText = 'display:flex;gap:10px;';
 
   function dismiss(): void { backdrop.remove(); }
 
+  function addPressFeedback(btn: HTMLElement): void {
+    btn.addEventListener('pointerdown', () => { btn.style.transform = 'scale(0.92)'; btn.style.filter = 'brightness(1.1)'; });
+    btn.addEventListener('pointerup', () => { btn.style.transform = 'scale(1)'; btn.style.filter = 'brightness(1)'; });
+    btn.addEventListener('pointercancel', () => { btn.style.transform = 'scale(1)'; btn.style.filter = 'brightness(1)'; });
+    btn.addEventListener('pointerleave', () => { btn.style.transform = 'scale(1)'; btn.style.filter = 'brightness(1)'; });
+  }
+
   const restartBtn = document.createElement('button');
   restartBtn.textContent = 'Restart';
-  restartBtn.style.cssText = `${DIALOG_BTN};background:#f0d2a8;color:#b17025;`;
+  restartBtn.style.cssText = `${DIALOG_BTN};background:${C_RECESSED};color:${C_TEXT};`;
   restartBtn.addEventListener('click', () => { clearSave(levelId, 'restart'); dismiss(); resetGame(); });
+  addPressFeedback(restartBtn);
 
   const resumeBtn = document.createElement('button');
   resumeBtn.textContent = 'Resume';
-  resumeBtn.style.cssText = `${DIALOG_BTN};background:#fb5607;color:#ffffff;`;
+  resumeBtn.style.cssText = `${DIALOG_BTN};background:${GRAD_PRIMARY};color:#ffffff;`;
   resumeBtn.addEventListener('click', () => { dismiss(); });
+  addPressFeedback(resumeBtn);
 
   btnRow.appendChild(restartBtn);
   btnRow.appendChild(resumeBtn);
@@ -329,15 +352,10 @@ function loop(time: number): void {
 (async () => {
   // ── Splash screen ─────────────────────────────────────────────────────────
   const splash       = document.getElementById('splash')!;
-  const splashLogo   = document.getElementById('splash-logo')! as HTMLImageElement;
   const splashSub    = document.getElementById('splash-sub')!;
   const splashLoader = document.getElementById('splash-loader')!;
 
-  // Fade in logo immediately, subtitle 200ms later.
-  requestAnimationFrame(() => {
-    splashLogo.style.opacity = '1';
-    setTimeout(() => { splashSub.style.opacity = '1'; }, 200);
-  });
+  // SVG draw animation is handled by splash-animation.css.
 
   // Pulse animation for the loader dot.
   let loaderInterval: ReturnType<typeof setInterval> | null = null;
@@ -353,32 +371,19 @@ function loop(time: number): void {
   }
 
   // Load assets in parallel with the minimum display time.
-  const splashStart = performance.now();
+  const minTime     = new Promise<void>((r) => setTimeout(r, 2000));
   const assetsReady = Promise.all([loadLevels(), document.fonts.ready]);
-  let userSkipped = false;
 
-  // Show loader if assets take longer than 1.5s.
-  const loaderTimeout = setTimeout(showLoader, 1500);
+  // Show loader if assets take longer than 2s.
+  const loaderTimeout = setTimeout(showLoader, 2000);
 
-  // Tap-to-skip: removes the time requirement but still waits for assets.
-  splash.addEventListener('pointerdown', () => { userSkipped = true; }, { once: true });
+  // Show subtitle after a short delay (once logo animation is underway).
+  setTimeout(() => { splashSub.style.opacity = '1'; }, 1200);
 
-  await assetsReady;
+  // Wait for BOTH minimum time AND assets — no tap-to-skip.
+  await Promise.all([minTime, assetsReady]);
   clearTimeout(loaderTimeout);
   hideLoader();
-
-  // Wait for the remaining minimum time unless the user tapped to skip.
-  const elapsed = performance.now() - splashStart;
-  const remaining = 1500 - elapsed;
-  if (remaining > 0 && !userSkipped) {
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, remaining);
-      splash.addEventListener('pointerdown', () => {
-        clearTimeout(timer);
-        resolve();
-      }, { once: true });
-    });
-  }
 
   // ── Initialize game behind the splash ─────────────────────────────────────
   initCelebration();

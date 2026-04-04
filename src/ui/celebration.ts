@@ -48,7 +48,7 @@ export function initCelebration(): void {
 
   cardEl = document.createElement('div');
   cardEl.style.cssText = [
-    'background:#ffffff',
+    'background:#feffe5',
     'border-radius:24px',
     'padding:32px 28px 24px',
     'max-width:320px',

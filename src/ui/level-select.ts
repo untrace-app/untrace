@@ -134,11 +134,11 @@ function renderGrid(): void {
       border    = 'none';
       textColor = C_TEXT;
     } else if (isCurrent) {
-      bg        = '#ffffff';
+      bg        = '#feffe5';
       border    = `2px solid ${C_PRIMARY}`;
       textColor = C_PRIMARY;
     } else {
-      bg        = '#ffffff';
+      bg        = '#feffe5';
       border    = '1px solid #d3d1c7';
       textColor = C_TEXT;
     }
