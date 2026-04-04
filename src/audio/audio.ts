@@ -20,6 +20,15 @@ let undoFilter!:   Tone.Filter;
 let marimbaSampler!: Tone.Sampler;
 let isMarimbaLoaded  = false;
 
+// Pop sound for dot intro animation.
+let popPlayer!: Tone.Player;
+let isPopLoaded = false;
+
+// Board appear sound for intro animation.
+let boardPlayer!: Tone.Player;
+let isBoardLoaded = false;
+
+
 // ─── White-key scale (no sharps/flats) ────────────────────────────────────────
 
 const WHITE_KEYS: readonly string[] = [
@@ -81,6 +90,18 @@ function _doInit(): void {
     onload: () => { isMarimbaLoaded = true; },
   }).toDestination();
 
+  // ── Pop sound for intro animation ──────────────────────────────────────────
+  popPlayer = new Tone.Player({
+    url: '/pop.mp3',
+    onload: () => { isPopLoaded = true; },
+  }).toDestination();
+
+  // ── Board appear sound for intro animation ─────────────────────────────────
+  boardPlayer = new Tone.Player({
+    url: '/board.mp3',
+    onload: () => { isBoardLoaded = true; },
+  }).toDestination();
+
   isReady = true;
 }
 
@@ -112,6 +133,18 @@ export function playButtonTap(): void {
 export function playDotTouch(): void {
   if (!isReady) return;
   dotSynth.triggerAttackRelease('C6', 0.05);
+}
+
+export function playPop(): void {
+  if (!isReady || !isPopLoaded) return;
+  popPlayer.stop();
+  popPlayer.start();
+}
+
+export function playBoardAppear(): void {
+  if (!isReady || !isBoardLoaded) return;
+  boardPlayer.stop();
+  boardPlayer.start();
 }
 
 export function playProgressNote(erased: boolean): void {

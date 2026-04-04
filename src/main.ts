@@ -1,12 +1,14 @@
 import { render } from './engine/renderer.ts';
 import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActivation } from './engine/animations.ts';
+import { startIntroAnimation, isIntroActive, updateIntro, renderIntro } from './engine/intro-animation.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
 import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo } from './audio/audio.ts';
 import { initOverlay, updateOverlay } from './ui/overlay.ts';
-import { initCelebration, showCelebration } from './ui/celebration.ts';
+import { initCelebration, showCelebration, hideCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
 import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
+import { showLevelTransition } from './ui/level-transition.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO } from './constants.ts';
 
@@ -45,6 +47,11 @@ window.addEventListener('resize', resize);
 // This prevents a flash of game content before the level select screen appears.
 canvas.style.opacity    = '0';
 canvas.style.transition = 'opacity 0.25s ease';
+
+// ─── Input gating (disabled during intro/transition) ─────────────────────────
+
+let inputEnabled      = false;
+let transitionActive  = false; // true while level-transition splash is covering the screen
 
 // ─── Level tracking ───────────────────────────────────────────────────────────
 
@@ -231,7 +238,8 @@ function showResumeDialog(levelId: string, save: SavedState): void {
 // Snapshot of initial connections for the current level (used by resetGame).
 let initialConnections    = new Map<ConnectionKey, ConnectionState>();
 
-function loadLevel(index: number): void {
+function loadLevel(index: number, skipIntro = false): void {
+  boardBgEl.style.display = 'none';
   currentLevelIndex = index % getLevelCount();
   setCurrentLevel(currentLevelIndex);
   const level = getCurrentLevel(currentLevelIndex);
@@ -267,6 +275,9 @@ function loadLevel(index: number): void {
 
   updateLevelIndicator();
 
+  // skipIntro: caller will start the intro animation separately (e.g. after transition splash).
+  if (skipIntro) return;
+
   // If gameplay is already active (canvas visible), check for a mid-level save.
   // Skips silently on the startup loadLevel(0) call when the canvas is still hidden.
   if (canvas.style.opacity === '1') {
@@ -275,11 +286,29 @@ function loadLevel(index: number): void {
     if (save) {
       console.log(`SAVE: found save for level ${level.id}`);
       applySave(save);
+      inputEnabled = true;
+      boardBgEl.style.transition = 'none';
+      boardBgEl.style.opacity    = '1';
+      boardBgEl.style.display    = 'block';
       showResumeDialog(level.id, save);
     } else {
       console.log('SAVE: no save found');
+      runIntro();
     }
   }
+}
+
+function runIntro(): void {
+  inputEnabled = false;
+  canvas.style.pointerEvents = 'none';
+  // Show board-bg but fully transparent — intro will fade it in.
+  boardBgEl.style.transition = 'none';
+  boardBgEl.style.opacity    = '0';
+  boardBgEl.style.display    = 'block';
+  startIntroAnimation(gameState, boardBgEl).then(() => {
+    inputEnabled = true;
+    canvas.style.pointerEvents = '';
+  });
 }
 
 function resetGame(): void {
@@ -293,10 +322,36 @@ function resetGame(): void {
   gameState.undoStack               = [];
   gameState.redoStack               = [];
   gameState.currentStrokeConnections = new Set();
+  runIntro();
 }
 
 function nextLevel(): void {
   loadLevel((currentLevelIndex + 1) % getLevelCount());
+}
+
+function nextLevelWithTransition(): void {
+  const nextIndex = (currentLevelIndex + 1) % getLevelCount();
+  const next = getCurrentLevel(nextIndex);
+
+  inputEnabled     = false;
+  transitionActive = true;
+
+  showLevelTransition(
+    nextIndex + 1,
+    next.name,
+    // onCovered: splash is fully opaque — safe to tear down behind it.
+    () => {
+      hideCelebration();
+      boardBgEl.style.display = 'none';
+      // Load level data only (skipIntro=true). Intro starts after splash is gone.
+      loadLevel(nextIndex, true);
+    },
+  ).then(() => {
+    // Splash is fully gone (opacity 0, pointer-events none).
+    transitionActive = false;
+    console.log('TRANSITION SPLASH: fully gone, starting intro');
+    runIntro();
+  });
 }
 
 // ─── Grid-to-pixel helper ─────────────────────────────────────────────────────
@@ -339,9 +394,17 @@ function loop(time: number): void {
   const dt = prevLoopTime > 0 ? time - prevLoopTime : 0;
   prevLoopTime = time;
 
-  render(ctx, gameState, canvas, inputState.rawPointer);
-  animationManager.update(dt);
-  animationManager.draw(ctx, gridToPixel, gameState);
+  if (transitionActive) {
+    // Blank canvas while the transition splash covers the screen.
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  } else if (isIntroActive()) {
+    updateIntro(dt);
+    renderIntro(ctx, gameState, canvas);
+  } else {
+    render(ctx, gameState, canvas, inputState.rawPointer);
+    animationManager.update(dt);
+    animationManager.draw(ctx, gridToPixel, gameState);
+  }
   updateOverlay(gameState, currentLevelIndex, getLevelCount());
   requestAnimationFrame(loop);
 }
@@ -389,8 +452,8 @@ function loop(time: number): void {
   initCelebration();
 
   initLevelSelect((index) => {
-    canvas.style.opacity      = '1';
-    boardBgEl.style.display   = 'block';
+    canvas.style.opacity    = '1';
+    // Board-bg display is handled by runIntro / applySave — not set here.
     loadLevel(index);
   });
 
@@ -403,6 +466,7 @@ function loop(time: number): void {
   setTimeout(() => { splash.style.display = 'none'; }, 300);
 
   inputState = initInput(canvas, gridToPixel, gameState, (from, to) => {
+    if (!inputEnabled) return;
     // Capture layer count before the move to drive audio decisions.
     const key = makeConnectionKey(from, to);
     const layersBefore = gameState.connections.get(key)?.layers ?? -1;
@@ -466,7 +530,7 @@ function loop(time: number): void {
           stars,
           remainingLayers,
           targetLayers:   level.targetLayers,
-          onNextLevel:    () => { nextLevel();       },
+          onNextLevel:    () => { nextLevelWithTransition(); },
           onReplay:       () => { resetGame();        },
           onLevelSelect:  () => { boardBgEl.style.display = 'none'; showLevelSelect(); },
         });

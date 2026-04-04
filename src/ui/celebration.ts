@@ -191,7 +191,7 @@ export function showCelebration(params: CelebrationParams): void {
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next Level';
   nextBtn.style.cssText = `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
-  nextBtn.addEventListener('click', () => { playButtonTap(); dismiss(onNextLevel); });
+  nextBtn.addEventListener('click', () => { playButtonTap(); onNextLevel(); });
   addPressFeedback(nextBtn);
 
   const replayBtn = document.createElement('button');
