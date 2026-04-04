@@ -1,6 +1,8 @@
 // Level select screen (Phase 3)
 
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
+import { playButtonTap } from '../audio/audio.ts';
+import { addPressFeedback } from './overlay.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -149,7 +151,7 @@ function renderGrid(): void {
       'display:flex', 'align-items:center', 'justify-content:center',
       'flex-shrink:0',
       locked ? 'opacity:0.4' : 'opacity:1',
-      'transition:transform 0.12s ease',
+      'transition:transform 0.15s ease-out, filter 0.15s ease-out',
     ].join(';');
 
     if (locked) {
@@ -171,11 +173,9 @@ function renderGrid(): void {
 
     // ── Interaction (unlocked only) ───────────────────────────────────────────
     if (!locked) {
-      cell.addEventListener('pointerdown',   () => { tile.style.transform = 'scale(0.94)'; });
-      cell.addEventListener('pointerup',     () => { tile.style.transform = 'scale(1)'; });
-      cell.addEventListener('pointercancel', () => { tile.style.transform = 'scale(1)'; });
+      addPressFeedback(tile);
       cell.addEventListener('click', () => {
-        if (onSelectCb) { hideLevelSelect(); onSelectCb(i); }
+        if (onSelectCb) { playButtonTap(); hideLevelSelect(); onSelectCb(i); }
       });
     }
 

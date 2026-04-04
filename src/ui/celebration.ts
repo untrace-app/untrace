@@ -1,5 +1,8 @@
 // Win celebration screen (Phase 3)
 
+import { playButtonTap } from '../audio/audio.ts';
+import { addPressFeedback } from './overlay.ts';
+
 const FONT         = "'Manrope', system-ui, sans-serif";
 const FONT_HEADING = "'Plus Jakarta Sans', system-ui, sans-serif";
 const C_TEXT       = '#2e2f2c';
@@ -181,24 +184,27 @@ export function showCelebration(params: CelebrationParams): void {
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'display:block', 'box-sizing:border-box',
     `font-family:${FONT}`,
-    'transition:opacity 0.1s ease',
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
     'outline:none',
   ].join(';');
 
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next Level';
   nextBtn.style.cssText = `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
-  nextBtn.addEventListener('click', () => dismiss(onNextLevel));
+  nextBtn.addEventListener('click', () => { playButtonTap(); dismiss(onNextLevel); });
+  addPressFeedback(nextBtn);
 
   const replayBtn = document.createElement('button');
   replayBtn.textContent = 'Replay';
   replayBtn.style.cssText = `${BTN_BASE};background:${C_RECESSED};color:${C_TEXT};margin-bottom:10px;`;
-  replayBtn.addEventListener('click', () => dismiss(onReplay));
+  replayBtn.addEventListener('click', () => { playButtonTap(); dismiss(onReplay); });
+  addPressFeedback(replayBtn);
 
   const selectBtn = document.createElement('button');
   selectBtn.textContent = 'Level Select';
   selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT_SEC};margin-bottom:0;`;
-  selectBtn.addEventListener('click', () => dismiss(onLevelSelect));
+  selectBtn.addEventListener('click', () => { playButtonTap(); dismiss(onLevelSelect); });
+  addPressFeedback(selectBtn);
 
   cardEl.appendChild(checkEl);
   cardEl.appendChild(nameEl);

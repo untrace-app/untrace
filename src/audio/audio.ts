@@ -1,124 +1,166 @@
 // Tone.js setup, all sound event triggers
+// Synths are NOT created at import time — iOS Safari requires AudioContext to
+// be created and resumed inside a direct user-gesture handler.
 
 import * as Tone from 'tone';
-import { LAYER_PITCHES } from '../constants.ts';
 
-let audioReady = false;
+// ─── State ────────────────────────────────────────────────────────────────────
 
-// ─── Master volume ────────────────────────────────────────────────────────────
+let isReady      = false;
+let _initStarted = false;
 
-Tone.getDestination().volume.value = -6; // ~70% perceived loudness
+// Synth references — assigned inside _doInit(), only accessed when isReady.
+let buttonSynth!:  Tone.Synth;
+let dotSynth!:     Tone.Synth;
+let completePoly!: Tone.PolySynth;
+let undoNoise!:    Tone.NoiseSynth;
+let undoFilter!:   Tone.Filter;
 
-// ─── Dot touch ────────────────────────────────────────────────────────────────
-// Short high-frequency sine ping.
+// Marimba sampler (xylophone samples).
+let marimbaSampler!: Tone.Sampler;
+let isMarimbaLoaded  = false;
 
-const dotSynth = new Tone.Synth({
-  oscillator: { type: 'sine' },
-  envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.01 },
-}).toDestination();
+// ─── White-key scale (no sharps/flats) ────────────────────────────────────────
 
-// ─── Line erase ───────────────────────────────────────────────────────────────
-// Filtered pink-noise burst + pitched sine tone, ~150ms total.
-
-const eraseSine = new Tone.Synth({
-  oscillator: { type: 'sine' },
-  envelope: { attack: 0.005, decay: 0.09, sustain: 0, release: 0.04 },
-}).toDestination();
-
-const eraseNoise = new Tone.NoiseSynth({
-  noise: { type: 'pink' },
-  envelope: { attack: 0.001, decay: 0.07, sustain: 0, release: 0.03 },
-});
-const eraseFilter = new Tone.Filter({ frequency: 2200, type: 'bandpass' }).toDestination();
-eraseNoise.connect(eraseFilter);
-
-// ─── Final layer erase ────────────────────────────────────────────────────────
-// Distinct sine chime with a longer release (~400ms).
-
-const finalSine = new Tone.Synth({
-  oscillator: { type: 'sine' },
-  envelope: { attack: 0.01, decay: 0.15, sustain: 0.15, release: 0.4 },
-}).toDestination();
-
-// ─── Accidental draw ──────────────────────────────────────────────────────────
-// Low muted membrane thud, ~100ms — communicates "oops" without punishing.
-
-const drawSynth = new Tone.MembraneSynth({
-  pitchDecay: 0.04,
-  octaves: 3,
-  envelope: { attack: 0.001, decay: 0.07, sustain: 0, release: 0.02 },
-}).toDestination();
-
-// ─── Puzzle complete ──────────────────────────────────────────────────────────
-// Cascading ascending sine chimes, one every 100ms → ~800ms total.
-
-const completePoly = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: 'sine' },
-  envelope: { attack: 0.01, decay: 0.25, sustain: 0, release: 0.12 },
-}).toDestination();
-
-const COMPLETE_NOTES: readonly string[] = [
-  'C4', 'E4', 'G4', 'B4', 'D5', 'F#5', 'A5', 'C6',
+const WHITE_KEYS: readonly string[] = [
+  'C3','D3','E3','F3','G3','A3','B3',
+  'C4','D4','E4','F4','G4','A4','B4',
+  'C5','D5','E5','F5','G5','A5','B5',
 ];
-const COMPLETE_STEP = 0.1; // seconds between each chime
+const NOTE_INDEX_MAX = WHITE_KEYS.length - 1; // 20
 
-// ─── Undo ─────────────────────────────────────────────────────────────────────
-// White noise with a lowpass filter sweeping high-to-low over ~200ms.
+// ─── Initialization ───────────────────────────────────────────────────────────
 
-const undoNoise = new Tone.NoiseSynth({
-  noise: { type: 'white' },
-  envelope: { attack: 0.001, decay: 0.13, sustain: 0, release: 0.05 },
-});
-const undoFilter = new Tone.Filter({ frequency: 3000, type: 'lowpass' }).toDestination();
-undoNoise.connect(undoFilter);
+function _doInit(): void {
+  if (_initStarted) return;
+  _initStarted = true;
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+  const RawAC = (window.AudioContext
+    ?? (window as unknown as Record<string, unknown>).webkitAudioContext) as typeof AudioContext;
+  let ctx: AudioContext;
+  try {
+    ctx = new RawAC();
+  } catch {
+    return;
+  }
 
-/**
- * Call once from a user-gesture handler (pointerdown, click, keydown).
- * Resumes the AudioContext — browsers block audio until a gesture fires.
- */
-export function initAudio(): void {
-  void Tone.start().then(() => {
-    audioReady = true;
+  ctx.resume();
+  Tone.setContext(ctx);
+  Tone.start();
+
+  Tone.getDestination().volume.value = -6;
+
+  // ── UI synths (direct to destination) ─────────────────────────────────────
+  buttonSynth = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
+    volume: -18,
+  }).toDestination();
+
+  dotSynth = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.01 },
+  }).toDestination();
+
+  completePoly = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.01, decay: 0.25, sustain: 0, release: 0.12 },
+  }).toDestination();
+
+  undoNoise = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.13, sustain: 0, release: 0.05 },
   });
+  undoFilter = new Tone.Filter({ frequency: 3000, type: 'lowpass' }).toDestination();
+  undoNoise.connect(undoFilter);
+
+  // ── Marimba (xylophone samples) ───────────────────────────────────────────
+  marimbaSampler = new Tone.Sampler({
+    urls: { G4: 'G4.mp3', C5: 'C5.mp3', G5: 'G5.mp3', C6: 'C6.mp3', G6: 'G6.mp3', C7: 'C7.mp3' },
+    baseUrl: 'https://nbrosowsky.github.io/tonejs-instruments/samples/xylophone/',
+    onload: () => { isMarimbaLoaded = true; },
+  }).toDestination();
+
+  isReady = true;
+}
+
+// Primary trigger: touchstart on documentElement is more reliable on iOS Safari.
+document.documentElement.addEventListener('touchstart', _doInit, { once: true });
+document.addEventListener('click', _doInit, { once: true });
+
+// ─── Public init ──────────────────────────────────────────────────────────────
+
+export function initAudio(): void {
+  _doInit();
+}
+
+// ─── Progress note state ──────────────────────────────────────────────────────
+
+let _noteCursor = 7; // starts at C4
+
+export function resetProgressAudio(): void {
+  _noteCursor = 7;
 }
 
 // ─── Trigger functions ────────────────────────────────────────────────────────
 
+export function playButtonTap(): void {
+  if (!isReady) return;
+  buttonSynth.triggerAttackRelease('A5', 0.05);
+}
+
 export function playDotTouch(): void {
-  if (!audioReady) return;
+  if (!isReady) return;
   dotSynth.triggerAttackRelease('C6', 0.05);
 }
 
-/** @param layer The layer number being erased (1–5), used to select pitch. */
-export function playErase(layer: number): void {
-  if (!audioReady) return;
-  const pitch = LAYER_PITCHES[layer] || 'C4';
-  eraseSine.triggerAttackRelease(pitch, 0.15);
-  eraseNoise.triggerAttackRelease(0.1);
+export function playProgressNote(erased: boolean): void {
+  if (!isReady) return;
+
+  if (erased) {
+    _noteCursor += 1;
+  } else {
+    _noteCursor -= 1;
+  }
+  _noteCursor = Math.max(0, Math.min(NOTE_INDEX_MAX, _noteCursor));
+
+  const note = WHITE_KEYS[_noteCursor]!;
+  if (isMarimbaLoaded) {
+    marimbaSampler.triggerAttackRelease(note, 0.4, Tone.now(), 0.4);
+  } else {
+    dotSynth.triggerAttackRelease(note, 0.08);
+  }
 }
 
-export function playFinalErase(): void {
-  if (!audioReady) return;
-  finalSine.triggerAttackRelease('E5', 0.4);
-}
+const COMPLETE_NOTES_SYNTH: readonly string[] = [
+  'C4', 'E4', 'G4', 'B4', 'D5', 'F#5', 'A5', 'C6',
+];
+const COMPLETE_STEP = 0.1;
 
-export function playAccidentalDraw(): void {
-  if (!audioReady) return;
-  drawSynth.triggerAttackRelease('C2', 0.1);
-}
+const COMPLETE_WHITE_NOTES: readonly string[] = [
+  WHITE_KEYS[NOTE_INDEX_MAX - 4]!,
+  WHITE_KEYS[NOTE_INDEX_MAX - 3]!,
+  WHITE_KEYS[NOTE_INDEX_MAX - 2]!,
+  WHITE_KEYS[NOTE_INDEX_MAX - 1]!,
+  WHITE_KEYS[NOTE_INDEX_MAX]!,
+];
 
 export function playPuzzleComplete(): void {
-  if (!audioReady) return;
+  if (!isReady) return;
   const now = Tone.now();
-  COMPLETE_NOTES.forEach((note, i) => {
-    completePoly.triggerAttackRelease(note, 0.25, now + i * COMPLETE_STEP);
-  });
+  if (isMarimbaLoaded) {
+    COMPLETE_WHITE_NOTES.forEach((note, i) => {
+      marimbaSampler.triggerAttackRelease(note, 0.5, now + i * COMPLETE_STEP, 0.55);
+    });
+  } else {
+    COMPLETE_NOTES_SYNTH.forEach((note, i) => {
+      completePoly.triggerAttackRelease(note, 0.25, now + i * COMPLETE_STEP);
+    });
+  }
 }
 
 export function playUndo(): void {
-  if (!audioReady) return;
+  if (!isReady) return;
   const now = Tone.now();
   undoFilter.frequency.cancelScheduledValues(now);
   undoFilter.frequency.setValueAtTime(3000, now);

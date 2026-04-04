@@ -1,7 +1,7 @@
 // In-game UI (undo, move counter, reset, win screen)
 
 import type { GameState } from '../types.ts';
-import { playUndo } from '../audio/audio.ts';
+import { playUndo, playButtonTap } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
 import { getCurrentLevel } from '../levels/levels.ts';
 
@@ -33,8 +33,6 @@ interface WinOverlay { show: (moveCount: number) => void; hide: () => void; }
 let winOverlay: WinOverlay | null = null;
 let prevSolved = false;
 
-// Cached for the level-select back button's confirmation check.
-let _cachedMoveCount  = 0;
 let _onLevelSelect:   (() => void) | null = null;
 let _onWin:           ((moveCount: number) => void) | null = null;
 
@@ -66,8 +64,8 @@ const GRAD_PRIMARY = 'linear-gradient(135deg, #993c49, #ff8c98)';
 
 // Inline button for use inside the top/bottom bar (no position:fixed).
 const BTN_INLINE = [
-  'width:44px',
-  'height:44px',
+  'width:40px',
+  'height:40px',
   'flex-shrink:0',
   'display:flex',
   'align-items:center',
@@ -81,27 +79,7 @@ const BTN_INLINE = [
   '-webkit-tap-highlight-color:transparent',
   'touch-action:manipulation',
   'outline:none',
-  'transition:opacity 0.2s ease-out',
-].join(';');
-
-// Back/level-select button — slightly larger tap target.
-const BTN_INLINE_BACK = [
-  'width:48px',
-  'height:48px',
-  'flex-shrink:0',
-  'display:flex',
-  'align-items:center',
-  'justify-content:center',
-  `background:${C_RECESSED}`,
-  'border:none',
-  'border-radius:9999px',
-  `color:${C_TEXT}`,
-  'cursor:pointer',
-  'padding:0',
-  '-webkit-tap-highlight-color:transparent',
-  'touch-action:manipulation',
-  'outline:none',
-  'transition:opacity 0.2s ease-out',
+  'transition:transform 0.15s ease-out, filter 0.15s ease-out',
 ].join(';');
 
 // Shared dialog card style.
@@ -131,14 +109,35 @@ const DIALOG_BTN_BASE = [
   'font-size:15px', 'font-weight:600', 'cursor:pointer',
   `font-family:${FONT}`,
   'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
-  'transition:opacity 0.2s ease-out',
+  'transition:transform 0.15s ease-out, filter 0.15s ease-out',
 ].join(';');
+
+/** Attach press feedback to any button: scale 0.92 + brightness on press. */
+export function addPressFeedback(btn: HTMLElement): void {
+  btn.addEventListener('pointerdown', () => {
+    btn.style.transform = 'scale(0.92)';
+    btn.style.filter    = 'brightness(1.1)';
+  });
+  btn.addEventListener('pointerup', () => {
+    btn.style.transform = 'scale(1)';
+    btn.style.filter    = 'brightness(1)';
+  });
+  btn.addEventListener('pointercancel', () => {
+    btn.style.transform = 'scale(1)';
+    btn.style.filter    = 'brightness(1)';
+  });
+  btn.addEventListener('pointerleave', () => {
+    btn.style.transform = 'scale(1)';
+    btn.style.filter    = 'brightness(1)';
+  });
+}
 
 function makeInlineBtn(icon: string, label: string): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.style.cssText = BTN_INLINE;
   btn.innerHTML = icon;
   btn.setAttribute('aria-label', label);
+  addPressFeedback(btn);
   return btn;
 }
 
@@ -171,55 +170,12 @@ function buildResetDialog(ui: HTMLElement, onConfirm: () => void): () => void {
   card.addEventListener('click', (e) => e.stopPropagation());
   cancelBtn.addEventListener('click', hide);
   confirmBtn.addEventListener('click', () => { hide(); onConfirm(); });
+  addPressFeedback(cancelBtn);
+  addPressFeedback(confirmBtn);
 
   btnRow.appendChild(cancelBtn);
   btnRow.appendChild(confirmBtn);
   card.appendChild(text);
-  card.appendChild(btnRow);
-  backdrop.appendChild(card);
-  ui.appendChild(backdrop);
-
-  return () => { backdrop.style.display = 'flex'; };
-}
-
-// ─── Leave level confirmation dialog ─────────────────────────────────────────
-
-function buildLeaveDialog(ui: HTMLElement, onConfirm: () => void): () => void {
-  const backdrop = document.createElement('div');
-  backdrop.style.cssText = `${BACKDROP_STYLE_BASE};display:none;z-index:12;`;
-
-  const card = document.createElement('div');
-  card.style.cssText = CARD_STYLE;
-
-  const text = document.createElement('p');
-  text.textContent = 'Return to level select?';
-  text.style.cssText = `color:${C_TEXT};font-size:16px;font-weight:600;margin:0 0 6px;line-height:1.4;font-family:${FONT_HEADING};`;
-
-  const sub = document.createElement('p');
-  sub.textContent = 'Progress on this level will be lost.';
-  sub.style.cssText = `color:${C_TEXT_SEC};font-size:13px;font-weight:400;margin:0 0 24px;line-height:1.4;`;
-
-  const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:10px;';
-
-  const stayBtn = document.createElement('button');
-  stayBtn.textContent = 'Stay';
-  stayBtn.style.cssText = `${DIALOG_BTN_BASE};background:${C_RECESSED};color:${C_TEXT};`;
-
-  const leaveBtn = document.createElement('button');
-  leaveBtn.textContent = 'Leave';
-  leaveBtn.style.cssText = `${DIALOG_BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;`;
-
-  function hide(): void { backdrop.style.display = 'none'; }
-  backdrop.addEventListener('click', hide);
-  card.addEventListener('click', (e) => e.stopPropagation());
-  stayBtn.addEventListener('click', hide);
-  leaveBtn.addEventListener('click', () => { hide(); onConfirm(); });
-
-  btnRow.appendChild(stayBtn);
-  btnRow.appendChild(leaveBtn);
-  card.appendChild(text);
-  card.appendChild(sub);
   card.appendChild(btnRow);
   backdrop.appendChild(card);
   ui.appendChild(backdrop);
@@ -270,6 +226,7 @@ function buildWinOverlay(
     'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
     'display:block', 'box-sizing:border-box',
     `font-family:${FONT}`,
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
   ].join(';');
 
   const nextBtn = document.createElement('button');
@@ -282,6 +239,8 @@ function buildWinOverlay(
 
   nextBtn.addEventListener('click',   () => { hide(); onNextLevel(); });
   replayBtn.addEventListener('click', () => { hide(); onReplay();    });
+  addPressFeedback(nextBtn);
+  addPressFeedback(replayBtn);
 
   card.appendChild(title);
   card.appendChild(movesEl);
@@ -334,13 +293,14 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   const topBar = document.createElement('div');
   topBar.style.cssText = [
     'position:fixed', 'top:0', 'left:0', 'right:0',
-    'height:60px',
+    'padding-top:calc(env(safe-area-inset-top, 0px) + 12px)',
+    'height:52px',
     'display:flex', 'align-items:center', 'justify-content:space-between',
-    'padding:0 16px',
+    'padding-left:16px', 'padding-right:16px',
     'background:#f8f6f2',
     'z-index:5',
     `font-family:${FONT}`,
-    'box-sizing:border-box',
+    'box-sizing:content-box',
   ].join(';');
 
   const LABEL_STYLE = [
@@ -354,18 +314,10 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   const leftCol = document.createElement('div');
   leftCol.style.cssText = 'flex:1;display:flex;align-items:center;';
 
-  const showLeaveDialog = buildLeaveDialog(ui, () => _onLevelSelect?.());
-  const backBtn = document.createElement('button');
-  backBtn.style.cssText = BTN_INLINE_BACK;
-  backBtn.innerHTML = LEVELS_ICON;
-  backBtn.setAttribute('aria-label', 'Level select');
+  const backBtn = makeInlineBtn(LEVELS_ICON, 'Level select');
   backBtn.addEventListener('click', () => {
-    console.log('[overlay] back button pressed, moveCount =', _cachedMoveCount);
-    if (_cachedMoveCount > 0) {
-      showLeaveDialog();
-    } else {
-      _onLevelSelect?.();
-    }
+    playButtonTap();
+    _onLevelSelect?.();
   });
   leftCol.appendChild(backBtn);
 
@@ -396,7 +348,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;';
   const showResetDialog = buildResetDialog(ui, callbacks.onReset);
   const resetBtn = makeInlineBtn(RESET_ICON, 'Reset puzzle');
-  resetBtn.addEventListener('click', showResetDialog);
+  resetBtn.addEventListener('click', () => { playButtonTap(); showResetDialog(); });
   rightCol.appendChild(resetBtn);
 
   topBar.appendChild(leftCol);
@@ -408,19 +360,20 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   const bottomBar = document.createElement('div');
   bottomBar.style.cssText = [
     'position:fixed', 'bottom:0', 'left:0', 'right:0',
-    'height:80px',
+    'padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)',
+    'height:48px',
     'display:flex', 'align-items:center', 'justify-content:space-between',
-    'padding:0 24px',
+    'padding-left:24px', 'padding-right:24px',
     'background:#f8f6f2',
     `font-family:${FONT}`,
-    'box-sizing:border-box',
+    'box-sizing:content-box',
   ].join(';');
 
   undoBtnEl = makeInlineBtn(UNDO_ICON, 'Undo');
-  undoBtnEl.addEventListener('click', () => callbacks.onUndo());
+  undoBtnEl.addEventListener('click', () => { playButtonTap(); callbacks.onUndo(); });
 
   redoBtnEl = makeInlineBtn(REDO_ICON, 'Redo');
-  redoBtnEl.addEventListener('click', () => { callbacks.onRedo(); playUndo(); });
+  redoBtnEl.addEventListener('click', () => { playButtonTap(); callbacks.onRedo(); playUndo(); });
 
   // Center cluster: moves counter is the in-flow anchor, always vertically centered.
   // The reduce indicator floats above it via absolute positioning — never shifts the row.
@@ -474,7 +427,6 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
 export function updateOverlay(state: GameState, levelIndex: number, levelTotal: number): void {
   _levelIndex      = levelIndex;
   _levelTotal      = levelTotal;
-  _cachedMoveCount = state.moveCount;
 
   if (levelIndicatorEl !== null) {
     levelIndicatorEl.textContent = `Level ${levelIndex + 1}`;

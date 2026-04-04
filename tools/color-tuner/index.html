@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Untrace Color Tuner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: #808080;
+    color: #e0e0e0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Left: Preview ─────────────────────────────────────────────── */
+  #preview {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: 24px;
+    gap: 20px;
+  }
+  #preview h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ccc;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    align-self: flex-start;
+  }
+
+  /* Page background wrapper */
+  #page-bg {
+    width: 100%;
+    max-width: 380px;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Top bar mock */
+  #mock-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+  .topbar-btn {
+    width: 40px; height: 40px; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; cursor: default;
+  }
+  .topbar-center {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .topbar-level {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+  }
+  .topbar-name {
+    font-size: 12px; font-weight: 400;
+  }
+
+  /* Board background */
+  #board-wrapper {
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #game-canvas {
+    display: block;
+    border-radius: 4px;
+  }
+
+  /* Bottom bar mock */
+  #mock-bottombar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-radius: 12px;
+  }
+  .bottombar-btn {
+    width: 40px; height: 40px; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    border: none; cursor: default;
+  }
+  .bottombar-moves {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+  }
+
+  /* Level select mock */
+  #mock-levelselect {
+    display: flex; gap: 12px; justify-content: center; padding: 8px 0;
+  }
+  .ls-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+  }
+  .ls-tile {
+    width: 54px; height: 54px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 16px; font-weight: 700;
+  }
+  .ls-stars {
+    display: flex; gap: 3px;
+  }
+  .ls-star-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+
+  /* Celebration card mock */
+  #mock-celebration {
+    border-radius: 20px;
+    padding: 24px 20px 18px;
+    text-align: center;
+    max-width: 260px;
+    width: 100%;
+    box-shadow: 0 6px 24px rgba(46,47,44,0.08);
+  }
+  .celeb-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 22px; font-weight: 700; margin-bottom: 4px;
+  }
+  .celeb-sub { font-size: 13px; margin-bottom: 16px; }
+  .celeb-stars { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }
+  .celeb-btn {
+    width: 100%; padding: 12px 0; border: none; border-radius: 9999px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: default;
+    display: block; margin-bottom: 8px;
+  }
+
+  /* ── Right: Controls ───────────────────────────────────────────── */
+  #controls {
+    width: 320px;
+    background: #2a2a2a;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-left: 1px solid #444;
+  }
+  #controls h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: #aaa; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 6px;
+  }
+  .section-label {
+    font-size: 11px; font-weight: 600; color: #888;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-top: 10px; margin-bottom: 2px;
+  }
+  .color-row {
+    display: flex; align-items: center; gap: 8px;
+    height: 32px;
+  }
+  .color-row label {
+    flex: 1; font-size: 12px; color: #ccc;
+  }
+  .color-row input[type="color"] {
+    width: 32px; height: 24px; border: 1px solid #555;
+    border-radius: 4px; cursor: pointer; padding: 0;
+    background: none;
+  }
+  .color-row .hex {
+    font-size: 11px; color: #999; font-family: monospace;
+    width: 60px; text-align: right;
+  }
+  .opacity-row {
+    display: flex; align-items: center; gap: 8px; height: 32px;
+  }
+  .opacity-row label { flex: 1; font-size: 12px; color: #ccc; }
+  .opacity-row input[type="range"] { width: 80px; }
+  .opacity-row .val { font-size: 11px; color: #999; font-family: monospace; width: 30px; text-align: right; }
+
+  #btn-row {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  #btn-row button {
+    flex: 1; padding: 10px 0; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: 'Manrope', sans-serif;
+  }
+  #btn-export { background: #993c49; color: #fff; }
+  #btn-reset  { background: #555; color: #ddd; }
+  #export-output {
+    width: 100%; height: 120px; margin-top: 8px;
+    background: #1a1a1a; color: #ccc; border: 1px solid #444;
+    border-radius: 6px; padding: 8px; font-size: 11px;
+    font-family: monospace; resize: vertical;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Preview Panel ──────────────────────────────────────────────── -->
+<div id="preview">
+  <h2>Preview</h2>
+
+  <div id="page-bg">
+    <!-- Top bar -->
+    <div id="mock-topbar">
+      <div class="topbar-btn" id="tb-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </div>
+      <div class="topbar-center">
+        <div class="topbar-level" id="tb-level">Level 5</div>
+        <div class="topbar-name" id="tb-name">Crossroads</div>
+      </div>
+      <div class="topbar-btn" id="tb-reset">
+        <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor"><path d="M65.9 228.5c13.3-93 93.4-164.5 190.1-164.5 53 0 101 21.5 135.8 56.2l7.6 7.2-47.9 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 53.4-11.3-10.7C390.5 28.6 326.5 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1z"/></svg>
+      </div>
+    </div>
+
+    <!-- Game board -->
+    <div id="board-wrapper">
+      <canvas id="game-canvas" width="280" height="280"></canvas>
+    </div>
+
+    <!-- Bottom bar -->
+    <div id="mock-bottombar">
+      <div class="bottombar-btn" id="bb-undo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.5"/>
+        </svg>
+      </div>
+      <div class="bottombar-moves" id="bb-moves">Moves: 3</div>
+      <div class="bottombar-btn" id="bb-redo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Level select mock -->
+    <div id="mock-levelselect"></div>
+
+    <!-- Celebration card mock -->
+    <div id="mock-celebration">
+      <div class="celeb-title" id="celeb-title">Level Cleared</div>
+      <div class="celeb-sub" id="celeb-sub">Crossroads</div>
+      <div class="celeb-stars" id="celeb-stars"></div>
+      <button class="celeb-btn" id="celeb-next">Next Level</button>
+      <button class="celeb-btn" id="celeb-replay">Replay</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Controls Panel ─────────────────────────────────────────────── -->
+<div id="controls">
+  <h2>Color Tuner</h2>
+  <div id="picker-list"></div>
+  <div class="section-label">Opacity</div>
+  <div id="opacity-list"></div>
+  <div id="btn-row">
+    <button id="btn-export">Export Colors</button>
+    <button id="btn-reset">Reset to Current</button>
+  </div>
+  <textarea id="export-output" readonly></textarea>
+</div>
+
+<script>
+// ── Default colors from constants.ts ─────────────────────────────
+const DEFAULTS = {
+  pageBackground:    '#f8f6f2',
+  boardBackground:   '#e9e8e4',
+  dotInactive:       '#d3d1c7',
+  dotActive:         '#993c49',
+  layerRed:          '#e07a7a',
+  layerAmber:        '#e8b76e',
+  layerTeal:         '#6cb5a4',
+  layerViolet:       '#9b8bc7',
+  layerWhite:        '#b4b2a9',
+  accidentalFlash:   '#cc5555',
+  uiTextPrimary:     '#2e2f2c',
+  uiTextSecondary:   '#888780',
+  gradientStart:     '#993c49',
+  gradientEnd:       '#ff8c98',
+  cardBackground:    '#ffffff',
+  starEarned:        '#e8b76e',
+  starEmpty:         '#d3d1c7',
+  recessedBg:        '#e9e8e4',
+  primaryAccent:     '#993c49',
+};
+
+const OPACITY_DEFAULTS = {
+  lockedLevel: 0.4,
+};
+
+const LABELS = {
+  pageBackground:  'Page Background',
+  boardBackground: 'Board Background',
+  dotInactive:     'Dot (inactive)',
+  dotActive:       'Dot (active)',
+  layerRed:        'Red Layer (1)',
+  layerAmber:      'Amber Layer (2)',
+  layerTeal:       'Teal Layer (3)',
+  layerViolet:     'Violet Layer (4)',
+  layerWhite:      'White Layer (5)',
+  accidentalFlash: 'Accidental Flash',
+  uiTextPrimary:   'UI Text Primary',
+  uiTextSecondary: 'UI Text Secondary',
+  gradientStart:   'Gradient Start',
+  gradientEnd:     'Gradient End',
+  cardBackground:  'Card Background',
+  starEarned:      'Star (earned)',
+  starEmpty:       'Star (empty)',
+  recessedBg:      'Recessed BG',
+  primaryAccent:   'Primary Accent',
+};
+
+const SECTIONS = {
+  pageBackground:  'Backgrounds',
+  dotInactive:     'Dots',
+  layerRed:        'Layers',
+  accidentalFlash: 'Feedback',
+  uiTextPrimary:   'UI Text',
+  gradientStart:   'Buttons & Cards',
+  starEarned:      'Stars & Misc',
+};
+
+// ── State ────────────────────────────────────────────────────────
+const colors = { ...DEFAULTS };
+const opacities = { ...OPACITY_DEFAULTS };
+
+// ── Build pickers ────────────────────────────────────────────────
+const pickerList = document.getElementById('picker-list');
+const hexSpans = {};
+
+for (const [key, label] of Object.entries(LABELS)) {
+  if (SECTIONS[key]) {
+    const sec = document.createElement('div');
+    sec.className = 'section-label';
+    sec.textContent = SECTIONS[key];
+    pickerList.appendChild(sec);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'color-row';
+
+  const lbl = document.createElement('label');
+  lbl.textContent = label;
+
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = colors[key];
+  input.addEventListener('input', () => {
+    colors[key] = input.value;
+    hexSpan.textContent = input.value;
+    updateAll();
+  });
+
+  const hexSpan = document.createElement('span');
+  hexSpan.className = 'hex';
+  hexSpan.textContent = colors[key];
+  hexSpans[key] = { input, hexSpan };
+
+  row.appendChild(lbl);
+  row.appendChild(input);
+  row.appendChild(hexSpan);
+  pickerList.appendChild(row);
+}
+
+// Opacity pickers
+const opacityList = document.getElementById('opacity-list');
+const opacityInputs = {};
+
+{
+  const row = document.createElement('div');
+  row.className = 'opacity-row';
+  const lbl = document.createElement('label');
+  lbl.textContent = 'Locked Level';
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = '0'; input.max = '1'; input.step = '0.05';
+  input.value = String(opacities.lockedLevel);
+  const val = document.createElement('span');
+  val.className = 'val';
+  val.textContent = String(opacities.lockedLevel);
+  input.addEventListener('input', () => {
+    opacities.lockedLevel = parseFloat(input.value);
+    val.textContent = input.value;
+    updateAll();
+  });
+  opacityInputs.lockedLevel = { input, val };
+  row.appendChild(lbl);
+  row.appendChild(input);
+  row.appendChild(val);
+  opacityList.appendChild(row);
+}
+
+// ── Canvas drawing ───────────────────────────────────────────────
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const W = 280, H = 280;
+const GRID = 3;
+const SPACING = 90;
+const ORIGIN_X = (W - SPACING * (GRID - 1)) / 2;
+const ORIGIN_Y = (H - SPACING * (GRID - 1)) / 2;
+const DOT_R = 10;
+const LINE_W = 6;
+
+function gtp(col, row) {
+  return { x: ORIGIN_X + col * SPACING, y: ORIGIN_Y + row * SPACING };
+}
+
+function drawLine(x1, y1, x2, y2, color, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+// Connection definitions: [fromCol, fromRow, toCol, toRow, layerCount]
+const CONNECTIONS = [
+  [0, 0, 1, 0, 1],  // red
+  [1, 0, 2, 0, 2],  // amber
+  [0, 1, 1, 1, 3],  // teal
+  [1, 1, 2, 1, 4],  // violet
+  [0, 2, 1, 2, 5],  // white
+  [0, 0, 0, 1, 1],  // red vertical
+  [2, 1, 2, 2, 2],  // amber vertical
+  [1, 0, 1, 1, 0],  // empty (erased) — to show accidental flash
+];
+
+const LAYER_KEYS = ['', 'layerRed', 'layerAmber', 'layerTeal', 'layerViolet', 'layerWhite'];
+
+function drawBoard() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw connections
+  for (const [c1, r1, c2, r2, layers] of CONNECTIONS) {
+    if (layers === 0) continue;
+    const a = gtp(c1, r1);
+    const b = gtp(c2, r2);
+    const color = colors[LAYER_KEYS[layers]] || colors.layerWhite;
+    const width = LINE_W + (layers - 1) * 1.5;
+    drawLine(a.x, a.y, b.x, b.y, color, width);
+  }
+
+  // Accidental flash on empty connection
+  {
+    const a = gtp(1, 0);
+    const b = gtp(1, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    drawLine(a.x, a.y, b.x, b.y, colors.accidentalFlash, LINE_W * 1.3);
+    ctx.restore();
+  }
+
+  // Draw dots
+  for (let c = 0; c < GRID; c++) {
+    for (let r = 0; r < GRID; r++) {
+      const { x, y } = gtp(c, r);
+      const isActive = c === 2 && r === 2;
+      ctx.beginPath();
+      ctx.arc(x, y, DOT_R, 0, Math.PI * 2);
+      ctx.fillStyle = isActive ? colors.dotActive : colors.dotInactive;
+      ctx.fill();
+
+      // Active dot glow
+      if (isActive) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(x, y, DOT_R * 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = colors.dotActive;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+}
+
+// ── UI Updates ───────────────────────────────────────────────────
+function updateAll() {
+  const c = colors;
+  const o = opacities;
+
+  // Page bg
+  document.getElementById('page-bg').style.background = c.pageBackground;
+
+  // Board wrapper
+  document.getElementById('board-wrapper').style.background = c.boardBackground;
+
+  // Top bar
+  const topbar = document.getElementById('mock-topbar');
+  topbar.style.background = c.pageBackground;
+  document.getElementById('tb-back').style.background = c.recessedBg;
+  document.getElementById('tb-back').style.color = c.uiTextPrimary;
+  document.getElementById('tb-reset').style.background = c.recessedBg;
+  document.getElementById('tb-reset').style.color = c.uiTextSecondary;
+  document.getElementById('tb-level').style.color = c.uiTextPrimary;
+  document.getElementById('tb-name').style.color = c.uiTextSecondary;
+
+  // Bottom bar
+  const bottombar = document.getElementById('mock-bottombar');
+  bottombar.style.background = c.pageBackground;
+  document.getElementById('bb-undo').style.background = c.recessedBg;
+  document.getElementById('bb-undo').style.color = c.uiTextPrimary;
+  document.getElementById('bb-redo').style.background = c.recessedBg;
+  document.getElementById('bb-redo').style.color = c.uiTextPrimary;
+  document.getElementById('bb-moves').style.color = c.uiTextPrimary;
+
+  // Level select
+  buildLevelSelect();
+
+  // Celebration card
+  const celeb = document.getElementById('mock-celebration');
+  celeb.style.background = c.cardBackground;
+  document.getElementById('celeb-title').style.color = c.uiTextPrimary;
+  document.getElementById('celeb-sub').style.color = c.uiTextSecondary;
+  buildCelebStars();
+  document.getElementById('celeb-next').style.background = `linear-gradient(135deg, ${c.gradientStart}, ${c.gradientEnd})`;
+  document.getElementById('celeb-next').style.color = '#ffffff';
+  document.getElementById('celeb-replay').style.background = c.recessedBg;
+  document.getElementById('celeb-replay').style.color = c.uiTextPrimary;
+
+  // Redraw canvas
+  drawBoard();
+}
+
+function buildLevelSelect() {
+  const c = colors;
+  const o = opacities;
+  const container = document.getElementById('mock-levelselect');
+  container.innerHTML = '';
+  container.style.background = c.pageBackground;
+  container.style.borderRadius = '12px';
+  container.style.padding = '12px';
+
+  // Completed level (with stars)
+  const cell1 = makeLSCell('1', c.recessedBg, 'none', c.uiTextPrimary, 1.0, 2);
+  // Current level
+  const cell2 = makeLSCell('2', c.cardBackground, `2px solid ${c.primaryAccent}`, c.primaryAccent, 1.0, 0);
+  // Locked level
+  const cell3 = makeLSCell('', c.recessedBg, 'none', '', o.lockedLevel, -1);
+
+  container.appendChild(cell1);
+  container.appendChild(cell2);
+  container.appendChild(cell3);
+}
+
+function makeLSCell(num, bg, border, textColor, opacity, stars) {
+  const cell = document.createElement('div');
+  cell.className = 'ls-cell';
+
+  const tile = document.createElement('div');
+  tile.className = 'ls-tile';
+  tile.style.background = bg;
+  tile.style.border = border;
+  tile.style.color = textColor;
+  tile.style.opacity = String(opacity);
+  tile.textContent = num;
+
+  if (stars === -1) {
+    // Locked — show lock icon
+    tile.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + colors.uiTextSecondary + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  }
+
+  cell.appendChild(tile);
+
+  // Star dots
+  const starsRow = document.createElement('div');
+  starsRow.className = 'ls-stars';
+  if (stars > 0) {
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'ls-star-dot';
+      dot.style.background = i < stars ? colors.starEarned : colors.starEmpty;
+      starsRow.appendChild(dot);
+    }
+  } else {
+    starsRow.style.height = '5px';
+  }
+  cell.appendChild(starsRow);
+  return cell;
+}
+
+function buildCelebStars() {
+  const container = document.getElementById('celeb-stars');
+  container.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const filled = i < 2;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '24');
+    svg.setAttribute('height', '24');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', filled ? colors.starEarned : colors.starEmpty);
+    svg.setAttribute('stroke', filled ? colors.starEarned : colors.starEmpty);
+    svg.setAttribute('stroke-width', '1');
+    svg.innerHTML = '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>';
+    container.appendChild(svg);
+  }
+}
+
+// ── Export / Reset ───────────────────────────────────────────────
+document.getElementById('btn-export').addEventListener('click', () => {
+  const data = { ...colors, lockedLevelOpacity: opacities.lockedLevel };
+  const json = JSON.stringify(data, null, 2);
+  document.getElementById('export-output').value = json;
+  navigator.clipboard.writeText(json).catch(() => {});
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  Object.assign(colors, DEFAULTS);
+  Object.assign(opacities, OPACITY_DEFAULTS);
+  for (const [key, { input, hexSpan }] of Object.entries(hexSpans)) {
+    input.value = colors[key];
+    hexSpan.textContent = colors[key];
+  }
+  for (const [key, { input, val }] of Object.entries(opacityInputs)) {
+    input.value = String(opacities[key]);
+    val.textContent = String(opacities[key]);
+  }
+  updateAll();
+});
+
+// ── Initial render ───────────────────────────────────────────────
+updateAll();
+</script>
+</body>
+</html>

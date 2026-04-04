@@ -2,7 +2,7 @@ import { render } from './engine/renderer.ts';
 import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActivation } from './engine/animations.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
-import { initAudio, playErase, playFinalErase, playAccidentalDraw, playPuzzleComplete, playUndo } from './audio/audio.ts';
+import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo } from './audio/audio.ts';
 import { initOverlay, updateOverlay } from './ui/overlay.ts';
 import { initCelebration, showCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
@@ -104,6 +104,7 @@ function saveGameState(levelId: string): void {
     playerDot:   gameState.playerDot,
     moveCount:   gameState.moveCount,
   };
+  console.log(`SAVE: saving level ${levelId}, moves: ${gameState.moveCount}, playerDot: ${JSON.stringify(gameState.playerDot)}`);
   try { localStorage.setItem(_saveKey(levelId), JSON.stringify(data)); } catch { /* ignore */ }
 }
 
@@ -114,8 +115,22 @@ function loadSave(levelId: string): SavedState | null {
   } catch { return null; }
 }
 
-function clearSave(levelId: string): void {
+function clearSave(levelId: string, reason: string): void {
+  console.log(`SAVE: clearing save for ${levelId}, reason: ${reason}`);
   localStorage.removeItem(_saveKey(levelId));
+}
+
+function clearOtherSaves(keepLevelId: string): void {
+  const keepKey = _saveKey(keepLevelId);
+  const toRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('untrace-save-') && key !== keepKey) toRemove.push(key);
+  }
+  for (const key of toRemove) {
+    console.log(`SAVE: clearing save for ${key.replace('untrace-save-', '')}, reason: switching levels`);
+    localStorage.removeItem(key);
+  }
 }
 
 function applySave(save: SavedState): void {
@@ -124,12 +139,13 @@ function applySave(save: SavedState): void {
     connections.set(k as ConnectionKey, { layers });
   }
   gameState.connections              = connections;
-  gameState.playerDot                = save.playerDot;
+  gameState.playerDot                = save.playerDot ?? null;
   gameState.moveCount                = save.moveCount;
   gameState.isTracing                = false;
   gameState.undoStack                = [];
   gameState.redoStack                = [];
   gameState.currentStrokeConnections = new Set();
+  console.log(`SAVE: restoring playerDot: ${JSON.stringify(gameState.playerDot)}`);
 }
 
 function showResumeDialog(levelId: string, save: SavedState): void {
@@ -170,12 +186,12 @@ function showResumeDialog(levelId: string, save: SavedState): void {
   const restartBtn = document.createElement('button');
   restartBtn.textContent = 'Restart';
   restartBtn.style.cssText = `${DIALOG_BTN};background:rgba(255,255,255,0.12);color:#ffffff;`;
-  restartBtn.addEventListener('click', () => { clearSave(levelId); dismiss(); });
+  restartBtn.addEventListener('click', () => { clearSave(levelId, 'restart'); dismiss(); resetGame(); });
 
   const resumeBtn = document.createElement('button');
   resumeBtn.textContent = 'Resume';
   resumeBtn.style.cssText = `${DIALOG_BTN};background:#4ECDC4;color:#0A0A14;`;
-  resumeBtn.addEventListener('click', () => { applySave(save); dismiss(); });
+  resumeBtn.addEventListener('click', () => { dismiss(); });
 
   btnRow.appendChild(restartBtn);
   btnRow.appendChild(resumeBtn);
@@ -189,12 +205,13 @@ function showResumeDialog(levelId: string, save: SavedState): void {
 // ─── Level loading ────────────────────────────────────────────────────────────
 
 // Snapshot of initial connections for the current level (used by resetGame).
-let initialConnections = new Map<ConnectionKey, ConnectionState>();
+let initialConnections    = new Map<ConnectionKey, ConnectionState>();
 
 function loadLevel(index: number): void {
   currentLevelIndex = index % getLevelCount();
   setCurrentLevel(currentLevelIndex);
   const level = getCurrentLevel(currentLevelIndex);
+  clearOtherSaves(level.id);
 
   // Build connections map from level data.
   const connections = new Map<ConnectionKey, ConnectionState>();
@@ -207,10 +224,11 @@ function loadLevel(index: number): void {
     connections.set(key, { layers: c.layers });
   }
 
-  // Save snapshot for reset.
+  // Save snapshot for reset and compute starting total for audio progress mapping.
   initialConnections = new Map<ConnectionKey, ConnectionState>(
     Array.from(connections, ([k, v]): [ConnectionKey, ConnectionState] => [k, { ...v }])
   );
+  resetProgressAudio();
 
   // Apply to game state.
   gameState.grid                      = { ...level.grid };
@@ -228,13 +246,20 @@ function loadLevel(index: number): void {
   // If gameplay is already active (canvas visible), check for a mid-level save.
   // Skips silently on the startup loadLevel(0) call when the canvas is still hidden.
   if (canvas.style.opacity === '1') {
+    console.log(`SAVE: checking for save on level ${level.id}`);
     const save = loadSave(level.id);
-    if (save) showResumeDialog(level.id, save);
+    if (save) {
+      console.log(`SAVE: found save for level ${level.id}`);
+      applySave(save);
+      showResumeDialog(level.id, save);
+    } else {
+      console.log('SAVE: no save found');
+    }
   }
 }
 
 function resetGame(): void {
-  clearSave(getCurrentLevel(currentLevelIndex).id);
+  clearSave(getCurrentLevel(currentLevelIndex).id, 'reset');
   gameState.connections = new Map<ConnectionKey, ConnectionState>(
     Array.from(initialConnections, ([k, v]): [ConnectionKey, ConnectionState] => [k, { ...v }])
   );
@@ -335,8 +360,10 @@ function loop(time: number): void {
     const layersBefore = gameState.connections.get(key)?.layers ?? -1;
 
     processMove(gameState, from, to);
+    // playerDot is updated by input.ts AFTER onMove returns, so set it here
+    // to ensure the save captures the destination dot, not the stale origin.
+    gameState.playerDot = to;
 
-    const layersAfter = gameState.connections.get(key)?.layers ?? 0;
     const won = checkWin(gameState);
     const levelId = getCurrentLevel(currentLevelIndex).id;
 
@@ -347,13 +374,10 @@ function loop(time: number): void {
       // Win sound and celebration card are both triggered after a 150ms delay
       // (see onWin callback below) so the final erase animation is visible first.
     } else if (layersBefore <= 0) {
-      playAccidentalDraw();
+      playProgressNote(false);
       triggerAccidentalDraw(key);
-    } else if (layersAfter === 0) {
-      playFinalErase();
-      triggerErase(key, layersBefore);
     } else {
-      playErase(layersBefore);
+      playProgressNote(true);
       triggerErase(key, layersBefore);
     }
     triggerDotActivation(to);
@@ -373,7 +397,7 @@ function loop(time: number): void {
     onLevelSelect: () => { boardBgEl.style.display = 'none'; showLevelSelect(); },
     onWin: (moveCount: number) => {
       const level    = getCurrentLevel(currentLevelIndex);
-      clearSave(level.id);
+      clearSave(level.id, 'win');
       const minMoves = level.meta.minMoves;
       let stars = 1;
       if (minMoves !== null && minMoves > 0) {

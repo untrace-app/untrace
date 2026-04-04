@@ -474,16 +474,55 @@ For 3x3 grids, the full solver can optionally run as well (<100ms) for a precise
 - Streak tracking: consecutive days with a completed daily puzzle, stored in localStorage
 - No global leaderboard in Phase 3 (requires backend, deferred to Phase 5)
 
-### 3.9 Settings Screen
+### 3.9 Tutorial Hand Animation
+
+A semi-transparent hand/finger SVG icon that animates on top of the game board, showing the player exactly what to do on early levels. Plays once when the level loads, fades out permanently when the player makes their first move.
+
+**Implementation:**
+- Hand icon: SVG pointing finger (Font Awesome fa-hand-pointer or custom), semi-transparent, positioned absolutely over the canvas
+- Animation: hand moves between dots using CSS transitions or requestAnimationFrame, following a predefined path. A ghost trail line draws behind it as it moves, mimicking the actual trace behavior.
+- Position computed using the same gridToPixel function the renderer uses
+- Loops every 2-3 seconds with a pause between loops until player touches the screen
+
+**Per-level tutorial scripts (stored in level data):**
+```json
+"tutorial": {
+  "moves": [[0,0], [1,0]],
+  "delay": 500,
+  "loop": true
+}
+```
+- Level 1: hand drags dot 1 to dot 2 (teaches basic tracing)
+- Level 2: hand drags 1 to 2 to 5 in one continuous motion (teaches continuous trace)
+- Level 3: no tutorial (player should know by now)
+- Level 5: hand traces the same connection twice (teaches multi-layer)
+
+**Behavior:**
+- Only shows on levels that have a "tutorial" field in their level data
+- Fades out on first pointerdown event
+- Never shows again on a level the player has already completed (check localStorage)
+
+### 3.10 Splash Screen
+
+A brief branded screen that shows on every app launch before the level select.
+
+- Full screen, background #f8f6f2
+- "Untrace" title centered in Plus Jakarta Sans, 3.5rem, weight 700, color #2e2f2c
+- Optional subtle animation: a single line being traced and erased
+- Auto-transitions to level select after 1.5 seconds, or on tap
+- Covers any loading/initialization time
+- Prevents raw level select from being the first thing a new player sees
+
+### 3.11 Settings Screen
 
 - Volume slider
 - Mute toggle
-- Pattern mode toggle (accessibility)
+- Pattern mode toggle (accessibility / colorblind support)
 - Haptic feedback toggle (only shown on devices that support vibration)
 - Reset all progress (confirm dialog with two-step confirmation)
 - Version number
 
-### 3.10 Performance Targets
+### 3.12 Performance Targets
 
 - 60fps rendering on iPhone SE (2nd gen) and above
 - Touch-to-visual-response latency < 16ms (one frame)
