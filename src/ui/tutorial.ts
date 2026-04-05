@@ -124,7 +124,8 @@ let _handAnimId: number | null = null;
 // Tutorial bars (mirror overlay.ts layout)
 let _topBarEl: HTMLDivElement | null = null;
 let _bottomBarEl: HTMLDivElement | null = null;
-let _hintTextEl: HTMLElement | null = null;
+let _stepLabelEl: HTMLElement | null = null;
+let _tipEl: HTMLDivElement | null = null;
 let _moveCounterEl: HTMLElement | null = null;
 let _undoBtnEl: HTMLButtonElement | null = null;
 let _redoBtnEl: HTMLButtonElement | null = null;
@@ -279,8 +280,9 @@ function _startLevel(index: number): void {
   _removeCompletion();
   _removeHand();
 
-  // Update hint text in top bar
-  if (_hintTextEl) _hintTextEl.textContent = level.hint;
+  // Update header and tip text
+  if (_stepLabelEl) _stepLabelEl.textContent = `Step ${index + 1} of ${TUTORIAL_LEVELS.length}`;
+  _updateTip(level.hint);
   _updateBars();
 
   // Run intro animation, then enable input + hand
@@ -379,19 +381,33 @@ function _buildBars(): void {
   const leftCol = document.createElement('div');
   leftCol.style.cssText = 'flex:1;display:flex;align-items:center;';
 
-  // Center column — hint text (replaces level indicator).
+  // Center column — "TUTORIAL" + "Step N of 5" (mirrors game's level indicator).
   const centerCol = document.createElement('div');
   centerCol.style.cssText = 'flex:0;display:flex;align-items:center;';
 
-  _hintTextEl = document.createElement('div');
-  _hintTextEl.style.cssText = [
-    `font-family:${FONT}`, 'font-size:14px', 'font-weight:400',
-    `color:${C_TEXT_SEC}`,
-    'text-align:center',
+  const labelWrap = document.createElement('div');
+  labelWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
+
+  const titleEl = document.createElement('div');
+  titleEl.textContent = 'TUTORIAL';
+  titleEl.style.cssText = [
+    `color:${C_TEXT}`, 'font-size:16px', 'font-weight:600',
+    'letter-spacing:0.02em', 'white-space:nowrap',
     'user-select:none', 'pointer-events:none',
-    'white-space:nowrap',
+    `font-family:${FONT_HEADING}`,
   ].join(';');
-  centerCol.appendChild(_hintTextEl);
+
+  _stepLabelEl = document.createElement('div');
+  _stepLabelEl.style.cssText = [
+    `font-family:${FONT}`, 'font-size:12px', 'font-weight:400',
+    `color:${C_TEXT_SEC}`, 'user-select:none', 'pointer-events:none',
+    'white-space:nowrap', 'line-height:1',
+  ].join(';');
+  _stepLabelEl.textContent = `Step 1 of ${TUTORIAL_LEVELS.length}`;
+
+  labelWrap.appendChild(titleEl);
+  labelWrap.appendChild(_stepLabelEl);
+  centerCol.appendChild(labelWrap);
 
   // Right column — reset button (instant, no dialog).
   const rightCol = document.createElement('div');
@@ -448,15 +464,65 @@ function _buildBars(): void {
   _bottomBarEl.appendChild(bottomCenter);
   _bottomBarEl.appendChild(_redoBtnEl);
   ui.appendChild(_bottomBarEl);
+
+  // ── Floating tip (between header and board) ─────────────────────────────
+  _tipEl = document.createElement('div');
+  _tipEl.style.cssText = [
+    'position:fixed',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'width:90%',
+    'box-sizing:border-box',
+    `font-family:${FONT}`,
+    'font-size:14px', 'font-weight:400',
+    `color:${C_TEXT_SEC}`,
+    'text-align:center',
+    'line-height:1.4',
+    'user-select:none', 'pointer-events:none',
+    'z-index:5',
+    'opacity:0',
+    'transition:opacity 0.3s ease',
+  ].join(';');
+  ui.appendChild(_tipEl);
 }
 
 function _removeBars(): void {
   if (_topBarEl) { _topBarEl.remove(); _topBarEl = null; }
   if (_bottomBarEl) { _bottomBarEl.remove(); _bottomBarEl = null; }
-  _hintTextEl = null;
+  if (_tipEl) { _tipEl.remove(); _tipEl = null; }
+  _stepLabelEl = null;
   _moveCounterEl = null;
   _undoBtnEl = null;
   _redoBtnEl = null;
+}
+
+function _updateTip(text: string): void {
+  if (!_tipEl || !_topBarEl) return;
+
+  _tipEl.textContent = text;
+  _tipEl.style.opacity = '0';
+
+  // Compute position: midway between top bar bottom and board top.
+  const topBarRect  = _topBarEl.getBoundingClientRect();
+  const barBottom   = topBarRect.bottom;
+  const ih          = window.innerHeight;
+  const iw          = window.innerWidth;
+  const boardSize   = Math.min(iw, ih) * GRID_FILL_RATIO + 80;
+  const boardTop    = (ih - boardSize) / 2;
+  const gap         = boardTop - barBottom;
+  const centerY     = barBottom + gap / 2;
+
+  // Use smaller font if gap is tight
+  _tipEl.style.fontSize = gap < 60 ? '13px' : '14px';
+  _tipEl.style.top = `${centerY}px`;
+  _tipEl.style.transform = 'translate(-50%, -50%)';
+
+  // Fade in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (_tipEl) _tipEl.style.opacity = '1';
+    });
+  });
 }
 
 function _updateBars(): void {

@@ -2,6 +2,7 @@
 
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
+import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 
 const FONT         = "'Manrope', system-ui, sans-serif";
 const FONT_HEADING = "'Lexend', system-ui, sans-serif";
@@ -9,6 +10,72 @@ const C_TEXT       = '#b17025';
 const C_TEXT_SEC   = '#7f7c6c';
 const C_RECESSED   = '#f0d2a8';
 const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
+
+const TITLES_3_STAR: readonly string[] = ['Perfect!', 'Flawless!', 'Brilliant!'];
+const TITLES_2_STAR: readonly string[] = ['Well done!', 'Nice work!', 'Solid!'];
+const TITLES_1_STAR: readonly string[] = ['Cleared!', 'Done!', 'Onward!'];
+
+function pickTitle(stars: number): string {
+  const arr = stars >= 3 ? TITLES_3_STAR : stars === 2 ? TITLES_2_STAR : TITLES_1_STAR;
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
+// ─── World unlock gates ───────────────────────────────────────────────────────
+// Total stars required to unlock each world. Tuned as more worlds ship.
+const WORLD_GATES: Record<number, number> = {
+  2: 10,
+  3: 25,
+  4: 45,
+};
+const LS_STARS = 'untrace_stars';
+
+function getTotalStars(): number {
+  try {
+    const raw = localStorage.getItem(LS_STARS);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) || parsed === null || typeof parsed !== 'object') return 0;
+    return Object.values(parsed as Record<string, number>)
+      .reduce((sum, n) => sum + (typeof n === 'number' ? n : 0), 0);
+  } catch {
+    return 0;
+  }
+}
+
+/** True if any loaded level belongs to the given world. */
+function isWorldAvailable(world: number): boolean {
+  const count = getLevelCount();
+  for (let i = 0; i < count; i++) {
+    if (getCurrentLevel(i).world === world) return true;
+  }
+  return false;
+}
+
+// Snapshot of total stars captured at module-import time (before any win of
+// this session). Each call to getNewlyUnlockedWorld advances this to the
+// current total, so the next call's "before" is the prior call's "after".
+let _prevTotalStars = getTotalStars();
+
+/**
+ * Returns the world whose star-gate was crossed on THIS level completion
+ * (before < gate && after >= gate), or null. Worlds that are not present
+ * in the loaded level data are skipped. The internal snapshot is advanced
+ * on every call so subsequent wins compare against the latest total.
+ */
+function getNewlyUnlockedWorld(): number | null {
+  const afterTotal  = getTotalStars();
+  const beforeTotal = _prevTotalStars;
+  _prevTotalStars   = afterTotal;
+
+  const worlds = Object.keys(WORLD_GATES).map(Number).sort((a, b) => a - b);
+  for (const world of worlds) {
+    const required = WORLD_GATES[world]!;
+    if (beforeTotal < required && afterTotal >= required && isWorldAvailable(world)) {
+      return world;
+    }
+  }
+  return null;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,7 +184,7 @@ export function showCelebration(params: CelebrationParams): void {
 
   // Title
   const titleEl = document.createElement('p');
-  titleEl.textContent = 'Level Cleared';
+  titleEl.textContent = pickTitle(params.stars);
   titleEl.style.cssText = [
     `color:${C_TEXT}`,
     'font-size:26px', 'font-weight:700', 'letter-spacing:-0.02em',
@@ -143,6 +210,40 @@ export function showCelebration(params: CelebrationParams): void {
       : `<svg width="28" height="28" viewBox="0 0 24 24" fill="${C_RECESSED}" stroke="#d3d1c7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
     starsRow.appendChild(star);
     starEls.push(star);
+  }
+
+  // World unlock notification (shown only once per crossed star-gate)
+  const unlockedWorld = getNewlyUnlockedWorld();
+  let unlockEl: HTMLDivElement | null = null;
+  if (unlockedWorld !== null) {
+    unlockEl = document.createElement('div');
+    unlockEl.style.cssText = [
+      'margin:0 0 18px', 'user-select:none',
+      'opacity:0', 'transform:scale(0.8)',
+      'transition:opacity 0.3s ease-out, transform 0.3s ease-out',
+      'will-change:opacity,transform',
+    ].join(';');
+
+    const unlockTitle = document.createElement('p');
+    unlockTitle.textContent = `World ${unlockedWorld} Unlocked!`;
+    unlockTitle.style.cssText = [
+      'color:#fb5607',
+      'font-size:20px', 'font-weight:700',
+      'margin:0 0 4px', 'line-height:1.1',
+      `font-family:${FONT_HEADING}`,
+    ].join(';');
+
+    const unlockSub = document.createElement('p');
+    unlockSub.textContent = 'New puzzles await';
+    unlockSub.style.cssText = [
+      'color:#7f7c6c',
+      'font-size:13px', 'font-weight:500',
+      'margin:0', 'line-height:1.2',
+      `font-family:${FONT}`,
+    ].join(';');
+
+    unlockEl.appendChild(unlockTitle);
+    unlockEl.appendChild(unlockSub);
   }
 
   // Stats pill
@@ -210,6 +311,7 @@ export function showCelebration(params: CelebrationParams): void {
   cardEl.appendChild(nameEl);
   cardEl.appendChild(titleEl);
   cardEl.appendChild(starsRow);
+  if (unlockEl) cardEl.appendChild(unlockEl);
   cardEl.appendChild(statsEl);
   cardEl.appendChild(nextBtn);
   cardEl.appendChild(replayBtn);
@@ -231,6 +333,16 @@ export function showCelebration(params: CelebrationParams): void {
           star.style.transform = 'scale(1)';
           star.style.opacity   = '1';
         }, 220 + i * 200);
+      }
+      // World unlock popup: animate in after the last star finishes.
+      if (unlockEl) {
+        const lastStarFinish = 220 + Math.max(0, params.stars - 1) * 200 + 280;
+        setTimeout(() => {
+          if (unlockEl) {
+            unlockEl.style.opacity   = '1';
+            unlockEl.style.transform = 'scale(1)';
+          }
+        }, lastStarFinish + 120);
       }
     });
   });

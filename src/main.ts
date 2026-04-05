@@ -44,6 +44,12 @@ function resize(): void {
 resize();
 window.addEventListener('resize', resize);
 
+// Baseline schema version for future data migrations. Seeded once, never
+// downgraded here — migrations will bump this key as they run.
+if (localStorage.getItem('save-version') === null) {
+  localStorage.setItem('save-version', '1');
+}
+
 // Canvas stays invisible until the player selects a level from the level select.
 // This prevents a flash of game content before the level select screen appears.
 canvas.style.opacity    = '0';
