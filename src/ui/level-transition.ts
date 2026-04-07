@@ -29,7 +29,7 @@ function ensureOverlay(): HTMLDivElement {
 
   nameEl = document.createElement('div');
   nameEl.style.cssText = [
-    "font-family:'Manrope',system-ui,sans-serif",
+    "font-family:'Lexend',system-ui,sans-serif",
     'font-size:14px', 'font-weight:400', 'color:#7f7c6c',
     'letter-spacing:0.1em', 'text-transform:uppercase',
     'margin:8px 0 0',

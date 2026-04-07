@@ -55,7 +55,7 @@ const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
-const FONT         = "'Manrope', system-ui, sans-serif";
+const FONT         = "'Lexend', system-ui, sans-serif";
 const FONT_HEADING = "'Lexend', system-ui, sans-serif";
 const C_TEXT       = '#b17025';
 const C_TEXT_SEC   = '#7f7c6c';

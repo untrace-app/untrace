@@ -127,7 +127,7 @@ const gameState: GameState = {
 
 // ─── Level indicator (top-left) ───────────────────────────────────────────────
 
-const FONT         = "'Manrope', system-ui, sans-serif";
+const FONT         = "'Lexend', system-ui, sans-serif";
 const FONT_HEADING = "'Lexend', system-ui, sans-serif";
 const C_TEXT       = '#b17025';
 const C_TEXT_SEC   = '#7f7c6c';
