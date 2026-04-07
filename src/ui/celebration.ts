@@ -3,6 +3,7 @@
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
+import { WORLD_GATES } from '../constants.ts';
 
 const FONT         = "'Lexend', system-ui, sans-serif";
 const FONT_HEADING = "'Lexend', system-ui, sans-serif";
@@ -20,13 +21,6 @@ function pickTitle(stars: number): string {
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
-// ─── World unlock gates ───────────────────────────────────────────────────────
-// Total stars required to unlock each world. Tuned as more worlds ship.
-const WORLD_GATES: Record<number, number> = {
-  2: 10,
-  3: 25,
-  4: 45,
-};
 const LS_STARS = 'untrace_stars';
 
 function getTotalStars(): number {

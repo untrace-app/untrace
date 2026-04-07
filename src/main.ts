@@ -66,7 +66,7 @@ function resize(): void {
   canvas.height = Math.floor(window.innerHeight * dpr);
   canvas.style.width  = `${window.innerWidth}px`;
   canvas.style.height = `${window.innerHeight}px`;
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   resizeBoardBg();
 }
 

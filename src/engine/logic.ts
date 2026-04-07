@@ -59,6 +59,7 @@ export function processMove(
 
   // Snapshot before any mutation so undo can restore this state.
   state.undoStack.push(takeSnapshot(state));
+  if (state.undoStack.length > 50) state.undoStack.shift();
   state.redoStack = [];
 
   const conn = state.connections.get(key);

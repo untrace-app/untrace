@@ -72,3 +72,12 @@ export const LAYER_PITCHES: readonly string[] = [
   AUDIO_PITCH_VIOLET,
   AUDIO_PITCH_WHITE,
 ];
+
+// ─── World unlock gates ───────────────────────────────────────────────────────
+
+/** Total stars required to unlock each world. */
+export const WORLD_GATES: Record<number, number> = {
+  2: 30,
+  3: 80,
+  4: 140,
+};
