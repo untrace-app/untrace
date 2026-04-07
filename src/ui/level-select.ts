@@ -21,8 +21,8 @@ const BOT_PAD      = 72;  // px below last node bottom
 // X-positions per level, designed to create angular interest via straight connecting lines.
 // Each group uses a distinct positional rhythm; no two adjacent groups share the same feel.
 const X_PATTERN = [
-  // Group 1 (1–5) — gradual diagonal drift left → right
-  0.15, 0.27, 0.40, 0.55, 0.68,
+  // Group 1 (1–5) — gradual diagonal drift, starting near center-left
+  0.37, 0.48, 0.58, 0.68, 0.78,
   // Group 2 (6–8) — sharp zigzag, wide horizontal spacing
   0.12, 0.88, 0.14,
   // Group 3 (9–12) — clustered near center with small offsets
@@ -117,8 +117,9 @@ function starSVG(size: number, strokeW: number, strokeColor: string, gradId: str
 // ─── Path rendering ───────────────────────────────────────────────────────────
 
 function getNodeX(index: number, pathWidth: number, radius: number): number {
-  const frac = X_PATTERN[index % X_PATTERN.length]!;
-  return Math.max(radius + 10, Math.min(pathWidth - radius - 10, frac * pathWidth));
+  const frac    = X_PATTERN[index % X_PATTERN.length]!;
+  const minEdge = radius + 24;
+  return Math.max(minEdge, Math.min(pathWidth - minEdge, frac * pathWidth));
 }
 
 function renderPath(): void {
@@ -166,15 +167,20 @@ function renderPath(): void {
   svg.setAttribute('height', String(minHeight));
   svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
 
-  // Linear gradient for completed segments: gold → orange top-to-bottom
+  // Gradient for completed segments using objectBoundingBox so it applies to a
+  // rect fill rather than a path stroke. iOS Safari does not reliably render
+  // linearGradient on strokes, but fill gradients work correctly.
+  // objectBoundingBox: x1=0 maps to the rect's left edge (upper node after
+  // rotation), x2=1 maps to right edge (lower node). Since a.y < b.y always,
+  // gold is always at the earlier/higher node and orange at the lower node.
   const defs = document.createElementNS(svgNS, 'defs');
   const grad = document.createElementNS(svgNS, 'linearGradient');
-  grad.setAttribute('id',             'ls-comp-grad');
-  grad.setAttribute('gradientUnits',  'userSpaceOnUse');
-  grad.setAttribute('x1',            '0');
-  grad.setAttribute('y1',            '0');
-  grad.setAttribute('x2',            '0');
-  grad.setAttribute('y2',            String(minHeight));
+  grad.setAttribute('id',            'ls-comp-grad');
+  grad.setAttribute('gradientUnits', 'objectBoundingBox');
+  grad.setAttribute('x1',           '0');
+  grad.setAttribute('y1',           '0.5');
+  grad.setAttribute('x2',           '1');
+  grad.setAttribute('y2',           '0.5');
   const stop1 = document.createElementNS(svgNS, 'stop');
   stop1.setAttribute('offset',     '0%');
   stop1.setAttribute('stop-color', '#ffbe0b');
@@ -187,19 +193,42 @@ function renderPath(): void {
   svg.appendChild(defs);
 
   for (let i = 0; i < count - 1; i++) {
-    const a = positions[i]!;
-    const b = positions[i + 1]!;
-    const aStars  = starsMap[getCurrentLevel(i).id] ?? 0;
-    const bStars  = starsMap[getCurrentLevel(i + 1).id] ?? 0;
-    const lineCol = (aStars > 0 && bStars > 0) ? 'url(#ls-comp-grad)' : '#f0d2a8';
+    const a         = positions[i]!;
+    const b         = positions[i + 1]!;
+    const aStars    = starsMap[getCurrentLevel(i).id] ?? 0;
+    const bStars    = starsMap[getCurrentLevel(i + 1).id] ?? 0;
+    const completed = aStars > 0 && bStars > 0;
+    const thick     = 4; // px — visual line thickness
 
-    const line = document.createElementNS(svgNS, 'path');
-    line.setAttribute('d', `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
-    line.setAttribute('stroke',          lineCol);
-    line.setAttribute('stroke-width',    '4');
-    line.setAttribute('stroke-linecap',  'round');
-    line.setAttribute('fill',            'none');
-    svg.appendChild(line);
+    if (completed) {
+      // Rotated rect: centered at midpoint, width = segment length, height = thick.
+      // The gradient runs along the rect's local x-axis; after rotation it aligns
+      // with the line direction, so gold always appears at the upper node.
+      const dx    = b.x - a.x;
+      const dy    = b.y - a.y;
+      const len   = Math.sqrt(dx * dx + dy * dy);
+      const cx    = (a.x + b.x) / 2;
+      const cy    = (a.y + b.y) / 2;
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      const rect = document.createElementNS(svgNS, 'rect');
+      rect.setAttribute('x',         String(cx - len / 2));
+      rect.setAttribute('y',         String(cy - thick / 2));
+      rect.setAttribute('width',     String(len));
+      rect.setAttribute('height',    String(thick));
+      rect.setAttribute('rx',        String(thick / 2));
+      rect.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
+      rect.setAttribute('fill',      'url(#ls-comp-grad)');
+      svg.appendChild(rect);
+    } else {
+      const line = document.createElementNS(svgNS, 'path');
+      line.setAttribute('d',              `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+      line.setAttribute('stroke',         '#f0d2a8');
+      line.setAttribute('stroke-width',   String(thick));
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('fill',           'none');
+      svg.appendChild(line);
+    }
   }
   pathEl.appendChild(svg);
 
@@ -315,7 +344,9 @@ function renderPath(): void {
       ].join(';');
       for (let s = 0; s < stars; s++) {
         const starEl = document.createElement('div');
-        starEl.style.cssText = 'display:inline-flex;';
+        // For 3-star levels: arc the outer stars 3px above the center star
+        const yOff = (stars === 3 && s !== 1) ? -3 : 0;
+        starEl.style.cssText = `display:inline-flex;${yOff ? `transform:translateY(${yOff}px);` : ''}`;
         starEl.innerHTML = starSVG(22, 3, '#b17025', `lsstar-${i}-${s}`);
         starsRow.appendChild(starEl);
       }
@@ -342,7 +373,7 @@ function buildOverlay(ui: HTMLElement): void {
   overlayEl = document.createElement('div');
   overlayEl.style.cssText = [
     'position:fixed', 'inset:0',
-    'background:#ffedcd',
+    'background:linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
     'z-index:50',
     'display:flex', 'flex-direction:column',
     'overflow:hidden',
@@ -354,33 +385,56 @@ function buildOverlay(ui: HTMLElement): void {
   ].join(';');
 
   // ── Top bar ───────────────────────────────────────────────────────────────
+  // Floats above the scroll area (position:absolute) so content slides beneath
+  // it. A backdrop child transitions in when the user scrolls down.
   const topBar = document.createElement('div');
   topBar.style.cssText = [
-    'flex-shrink:0',
+    'position:absolute', 'top:0', 'left:0', 'right:0',
     'padding-top:calc(env(safe-area-inset-top,0px) + 14px)',
     'padding-bottom:14px',
     'padding-left:20px', 'padding-right:20px',
-    'background:#feffe5',
-    'border-radius:0 0 16px 16px',
+    'background:transparent',
     'display:flex', 'align-items:center',
-    'z-index:10',
-    'box-shadow:0 2px 8px rgba(177,112,37,0.07)',
+    'z-index:11',
   ].join(';');
 
-  // Star counter (left, flex:1)
+  // Frosted backdrop — fades in when scroll content reaches the bar
+  const topBarBackdrop = document.createElement('div');
+  topBarBackdrop.style.cssText = [
+    'position:absolute', 'inset:0',
+    'background:rgba(245,200,190,0.7)',
+    '-webkit-backdrop-filter:blur(12px)',
+    'backdrop-filter:blur(12px)',
+    'opacity:0',
+    'transition:opacity 0.2s ease',
+    'pointer-events:none',
+    'z-index:-1',
+  ].join(';');
+  topBar.appendChild(topBarBackdrop);
+
+  // Star counter (left, flex:1) — frosted pill chip
   const starCounter = document.createElement('div');
-  starCounter.style.cssText = 'flex:1;display:flex;align-items:center;gap:5px;';
+  starCounter.style.cssText = 'flex:1;display:flex;align-items:center;';
+  const starChip = document.createElement('div');
+  starChip.style.cssText = [
+    'display:flex', 'align-items:center', 'gap:5px',
+    'background:rgba(255,255,255,0.55)',
+    '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+    'border-radius:20px', 'padding:6px 14px',
+    'border:1px solid rgba(255,255,255,0.3)',
+  ].join(';');
   const starIconEl = document.createElement('div');
   starIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
-  starIconEl.innerHTML = starSVG(28, 3, '#b17025', 'ls-topstar');
+  starIconEl.innerHTML = starSVG(22, 3, '#b17025', 'ls-topstar');
   const starCountText = document.createElement('span');
   starCountText.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:18px', 'font-weight:700',
+    `color:${C_TEXT}`, 'font-size:16px', 'font-weight:700',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
   starCountText.textContent = `\u00D7\u00A0${getTotalStars()}`;
-  starCounter.appendChild(starIconEl);
-  starCounter.appendChild(starCountText);
+  starChip.appendChild(starIconEl);
+  starChip.appendChild(starCountText);
+  starCounter.appendChild(starChip);
 
   // Title + world name (center, flex:0)
   const titleWrap = document.createElement('div');
@@ -391,12 +445,11 @@ function buildOverlay(ui: HTMLElement): void {
   let worldNum = 1;
   if (levelCount > 0) worldNum = getCurrentLevel(0).world;
   titleEl.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:16px', 'font-weight:600',
+    `color:${C_TEXT}`, 'font-size:18px', 'font-weight:700',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
 
-  const worldNames: Record<number, string> = { 1: 'First Untraces', 2: 'Layers', 3: 'The Knot', 4: 'Remnants' };
-  titleEl.textContent = `World ${worldNum} — ${worldNames[worldNum] ?? ''}`;
+  titleEl.textContent = `World ${worldNum}`;
 
   titleWrap.appendChild(titleEl);
 
@@ -409,7 +462,9 @@ function buildOverlay(ui: HTMLElement): void {
   gearBtn.style.cssText = [
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
-    `background:${C_RECESSED}`, 'border:none', 'border-radius:9999px',
+    'background:rgba(255,255,255,0.45)',
+    '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+    'border:1px solid rgba(255,255,255,0.3)', 'border-radius:50%',
     'padding:0', 'cursor:pointer', 'outline:none',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
@@ -426,16 +481,23 @@ function buildOverlay(ui: HTMLElement): void {
   topBar.appendChild(rightCol);
 
   // ── Scroll area with dot-grid background ─────────────────────────────────
+  // flex:1 fills the full overlay (topBar is position:absolute, out of flow).
+  // padding-top pushes initial content below the floating topBar.
   const scroll = document.createElement('div');
   scroll.style.cssText = [
     'flex:1',
     'overflow-y:auto',
     '-webkit-overflow-scrolling:touch',
-    'padding:20px 0 0',
+    'padding-top:calc(env(safe-area-inset-top,0px) + 72px)',
     'position:relative',
-    'background-image:radial-gradient(circle, rgba(161,129,104,0.15) 2px, transparent 2px)',
+    'background-image:radial-gradient(circle, rgba(161,129,104,0.10) 2px, transparent 2px)',
     'background-size:30px 30px',
   ].join(';');
+
+  // Trigger topBar frosted backdrop when scroll content slides under the bar
+  scroll.addEventListener('scroll', () => {
+    topBarBackdrop.style.opacity = scroll.scrollTop > 8 ? '1' : '0';
+  }, { passive: true });
 
   pathEl = document.createElement('div');
   pathEl.style.cssText = 'position:relative;width:100%;';
