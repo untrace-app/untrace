@@ -112,10 +112,10 @@ function drawDots(
 function parseKey(key: string): [[number, number], [number, number]] | null {
   const parts = key.split('-');
   if (parts.length !== 2) return null;
-  const a = parts[0].split(',').map(Number);
-  const b = parts[1].split(',').map(Number);
+  const a = parts[0]!.split(',').map(Number);
+  const b = parts[1]!.split(',').map(Number);
   if (a.length !== 2 || b.length !== 2) return null;
-  return [[a[0], a[1]], [b[0], b[1]]];
+  return [[a[0]!, a[1]!], [b[0]!, b[1]!]];
 }
 
 export function render(

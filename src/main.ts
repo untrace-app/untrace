@@ -71,7 +71,9 @@ function resize(): void {
 }
 
 function checkOrientation(): void {
-  const isLandscape = window.innerWidth > window.innerHeight;
+  const isLandscape = typeof screen.orientation !== 'undefined'
+    ? screen.orientation.type.startsWith('landscape')
+    : window.innerWidth > window.innerHeight;
   landscapeOverlay.style.display = isLandscape ? 'flex' : 'none';
 }
 
@@ -153,6 +155,7 @@ function updateLevelIndicator(): void {
 // ─── Save state ───────────────────────────────────────────────────────────────
 
 interface SavedState {
+  version:     number;
   levelId:     string;
   connections: Array<[string, number]>; // [ConnectionKey, layers]
   playerDot:   [number, number] | null;
@@ -165,6 +168,7 @@ function _saveKey(levelId: string): string {
 
 function saveGameState(levelId: string): void {
   const data: SavedState = {
+    version:     1,
     levelId,
     connections: Array.from(gameState.connections, ([k, v]) => [k, v.layers] as [string, number]),
     playerDot:   gameState.playerDot,
@@ -174,10 +178,18 @@ function saveGameState(levelId: string): void {
   try { localStorage.setItem(_saveKey(levelId), JSON.stringify(data)); } catch { /* ignore */ }
 }
 
+const CURRENT_SAVE_VERSION = 1;
+
 function loadSave(levelId: string): SavedState | null {
   try {
     const raw = localStorage.getItem(_saveKey(levelId));
-    return raw ? (JSON.parse(raw) as SavedState) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedState;
+    // version missing (legacy) or older version: still load but could migrate here.
+    if ((parsed.version ?? 0) < CURRENT_SAVE_VERSION) {
+      parsed.version = CURRENT_SAVE_VERSION;
+    }
+    return parsed;
   } catch { return null; }
 }
 
@@ -245,6 +257,7 @@ function applySave(save: SavedState): void {
   gameState.connections              = connections;
   gameState.playerDot                = save.playerDot ?? null;
   gameState.moveCount                = save.moveCount;
+  gameState.targetLayers             = getCurrentLevel(currentLevelIndex).targetLayers;
   gameState.isTracing                = false;
   gameState.undoStack                = [];
   gameState.redoStack                = [];
