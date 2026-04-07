@@ -323,8 +323,8 @@ export function showCelebration(params: CelebrationParams): void {
   addPressFeedback(replayBtn);
 
   const selectBtn = document.createElement('button');
-  selectBtn.textContent = 'Level Select';
-  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT};margin-bottom:0;`;
+  selectBtn.textContent = 'Back to Levels';
+  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT};margin-bottom:0;text-decoration:underline;`;
   selectBtn.addEventListener('click', () => { playButtonTap(); dismiss(onLevelSelect); });
   addPressFeedback(selectBtn);
 

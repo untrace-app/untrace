@@ -4,7 +4,7 @@ import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActiva
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIntroAnimation } from './engine/intro-animation.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
-import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo } from './audio/audio.ts';
+import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playButtonTap } from './audio/audio.ts';
 import { initOverlay, updateOverlay } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
@@ -500,13 +500,107 @@ function loop(time: number): void {
   _rafId = requestAnimationFrame(loop);
 }
 
+// ─── Main menu ───────────────────────────────────────────────────────────────
+// Shown after the splash fades out. Waits for a tap — which also unlocks the
+// iOS AudioContext since it fires from a real user gesture.
+
+function showMainMenu(splash: HTMLElement): Promise<void> {
+  return new Promise<void>((resolve) => {
+    // Combined scale + opacity pulse.
+    const pulseStyle = document.createElement('style');
+    pulseStyle.textContent = '@keyframes mm-pulse { from { transform:scale(1.0); opacity:0.85; } to { transform:scale(1.1); opacity:1.0; } }';
+    document.head.appendChild(pulseStyle);
+
+    // Container: same layout as splash (full-screen flex center, no column direction).
+    // The logo is the only flex child so it lands at the exact same visual position.
+    const menuEl = document.createElement('div');
+    menuEl.style.cssText = [
+      'position:fixed', 'inset:0',
+      'background:#ffedcd',
+      'z-index:9998',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'opacity:0',
+      'transition:opacity 0.3s ease',
+    ].join(';');
+
+    // Clone the SVG logo from the live splash element, stripping svg-elem-N
+    // animation classes so it renders fully drawn (not re-animated).
+    const splashSvg = splash.querySelector('svg');
+    if (splashSvg) {
+      const logo = splashSvg.cloneNode(true) as SVGElement;
+      logo.querySelectorAll<Element>('*').forEach(el => el.removeAttribute('class'));
+      logo.removeAttribute('class');
+      logo.style.cssText = 'max-width:80%;height:auto;display:block;';
+      menuEl.appendChild(logo);
+    }
+
+    // Button wrapper — position:absolute keeps it out of the flex flow so the
+    // logo stays at exact center. top:calc(50% + 52px) ≈ SVG half-height (20px)
+    // + 32px gap, placing the button just below the logo on typical phone screens.
+    const btnWrap = document.createElement('div');
+    btnWrap.style.cssText = [
+      'position:absolute',
+      'top:calc(50% + 52px)',
+      'left:0', 'right:0',
+      'display:flex', 'justify-content:center',
+      'pointer-events:none',
+    ].join(';');
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Tap to Begin';
+    btn.style.cssText = [
+      "font-family:'Lexend',system-ui,sans-serif",
+      'font-size:17px', 'font-weight:700',
+      'color:#ffffff',
+      'background:#fb5607',
+      'border:none', 'border-radius:9999px',
+      'padding:14px 44px',
+      'cursor:pointer', 'outline:none',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.10)',
+      'animation:mm-pulse 1.2s ease-in-out infinite alternate',
+      '-webkit-tap-highlight-color:transparent',
+      'touch-action:manipulation',
+      'pointer-events:auto',
+    ].join(';');
+    btnWrap.appendChild(btn);
+    menuEl.appendChild(btnWrap);
+    document.body.appendChild(menuEl);
+
+    function pressDown(): void {
+      btn.style.animation = 'none';
+      btn.style.transform = 'scale(0.92)';
+      btn.style.opacity   = '1';
+    }
+    function pressUp(): void {
+      btn.style.animation = 'mm-pulse 1.2s ease-in-out infinite alternate';
+      btn.style.transform = '';
+      btn.style.opacity   = '';
+    }
+    btn.addEventListener('pointerdown',   pressDown);
+    btn.addEventListener('pointercancel', pressUp);
+    btn.addEventListener('pointerleave',  pressUp);
+
+    let dismissed = false;
+    btn.addEventListener('pointerup', () => {
+      if (dismissed) return;
+      dismissed = true;
+      pressUp();
+      playButtonTap();
+      menuEl.style.opacity = '0';
+      setTimeout(() => { menuEl.remove(); pulseStyle.remove(); resolve(); }, 300);
+    });
+
+    // Fade in after double-rAF so the CSS transition fires.
+    requestAnimationFrame(() => requestAnimationFrame(() => { menuEl.style.opacity = '1'; }));
+  });
+}
+
 // ─── Async startup ────────────────────────────────────────────────────────────
 // Fetch level data before wiring input/overlay and starting the render loop.
 
 (async () => {
   // ── Splash screen ─────────────────────────────────────────────────────────
   const splash       = document.getElementById('splash')!;
-  const splashSub    = document.getElementById('splash-sub')!;
   const splashLoader = document.getElementById('splash-loader')!;
 
   // SVG draw animation is handled by splash-animation.css.
@@ -531,9 +625,6 @@ function loop(time: number): void {
   // Show loader if assets take longer than 2s.
   const loaderTimeout = setTimeout(showLoader, 2000);
 
-  // Show subtitle after a short delay (once logo animation is underway).
-  setTimeout(() => { splashSub.style.opacity = '1'; }, 1200);
-
   // Wait for BOTH minimum time AND assets — no tap-to-skip.
   await Promise.all([minTime, assetsReady]);
   clearTimeout(loaderTimeout);
@@ -554,6 +645,11 @@ function loop(time: number): void {
   splash.style.transition = 'opacity 0.3s ease';
   splash.style.opacity    = '0';
   setTimeout(() => { splash.style.display = 'none'; }, 300);
+
+  // Show main menu — blocks until the player taps "Tap to Begin".
+  // The tap gesture is the first user interaction, which unlocks the iOS
+  // AudioContext via the existing onFirstInteraction pointerdown listener.
+  await showMainMenu(splash);
 
   // Show tutorial on first launch, otherwise go straight to level select.
   if (!isTutorialComplete()) {
