@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <title>Untrace Designer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #0A0A0F;
-      color: #FFFFFF;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #ffedcd;
+      color: #b17025;
+      font-family: 'Lexend', system-ui, sans-serif;
       font-size: 13px;
       display: flex;
       height: 100vh;
@@ -31,12 +33,13 @@
 
     #canvas {
       cursor: crosshair;
-      border-radius: 6px;
+      border-radius: 10px;
       display: block;
+      box-shadow: 0 4px 20px rgba(177,112,37,0.12);
     }
 
     #hint {
-      color: rgba(255,255,255,0.3);
+      color: #7f7c6c;
       font-size: 11px;
       text-align: center;
       line-height: 1.6;
@@ -46,8 +49,8 @@
     #panel {
       width: 310px;
       flex-shrink: 0;
-      background: rgba(255,255,255,0.03);
-      border-left: 1px solid rgba(255,255,255,0.08);
+      background: #feffe5;
+      border-left: 1px solid rgba(177,112,37,0.15);
       overflow-y: auto;
       padding: 18px 16px;
       display: flex;
@@ -62,13 +65,13 @@
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.35);
+      color: rgba(177,112,37,0.5);
       margin-bottom: 8px;
     }
 
     hr.div {
       border: none;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid rgba(177,112,37,0.15);
       margin: 14px 0;
     }
 
@@ -80,7 +83,7 @@
     }
 
     .field label {
-      color: rgba(255,255,255,0.6);
+      color: #7f7c6c;
       font-size: 12px;
       flex-shrink: 0;
       width: 96px;
@@ -90,10 +93,10 @@
     input[type="number"],
     select {
       flex: 1;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 5px;
-      color: #fff;
+      background: #f0d2a8;
+      border: 1px solid rgba(177,112,37,0.25);
+      border-radius: 7px;
+      color: #b17025;
       font-size: 12px;
       font-family: inherit;
       padding: 5px 8px;
@@ -101,36 +104,36 @@
       min-width: 0;
     }
     input:focus, select:focus {
-      border-color: rgba(255,255,255,0.35);
+      border-color: #fb5607;
     }
-    select option { background: #16161f; }
+    select option { background: #feffe5; color: #b17025; }
 
     button {
       cursor: pointer;
       border: none;
-      border-radius: 7px;
+      border-radius: 12px;
       font-family: inherit;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       padding: 9px 14px;
       width: 100%;
       margin-bottom: 7px;
       transition: opacity 0.12s;
     }
     button:hover:not(:disabled) { opacity: 0.82; }
-    button:disabled { opacity: 0.28; cursor: default; }
+    button:disabled { opacity: 0.35; cursor: default; }
     button:last-child { margin-bottom: 0; }
 
-    #btn-verify  { background: #4ECDC4; color: #000; }
-    #btn-export  { background: rgba(255,255,255,0.1); color: #fff; }
-    #btn-clear   { background: rgba(220,60,60,0.22); color: #ff8888; font-size: 12px; padding: 7px 12px; }
+    #btn-verify  { background: #fb5607; color: #ffffff; }
+    #btn-export  { background: #f0d2a8; color: #b17025; }
+    #btn-clear   { background: rgba(212,114,106,0.15); color: #d4726a; font-size: 12px; padding: 7px 12px; }
 
     /* ── Results ── */
     #results {
       display: none;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 7px;
+      background: rgba(240,210,168,0.4);
+      border: 1px solid rgba(177,112,37,0.2);
+      border-radius: 9px;
       padding: 11px 12px;
       margin-top: 8px;
       font-size: 12px;
@@ -139,15 +142,15 @@
     #results.show { display: block; }
 
     .rrow { display: flex; justify-content: space-between; align-items: baseline; }
-    .rlabel { color: rgba(255,255,255,0.45); }
-    .rval { font-weight: 600; }
-    .ok   { color: #4ECDC4; }
-    .warn { color: #FFB347; }
-    .bad  { color: #FF6B6B; }
+    .rlabel { color: #7f7c6c; }
+    .rval { font-weight: 600; color: #b17025; }
+    .ok   { color: #2a9d6a; }
+    .warn { color: #fb5607; }
+    .bad  { color: #d4726a; }
 
     #solver-note {
       font-size: 11px;
-      color: rgba(255,255,255,0.3);
+      color: #7f7c6c;
       margin-top: 5px;
       display: none;
     }
@@ -164,31 +167,31 @@
       font-size: 12px;
       padding: 8px 10px;
     }
-    #btn-solution { background: rgba(78,205,196,0.18); color: #4ECDC4; }
-    #btn-stop     { background: rgba(255,107,107,0.18); color: #FF6B6B; display: none; }
+    #btn-solution { background: #f0d2a8; color: #b17025; }
+    #btn-stop     { background: rgba(212,114,106,0.2); color: #d4726a; display: none; }
 
     /* ── Move list ── */
     #move-list {
       display: none;
       margin-top: 8px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 7px;
+      background: rgba(240,210,168,0.3);
+      border: 1px solid rgba(177,112,37,0.2);
+      border-radius: 9px;
       padding: 10px 11px;
       font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-family: inherit;
       line-height: 1.85;
       max-height: 220px;
       overflow-y: auto;
-      color: rgba(255,255,255,0.55);
+      color: #7f7c6c;
     }
     #move-list.show { display: block; }
     #move-list .ml-active {
-      color: #4ECDC4;
+      color: #fb5607;
       font-weight: 700;
     }
     #move-list .ml-done {
-      color: rgba(255,255,255,0.3);
+      color: rgba(177,112,37,0.4);
     }
   </style>
 </head>
@@ -284,9 +287,9 @@
 // ═══════════════════════════════════════════════════════════
 // Constants — mirrored from src/constants.ts
 // ═══════════════════════════════════════════════════════════
-const LAYER_COLORS = ['', '#FF6B6B', '#FFB347', '#4ECDC4', '#9B6BFF', '#E8E8F0'];
+const LAYER_COLORS = ['', '#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
 const DOT_RADIUS      = 12;
-const LINE_WIDTH_BASE =  6;
+const LINE_WIDTH_BASE = 12;
 const GRID_FILL       = 0.70;
 const HIT_DOT  = DOT_RADIUS + 10; // dot click radius
 const HIT_LINE = 10;              // line click proximity
@@ -352,7 +355,7 @@ function render() {
   const w = canvas.width, h = canvas.height;
 
   // Background
-  ctx.fillStyle = '#0A0A0F';
+  ctx.fillStyle = '#f7e6ca';
   ctx.fillRect(0, 0, w, h);
 
   // ── Connections ──────────────────────────────────────────
@@ -387,7 +390,7 @@ function render() {
 
       ctx.save();
       ctx.fillStyle = color;
-      ctx.font = 'bold 11px sans-serif';
+      ctx.font = 'bold 11px Lexend, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(conn.layers, bx, by);
@@ -407,14 +410,14 @@ function render() {
 
       // Glow
       if (isSel) {
-        ctx.shadowColor = '#FFFFFF'; ctx.shadowBlur = 18;
+        ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 18;
       } else if (isStart) {
-        ctx.shadowColor = '#4CAF50'; ctx.shadowBlur = 14;
+        ctx.shadowColor = '#3a86ff'; ctx.shadowBlur = 14;
       } else if (isEnd) {
-        ctx.shadowColor = '#FF6B6B'; ctx.shadowBlur = 14;
+        ctx.shadowColor = '#ff006e'; ctx.shadowBlur = 14;
       }
 
-      ctx.fillStyle = isSel ? '#FFFFFF' : (isStart ? '#5ADF6A' : (isEnd ? '#FF6B6B' : '#2A2A35'));
+      ctx.fillStyle = isSel ? '#ffffff' : (isStart ? '#3a86ff' : (isEnd ? '#ff006e' : '#a68168'));
       ctx.beginPath();
       ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
       ctx.fill();
@@ -422,8 +425,8 @@ function render() {
       // S / E label
       if (isStart || isEnd) {
         ctx.shadowBlur = 0;
-        ctx.fillStyle  = '#000';
-        ctx.font       = 'bold 9px sans-serif';
+        ctx.fillStyle  = '#ffffff';
+        ctx.font       = 'bold 9px Lexend, sans-serif';
         ctx.textAlign  = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(isStart ? 'S' : 'E', x, y);
@@ -433,8 +436,8 @@ function render() {
 
       // Coordinate label below dot
       ctx.save();
-      ctx.fillStyle = 'rgba(255,255,255,0.22)';
-      ctx.font = `${Math.max(8, 11 - gridN)}px sans-serif`;
+      ctx.fillStyle = 'rgba(177,112,37,0.5)';
+      ctx.font = `${Math.max(8, 11 - gridN)}px 'Lexend', sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillText(`${col},${row}`, x, y + DOT_RADIUS + 3);
@@ -444,9 +447,9 @@ function render() {
 
   // ── Solution overlay ─────────────────────────────────────
   if (solAnim.running && solAnim.trail.length > 0) {
-    // Green trail lines
+    // Solution trail lines
     ctx.save();
-    ctx.strokeStyle = '#4CAF50';
+    ctx.strokeStyle = '#fb5607';
     ctx.lineWidth   = 4;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
@@ -463,8 +466,8 @@ function render() {
 
     // Move number labels along trail segments
     ctx.save();
-    ctx.fillStyle = '#4CAF50';
-    ctx.font      = 'bold 11px sans-serif';
+    ctx.fillStyle = '#fb5607';
+    ctx.font      = 'bold 11px Lexend, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let i = 1; i < solAnim.trail.length; i++) {
@@ -483,9 +486,9 @@ function render() {
     const cur = solAnim.trail[solAnim.trail.length - 1];
     const cp  = dotPos(cur[0], cur[1]);
     ctx.save();
-    ctx.shadowColor = '#4CAF50';
+    ctx.shadowColor = '#fb5607';
     ctx.shadowBlur  = 20;
-    ctx.fillStyle   = '#4CAF50';
+    ctx.fillStyle   = '#fb5607';
     ctx.beginPath();
     ctx.arc(cp.x, cp.y, DOT_RADIUS + 3, 0, Math.PI * 2);
     ctx.fill();

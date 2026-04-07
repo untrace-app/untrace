@@ -27,21 +27,19 @@ function injectCelStyles(): void {
   document.head.appendChild(s);
 }
 
+const FA_STAR_PATH = 'M309.5-18.9c-4.1-8-12.4-13.1-21.4-13.1s-17.3 5.1-21.4 13.1L193.1 125.3 33.2 150.7c-8.9 1.4-16.3 7.7-19.1 16.3s-.5 18 5.8 24.4l114.4 114.5-25.2 159.9c-1.4 8.9 2.3 17.9 9.6 23.2s16.9 6.1 25 2L288.1 417.6 432.4 491c8 4.1 17.7 3.3 25-2s11-14.2 9.6-23.2L441.7 305.9 556.1 191.4c6.4-6.4 8.6-15.8 5.8-24.4s-10.1-14.9-19.1-16.3L383 125.3 309.5-18.9z';
+
 function celebStarSVG(index: number, earned: boolean): string {
   if (earned) {
-    return `<svg width="32" height="32" viewBox="0 0 24 24" `
-      + `fill="url(#celstar-${index})" stroke="#b17025" stroke-width="2" `
-      + `stroke-linecap="round" stroke-linejoin="round">`
+    return `<svg width="32" height="32" viewBox="-3 -21 582 536" overflow="visible">`
       + `<defs><radialGradient id="celstar-${index}" cx="50%" cy="30%" r="65%">`
       + `<stop offset="0%" stop-color="#ffbe0b"/><stop offset="100%" stop-color="#f59e0b"/>`
       + `</radialGradient></defs>`
-      + `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+      + `<path d="${FA_STAR_PATH}" fill="url(#celstar-${index})" stroke="#b17025" stroke-width="3" vector-effect="non-scaling-stroke"/>`
       + `</svg>`;
   }
-  return `<svg width="32" height="32" viewBox="0 0 24 24" `
-    + `fill="#d3d1c7" stroke="#b17025" stroke-width="2" `
-    + `stroke-linecap="round" stroke-linejoin="round">`
-    + `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+  return `<svg width="32" height="32" viewBox="-3 -21 582 536" overflow="visible">`
+    + `<path d="${FA_STAR_PATH}" fill="#d3d1c7" stroke="#b17025" stroke-width="3" vector-effect="non-scaling-stroke"/>`
     + `</svg>`;
 }
 
