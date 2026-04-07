@@ -199,6 +199,24 @@ function clearOtherSaves(keepLevelId: string): void {
   }
 }
 
+// ─── Emergency save on page suspension ───────────────────────────────────────
+// visibilitychange fires most reliably on mobile before the browser kills the
+// page (screen lock, app switch). pagehide covers Safari's BFCache eviction.
+// beforeunload is a desktop fallback. All three call the same function.
+
+function saveOnSuspend(): void {
+  if (canvas.style.opacity !== '1') return; // not in a level (level select / startup)
+  if (gameState.moveCount === 0) return;    // no moves yet — nothing worth saving
+  if (checkWin(gameState)) return;          // level already won — save was cleared in onWin
+  saveGameState(getCurrentLevel(currentLevelIndex).id);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveOnSuspend();
+});
+window.addEventListener('pagehide', saveOnSuspend);
+window.addEventListener('beforeunload', saveOnSuspend);
+
 function applySave(save: SavedState): void {
   const connections = new Map<ConnectionKey, ConnectionState>();
   for (const [k, layers] of save.connections) {
