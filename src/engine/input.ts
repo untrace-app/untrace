@@ -12,6 +12,8 @@ type OnMove = (from: [number, number], to: [number, number]) => void;
 export interface InputState {
   /** Raw CSS-pixel position of the active pointer, or null when not tracing. */
   rawPointer: { x: number; y: number } | null;
+  /** Cancel any active trace immediately (e.g. on window blur / phone call). */
+  cancelTrace: () => void;
   /** Remove all pointer listeners from the canvas. */
   destroy: () => void;
 }
@@ -115,6 +117,14 @@ export function initInput(
   const ac = new AbortController();
   const inputState: InputState = {
     rawPointer: null,
+    cancelTrace: () => {
+      clearTimeout(debounceTimer);
+      pendingEvent    = null;
+      activePointerId = null;
+      inputState.rawPointer           = null;
+      state.isTracing                 = false;
+      state.currentStrokeConnections  = new Set();
+    },
     destroy: () => ac.abort(),
   };
 

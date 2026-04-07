@@ -2,15 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#ffedcd" />
     <title>Untrace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Manrope:wght@400;500&display=swap" rel="stylesheet" />
     <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body { width: 100%; height: 100%; overflow: hidden; background: #ffedcd; }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-touch-callout: none; }
+      html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; position: fixed; touch-action: manipulation; background: #ffedcd; }
       canvas { display: block; position: relative; z-index: 1; background: transparent; }
       #ui { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
       #ui > * { pointer-events: auto; }

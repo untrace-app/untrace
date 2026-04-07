@@ -1,3 +1,4 @@
+import * as Tone from 'tone';
 import { render } from './engine/renderer.ts';
 import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActivation } from './engine/animations.ts';
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro } from './engine/intro-animation.ts';
@@ -16,6 +17,34 @@ import { GRID_FILL_RATIO } from './constants.ts';
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;
 const boardBgEl = document.getElementById('board-bg')!;
+
+// ─── Landscape overlay ────────────────────────────────────────────────────────
+
+const landscapeOverlay = document.createElement('div');
+landscapeOverlay.style.cssText = [
+  'position:fixed', 'inset:0', 'z-index:999999',
+  'background:#ffedcd',
+  'display:none',
+  'flex-direction:column', 'align-items:center', 'justify-content:center',
+  'gap:8px',
+].join(';');
+const lsTitleEl = document.createElement('p');
+lsTitleEl.textContent = 'Please rotate your device';
+lsTitleEl.style.cssText = [
+  "font-family:'Lexend',system-ui,sans-serif",
+  'font-size:18px', 'font-weight:600', 'color:#b17025',
+  'margin:0', 'text-align:center', 'padding:0 24px',
+].join(';');
+const lsSubEl = document.createElement('p');
+lsSubEl.textContent = 'Untrace is best in portrait mode';
+lsSubEl.style.cssText = [
+  "font-family:'Lexend',system-ui,sans-serif",
+  'font-size:14px', 'color:#7f7c6c',
+  'margin:0', 'text-align:center', 'padding:0 24px',
+].join(';');
+landscapeOverlay.appendChild(lsTitleEl);
+landscapeOverlay.appendChild(lsSubEl);
+document.body.appendChild(landscapeOverlay);
 
 function resizeBoardBg(): void {
   const iw   = window.innerWidth;
@@ -41,8 +70,26 @@ function resize(): void {
   resizeBoardBg();
 }
 
+function checkOrientation(): void {
+  const isLandscape = window.innerWidth > window.innerHeight;
+  landscapeOverlay.style.display = isLandscape ? 'flex' : 'none';
+}
+
 resize();
-window.addEventListener('resize', resize);
+checkOrientation();
+
+// Debounce canvas resize to at most once per 200ms; orientation check fires immediately.
+let _resizeTimer = 0;
+window.addEventListener('resize', () => {
+  checkOrientation();
+  clearTimeout(_resizeTimer);
+  _resizeTimer = window.setTimeout(resize, 200);
+});
+
+// Fix 4: prevent pull-to-refresh / scroll bounce on the canvas only.
+document.addEventListener('touchmove', (e: TouchEvent) => {
+  if (e.target === canvas) e.preventDefault();
+}, { passive: false });
 
 // Baseline schema version for future data migrations. Seeded once, never
 // downgraded here — migrations will bump this key as they run.
@@ -508,6 +555,10 @@ function loop(time: number): void {
     }
     triggerDotActivation(to);
   });
+
+  // Fix 2: end any active trace on phone call / notification / tab switch.
+  window.addEventListener('blur', () => { inputState.cancelTrace(); });
+  window.addEventListener('focus', () => { void Tone.context.resume(); });
 
   initOverlay(gameState, {
     onUndo: () => {

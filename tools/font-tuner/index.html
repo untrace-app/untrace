@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Untrace Font Tuner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Lexend', system-ui, sans-serif;
+    background: #808080;
+    color: #e0e0e0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Left: Preview ─────────────────────────────────────────────── */
+  #preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+  #preview > h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ccc;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    align-self: flex-start;
+  }
+
+  /* Inner surface mimics the game page */
+  .stage {
+    width: 100%;
+    max-width: 380px;
+    background: #ffedcd;
+    border-radius: 20px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Top bar */
+  .mock-topbar, .mock-bottombar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+  }
+  .mock-icon-btn {
+    width: 40px; height: 40px; border-radius: 9999px;
+    background: #f0d2a8; border: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #b17025; cursor: default;
+  }
+  .mock-level-indicator {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+
+  /* Board placeholder */
+  .mock-board {
+    height: 170px;
+    border-radius: 16px;
+    background: #f7e6ca;
+    display: flex; align-items: center; justify-content: center;
+    color: #a68168; font-size: 11px;
+  }
+
+  /* Celebration card */
+  .mock-celeb {
+    background: #feffe5;
+    border-radius: 20px;
+    padding: 22px 20px 16px;
+    text-align: center;
+    box-shadow: 0 6px 24px rgba(46,47,44,0.08);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .mock-check {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #fde8d0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fb5607;
+  }
+  .mock-stars { display: flex; gap: 4px; justify-content: center; }
+  .mock-star { color: #ffbe0b; font-size: 22px; line-height: 1; }
+  .mock-btn-col { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; }
+  .mock-btn {
+    width: 100%; padding: 11px 0; border: none; border-radius: 9999px;
+    cursor: default;
+  }
+  .mock-btn.primary   { background: #fb5607; color: #ffffff; }
+  .mock-btn.secondary { background: #f0d2a8; color: #b17025; }
+  .mock-btn.tertiary  { background: transparent; color: #7f7c6c; }
+
+  /* Reset dialog */
+  .mock-dialog {
+    background: #feffe5;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 4px 16px rgba(46,47,44,0.08);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .mock-dialog-btns { display: flex; gap: 8px; }
+  .mock-dialog-btn {
+    flex: 1; padding: 10px 0; border: none; border-radius: 9999px;
+    background: #f0d2a8; cursor: default;
+  }
+  .mock-dialog-btn.danger { background: #d4726a; color: #ffffff; }
+
+  /* Level select */
+  .mock-levelselect {
+    background: #feffe5;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .mock-world { }
+  .mock-ls-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .mock-ls-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mock-ls-tile {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mock-ls-tile.completed { background: #f0d2a8; }
+  .mock-ls-tile.current { background: #feffe5; border: 2px solid #fb5607; }
+  .mock-ls-tile.unlocked { background: #feffe5; border: 1px solid #d3d1c7; }
+  .mock-ls-tile.locked { background: #f0d2a8; opacity: 0.35; }
+  .mock-ls-num { line-height: 1; }
+  .mock-ls-tile.current .mock-ls-num { color: #fb5607 !important; }
+  .mock-ls-dots { display: flex; gap: 3px; height: 6px; }
+  .mock-ls-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+
+  /* Tutorial */
+  .mock-tutorial {
+    background: #feffe5;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+
+  /* Settings */
+  .mock-settings {
+    background: #feffe5;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .mock-settings-divider {
+    height: 1px; background: #f0d2a8; margin: 10px 0;
+  }
+  .mock-settings-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+  }
+  .mock-toggle {
+    width: 36px; height: 20px; border-radius: 10px; background: #fb5607;
+    position: relative;
+  }
+  .mock-toggle::after {
+    content: ''; position: absolute; top: 2px; right: 2px;
+    width: 16px; height: 16px; border-radius: 50%; background: #ffffff;
+  }
+
+  /* ── Right: Controls ───────────────────────────────────────────── */
+  #controls {
+    width: 380px;
+    background: #2a2a2a;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-left: 1px solid #444;
+  }
+  #controls h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: #aaa; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 4px;
+  }
+
+  .element-card {
+    background: #1f1f1f;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .element-title {
+    font-size: 12px; font-weight: 600;
+    color: #d8a86c; letter-spacing: 0.02em;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 2px;
+  }
+  .ctrl-row {
+    display: flex; align-items: center; gap: 8px;
+    height: 26px;
+  }
+  .ctrl-row label {
+    width: 68px; font-size: 11px; color: #aaa;
+  }
+  .ctrl-row select, .ctrl-row input[type="range"] {
+    flex: 1; min-width: 0;
+  }
+  .ctrl-row select {
+    background: #2a2a2a; color: #ddd;
+    border: 1px solid #444; border-radius: 4px;
+    padding: 3px 6px; font-size: 11px;
+    font-family: inherit;
+  }
+  .ctrl-row input[type="range"] {
+    height: 4px; accent-color: #fb5607;
+  }
+  .ctrl-row input[type="color"] {
+    width: 28px; height: 22px; border: 1px solid #555;
+    border-radius: 4px; cursor: pointer; padding: 0; background: none;
+  }
+  .ctrl-row .ctrl-val {
+    font-size: 10px; color: #888; font-family: monospace;
+    width: 52px; text-align: right;
+  }
+
+  #btn-row {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  #btn-row button {
+    flex: 1; padding: 10px 0; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: 'Lexend', sans-serif;
+  }
+  #btn-export { background: #fb5607; color: #fff; }
+  #btn-reset  { background: #555; color: #ddd; }
+  #export-output {
+    width: 100%; height: 160px; margin-top: 8px;
+    background: #1a1a1a; color: #ccc; border: 1px solid #444;
+    border-radius: 6px; padding: 8px; font-size: 10px;
+    font-family: monospace; resize: vertical;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Preview Panel ──────────────────────────────────────────────── -->
+<div id="preview">
+  <h2>Preview</h2>
+
+  <div class="stage">
+    <!-- Top bar -->
+    <div class="mock-topbar">
+      <button class="mock-icon-btn" aria-label="grid">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+      <div class="mock-level-indicator">
+        <div id="mock-level-number">Level 5</div>
+        <div id="mock-level-name">Corner</div>
+      </div>
+      <button class="mock-icon-btn" aria-label="reset">
+        <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor">
+          <path d="M65.9 228.5c13.3-93 93.4-164.5 190.1-164.5 53 0 101 21.5 135.8 56.2l7.6 7.2-47.9 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 53.4-11.3-10.7C390.5 28.6 326.5 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Board placeholder -->
+    <div class="mock-board">(board)</div>
+
+    <!-- Bottom bar -->
+    <div class="mock-bottombar">
+      <button class="mock-icon-btn" aria-label="undo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.5"/>
+        </svg>
+      </button>
+      <div id="mock-moves">Moves: 12</div>
+      <button class="mock-icon-btn" aria-label="redo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.5"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Celebration card -->
+  <div class="stage">
+    <div class="mock-celeb">
+      <div class="mock-check">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <div id="mock-celeb-title">Perfect!</div>
+      <div class="mock-stars">
+        <span class="mock-star">★</span>
+        <span class="mock-star">★</span>
+        <span class="mock-star">★</span>
+      </div>
+      <div id="mock-celeb-stats">Moves: 12 | Par: 8</div>
+      <div class="mock-btn-col">
+        <button class="mock-btn primary"   id="mock-celeb-next">Next Level</button>
+        <button class="mock-btn secondary" id="mock-celeb-replay">Replay</button>
+        <button class="mock-btn tertiary"  id="mock-celeb-select">Level Select</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset dialog -->
+  <div class="stage">
+    <div class="mock-dialog">
+      <div id="mock-dialog-title">Reset this puzzle?</div>
+      <div class="mock-dialog-btns">
+        <button class="mock-dialog-btn mock-dialog-btn-el">Stay</button>
+        <button class="mock-dialog-btn danger mock-dialog-btn-el">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level select -->
+  <div class="stage">
+    <div class="mock-levelselect">
+      <div id="mock-world-title">World 1</div>
+      <div class="mock-ls-grid">
+        <div class="mock-ls-cell">
+          <div class="mock-ls-tile completed"><span class="mock-ls-num">1</span></div>
+          <div class="mock-ls-dots"><span style="background:#ffbe0b"></span><span style="background:#ffbe0b"></span><span style="background:#ffbe0b"></span></div>
+        </div>
+        <div class="mock-ls-cell">
+          <div class="mock-ls-tile completed"><span class="mock-ls-num">2</span></div>
+          <div class="mock-ls-dots"><span style="background:#ffbe0b"></span><span style="background:#ffbe0b"></span><span style="background:#d3d1c7"></span></div>
+        </div>
+        <div class="mock-ls-cell">
+          <div class="mock-ls-tile current"><span class="mock-ls-num">3</span></div>
+          <div class="mock-ls-dots" style="visibility:hidden"></div>
+        </div>
+        <div class="mock-ls-cell">
+          <div class="mock-ls-tile unlocked"><span class="mock-ls-num">4</span></div>
+          <div class="mock-ls-dots" style="visibility:hidden"></div>
+        </div>
+        <div class="mock-ls-cell">
+          <div class="mock-ls-tile locked">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7f7c6c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="mock-ls-dots" style="visibility:hidden"></div>
+        </div>
+        <div class="mock-ls-cell">
+          <div class="mock-ls-tile locked">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7f7c6c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="mock-ls-dots" style="visibility:hidden"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutorial -->
+  <div class="stage">
+    <div class="mock-tutorial">
+      <div id="mock-tut-header">TUTORIAL / STEP 1 OF 5</div>
+      <div id="mock-tut-tip">Swipe to erase the line</div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="stage">
+    <div class="mock-settings">
+      <div id="mock-settings-title">Settings</div>
+      <div class="mock-settings-divider"></div>
+      <div class="mock-settings-section mock-settings-section-el">Sound</div>
+      <div class="mock-settings-row">
+        <div class="mock-settings-item mock-settings-item-el">Volume</div>
+        <div style="width:100px;height:4px;background:#f0d2a8;border-radius:2px;position:relative;"><div style="position:absolute;top:-4px;left:60px;width:12px;height:12px;border-radius:50%;background:#fb5607;"></div></div>
+      </div>
+      <div class="mock-settings-row">
+        <div class="mock-settings-item mock-settings-item-el">Mute</div>
+        <div class="mock-toggle"></div>
+      </div>
+      <div class="mock-settings-divider"></div>
+      <div class="mock-settings-section mock-settings-section-el">About</div>
+      <div class="mock-settings-row">
+        <div class="mock-settings-item mock-settings-item-el">Version 1.0.0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Controls Panel ─────────────────────────────────────────────── -->
+<div id="controls">
+  <h2>Font Tuner</h2>
+  <div id="card-list"></div>
+  <div id="btn-row">
+    <button id="btn-export">Export Fonts</button>
+    <button id="btn-reset">Reset to Current</button>
+  </div>
+  <textarea id="export-output" readonly></textarea>
+</div>
+
+<script>
+// ── Font families loaded from Google Fonts ───────────────────────
+const FONT_FAMILIES = [
+  'Lexend',
+  'Plus Jakarta Sans',
+  'Inter',
+  'Poppins',
+  'Nunito',
+  'DM Sans',
+  'Outfit',
+  'Space Grotesk',
+  'Sora',
+];
+
+const WEIGHTS = [300, 400, 500, 600, 700, 800];
+const TRANSFORMS = ['none', 'uppercase', 'lowercase', 'capitalize'];
+
+// ── Element definitions (defaults match current game palette) ────
+// Headings use Lexend 700, body uses Lexend. Primary text #b17025,
+// secondary #7f7c6c.
+const ELEMENTS = [
+  {
+    key: 'levelNumber', label: 'Level Number',
+    selectors: ['#mock-level-number'],
+    def: { family: 'Lexend', size: 16, weight: 700, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'levelName', label: 'Level Name (subtitle)',
+    selectors: ['#mock-level-name'],
+    def: { family: 'Lexend', size: 11, weight: 500, letterSpacing: 0.08, textTransform: 'uppercase', color: '#7f7c6c' },
+  },
+  {
+    key: 'bottomBarMoves', label: 'Bottom Bar / Moves',
+    selectors: ['#mock-moves'],
+    def: { family: 'Lexend', size: 14, weight: 600, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'celebTitle', label: 'Celebration Title',
+    selectors: ['#mock-celeb-title'],
+    def: { family: 'Lexend', size: 26, weight: 700, letterSpacing: -0.02, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'celebStats', label: 'Celebration Stats',
+    selectors: ['#mock-celeb-stats'],
+    def: { family: 'Lexend', size: 13, weight: 500, letterSpacing: 0.00, textTransform: 'none', color: '#7f7c6c' },
+  },
+  {
+    key: 'celebPrimaryBtn', label: 'Celebration Primary Button',
+    selectors: ['#mock-celeb-next'],
+    def: { family: 'Lexend', size: 15, weight: 600, letterSpacing: 0.00, textTransform: 'none', color: '#ffffff' },
+  },
+  {
+    key: 'celebSecondaryBtn', label: 'Celebration Secondary Button',
+    selectors: ['#mock-celeb-replay'],
+    def: { family: 'Lexend', size: 15, weight: 600, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'celebTertiaryBtn', label: 'Celebration Tertiary Button',
+    selectors: ['#mock-celeb-select'],
+    def: { family: 'Lexend', size: 15, weight: 600, letterSpacing: 0.00, textTransform: 'none', color: '#7f7c6c' },
+  },
+  {
+    key: 'dialogTitle', label: 'Dialog Title',
+    selectors: ['#mock-dialog-title'],
+    def: { family: 'Lexend', size: 18, weight: 700, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'dialogBtn', label: 'Dialog Button',
+    selectors: ['.mock-dialog-btn-el'],
+    def: { family: 'Lexend', size: 14, weight: 600, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'worldTitle', label: 'World Title',
+    selectors: ['#mock-world-title'],
+    def: { family: 'Lexend', size: 20, weight: 700, letterSpacing: -0.02, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'levelCircleNumber', label: 'Level Circle Number',
+    selectors: ['.mock-ls-num'],
+    def: { family: 'Lexend', size: 18, weight: 700, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'tutorialHeader', label: 'Tutorial Header',
+    selectors: ['#mock-tut-header'],
+    def: { family: 'Lexend', size: 11, weight: 600, letterSpacing: 0.10, textTransform: 'uppercase', color: '#7f7c6c' },
+  },
+  {
+    key: 'tutorialTip', label: 'Tutorial Tip',
+    selectors: ['#mock-tut-tip'],
+    def: { family: 'Lexend', size: 16, weight: 500, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'settingsTitle', label: 'Settings Title',
+    selectors: ['#mock-settings-title'],
+    def: { family: 'Lexend', size: 22, weight: 700, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+  {
+    key: 'settingsSection', label: 'Settings Section Label',
+    selectors: ['.mock-settings-section-el'],
+    def: { family: 'Lexend', size: 11, weight: 600, letterSpacing: 0.08, textTransform: 'uppercase', color: '#7f7c6c' },
+  },
+  {
+    key: 'settingsItem', label: 'Settings Item',
+    selectors: ['.mock-settings-item-el'],
+    def: { family: 'Lexend', size: 14, weight: 500, letterSpacing: 0.00, textTransform: 'none', color: '#b17025' },
+  },
+];
+
+// ── State ────────────────────────────────────────────────────────
+const settings = {};
+for (const el of ELEMENTS) {
+  settings[el.key] = { ...el.def };
+}
+
+// Keep references to inputs for reset.
+const inputs = {};
+
+// ── Build control cards ──────────────────────────────────────────
+const cardList = document.getElementById('card-list');
+
+for (const el of ELEMENTS) {
+  const card = document.createElement('div');
+  card.className = 'element-card';
+
+  const title = document.createElement('div');
+  title.className = 'element-title';
+  title.textContent = el.label;
+  card.appendChild(title);
+
+  // Family
+  const familyRow = makeRow('Family');
+  const familySel = document.createElement('select');
+  for (const f of FONT_FAMILIES) {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    opt.style.fontFamily = `'${f}', system-ui, sans-serif`;
+    familySel.appendChild(opt);
+  }
+  familySel.value = settings[el.key].family;
+  familySel.addEventListener('change', () => {
+    settings[el.key].family = familySel.value;
+    applyElement(el);
+  });
+  familyRow.appendChild(familySel);
+  card.appendChild(familyRow);
+
+  // Size
+  const sizeRow = makeRow('Size');
+  const sizeSlider = document.createElement('input');
+  sizeSlider.type = 'range';
+  sizeSlider.min = '8'; sizeSlider.max = '48'; sizeSlider.step = '1';
+  sizeSlider.value = String(settings[el.key].size);
+  const sizeVal = document.createElement('span');
+  sizeVal.className = 'ctrl-val';
+  sizeVal.textContent = settings[el.key].size + 'px';
+  sizeSlider.addEventListener('input', () => {
+    settings[el.key].size = parseInt(sizeSlider.value, 10);
+    sizeVal.textContent = settings[el.key].size + 'px';
+    applyElement(el);
+  });
+  sizeRow.appendChild(sizeSlider);
+  sizeRow.appendChild(sizeVal);
+  card.appendChild(sizeRow);
+
+  // Weight
+  const weightRow = makeRow('Weight');
+  const weightSel = document.createElement('select');
+  for (const w of WEIGHTS) {
+    const opt = document.createElement('option');
+    opt.value = String(w);
+    opt.textContent = String(w);
+    weightSel.appendChild(opt);
+  }
+  weightSel.value = String(settings[el.key].weight);
+  weightSel.addEventListener('change', () => {
+    settings[el.key].weight = parseInt(weightSel.value, 10);
+    applyElement(el);
+  });
+  weightRow.appendChild(weightSel);
+  card.appendChild(weightRow);
+
+  // Letter-spacing
+  const lsRow = makeRow('Tracking');
+  const lsSlider = document.createElement('input');
+  lsSlider.type = 'range';
+  lsSlider.min = '-0.05'; lsSlider.max = '0.15'; lsSlider.step = '0.01';
+  lsSlider.value = String(settings[el.key].letterSpacing);
+  const lsVal = document.createElement('span');
+  lsVal.className = 'ctrl-val';
+  lsVal.textContent = fmtEm(settings[el.key].letterSpacing);
+  lsSlider.addEventListener('input', () => {
+    settings[el.key].letterSpacing = parseFloat(lsSlider.value);
+    lsVal.textContent = fmtEm(settings[el.key].letterSpacing);
+    applyElement(el);
+  });
+  lsRow.appendChild(lsSlider);
+  lsRow.appendChild(lsVal);
+  card.appendChild(lsRow);
+
+  // Transform
+  const ttRow = makeRow('Case');
+  const ttSel = document.createElement('select');
+  for (const t of TRANSFORMS) {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    ttSel.appendChild(opt);
+  }
+  ttSel.value = settings[el.key].textTransform;
+  ttSel.addEventListener('change', () => {
+    settings[el.key].textTransform = ttSel.value;
+    applyElement(el);
+  });
+  ttRow.appendChild(ttSel);
+  card.appendChild(ttRow);
+
+  // Color
+  const colorRow = makeRow('Color');
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = settings[el.key].color;
+  const colorVal = document.createElement('span');
+  colorVal.className = 'ctrl-val';
+  colorVal.textContent = settings[el.key].color;
+  colorInput.addEventListener('input', () => {
+    settings[el.key].color = colorInput.value;
+    colorVal.textContent = colorInput.value;
+    applyElement(el);
+  });
+  colorRow.appendChild(colorInput);
+  colorRow.appendChild(colorVal);
+  card.appendChild(colorRow);
+
+  cardList.appendChild(card);
+
+  inputs[el.key] = {
+    family: familySel, size: sizeSlider, sizeVal,
+    weight: weightSel, letterSpacing: lsSlider, lsVal,
+    textTransform: ttSel, color: colorInput, colorVal,
+  };
+}
+
+function makeRow(labelText) {
+  const row = document.createElement('div');
+  row.className = 'ctrl-row';
+  const lbl = document.createElement('label');
+  lbl.textContent = labelText;
+  row.appendChild(lbl);
+  return row;
+}
+
+function fmtEm(v) {
+  const sign = v >= 0 ? '' : '-';
+  const mag  = Math.abs(v).toFixed(2);
+  return sign + mag + 'em';
+}
+
+// ── Apply settings to mock elements ──────────────────────────────
+function applyElement(el) {
+  const s = settings[el.key];
+  const style = `font-family:'${s.family}',system-ui,sans-serif;font-size:${s.size}px;font-weight:${s.weight};letter-spacing:${s.letterSpacing}em;text-transform:${s.textTransform};color:${s.color};`;
+  for (const sel of el.selectors) {
+    document.querySelectorAll(sel).forEach((node) => {
+      node.style.fontFamily    = `'${s.family}', system-ui, sans-serif`;
+      node.style.fontSize      = s.size + 'px';
+      node.style.fontWeight    = String(s.weight);
+      node.style.letterSpacing = s.letterSpacing + 'em';
+      node.style.textTransform = s.textTransform;
+      node.style.color         = s.color;
+    });
+  }
+}
+
+function applyAll() {
+  for (const el of ELEMENTS) applyElement(el);
+}
+
+// ── Export / Reset ───────────────────────────────────────────────
+document.getElementById('btn-export').addEventListener('click', () => {
+  const json = JSON.stringify(settings, null, 2);
+  document.getElementById('export-output').value = json;
+  navigator.clipboard.writeText(json).catch(() => {});
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  for (const el of ELEMENTS) {
+    settings[el.key] = { ...el.def };
+    const i = inputs[el.key];
+    i.family.value        = settings[el.key].family;
+    i.size.value          = String(settings[el.key].size);
+    i.sizeVal.textContent = settings[el.key].size + 'px';
+    i.weight.value        = String(settings[el.key].weight);
+    i.letterSpacing.value = String(settings[el.key].letterSpacing);
+    i.lsVal.textContent   = fmtEm(settings[el.key].letterSpacing);
+    i.textTransform.value = settings[el.key].textTransform;
+    i.color.value         = settings[el.key].color;
+    i.colorVal.textContent = settings[el.key].color;
+  }
+  applyAll();
+});
+
+// ── Initial render ───────────────────────────────────────────────
+applyAll();
+</script>
+</body>
+</html>
