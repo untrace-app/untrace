@@ -18,20 +18,23 @@ const V_SPACING    = 120; // px between node centers vertically
 const TOP_PAD      = 28;  // px above first node center
 const BOT_PAD      = 72;  // px below last node bottom
 
-// Winding x-positions grouped in sets of 5 so each group of levels has its own feel
+// X-positions per level, designed to create angular interest via straight connecting lines.
+// Each group uses a distinct positional rhythm; no two adjacent groups share the same feel.
 const X_PATTERN = [
-  // Group 1 — gentle left-to-right drift
-  0.20, 0.35, 0.55, 0.72, 0.82,
-  // Group 2 — tight zigzag
-  0.22, 0.78, 0.24, 0.76, 0.26,
-  // Group 3 — wide sweep right-to-left
-  0.80, 0.60, 0.42, 0.24, 0.18,
-  // Group 4 — clustered center with variance
-  0.48, 0.62, 0.38, 0.55, 0.44,
-  // Group 5 — alternating far extremes
-  0.16, 0.84, 0.12, 0.88, 0.14,
-  // Group 6 — relaxed wave
-  0.68, 0.50, 0.32, 0.58, 0.76,
+  // Group 1 (1–5) — gradual diagonal drift left → right
+  0.15, 0.27, 0.40, 0.55, 0.68,
+  // Group 2 (6–8) — sharp zigzag, wide horizontal spacing
+  0.12, 0.88, 0.14,
+  // Group 3 (9–12) — clustered near center with small offsets
+  0.42, 0.54, 0.44, 0.56,
+  // Group 4 (13–16) — wide swings, far left ↔ far right
+  0.10, 0.90, 0.10, 0.90,
+  // Group 5 (17–20) — staircase: step right, then drop left
+  0.25, 0.42, 0.60, 0.18,
+  // Group 6 (21–24) — tight snake near center
+  0.40, 0.56, 0.42, 0.58,
+  // Group 7 (25–30) — wide sweeping diagonal then snap back left
+  0.14, 0.32, 0.55, 0.74, 0.88, 0.20,
 ];
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
@@ -163,17 +166,35 @@ function renderPath(): void {
   svg.setAttribute('height', String(minHeight));
   svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
 
+  // Linear gradient for completed segments: gold → orange top-to-bottom
+  const defs = document.createElementNS(svgNS, 'defs');
+  const grad = document.createElementNS(svgNS, 'linearGradient');
+  grad.setAttribute('id',             'ls-comp-grad');
+  grad.setAttribute('gradientUnits',  'userSpaceOnUse');
+  grad.setAttribute('x1',            '0');
+  grad.setAttribute('y1',            '0');
+  grad.setAttribute('x2',            '0');
+  grad.setAttribute('y2',            String(minHeight));
+  const stop1 = document.createElementNS(svgNS, 'stop');
+  stop1.setAttribute('offset',     '0%');
+  stop1.setAttribute('stop-color', '#ffbe0b');
+  const stop2 = document.createElementNS(svgNS, 'stop');
+  stop2.setAttribute('offset',     '100%');
+  stop2.setAttribute('stop-color', '#fb5607');
+  grad.appendChild(stop1);
+  grad.appendChild(stop2);
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
   for (let i = 0; i < count - 1; i++) {
     const a = positions[i]!;
     const b = positions[i + 1]!;
     const aStars  = starsMap[getCurrentLevel(i).id] ?? 0;
     const bStars  = starsMap[getCurrentLevel(i + 1).id] ?? 0;
-    const lineCol = (aStars > 0 && bStars > 0) ? '#ffbe0b' : '#f0d2a8';
+    const lineCol = (aStars > 0 && bStars > 0) ? 'url(#ls-comp-grad)' : '#f0d2a8';
 
-    // S-curve: control points anchor to each node's side, curving into midpoint
-    const offset = V_SPACING * 0.38;
-    const line   = document.createElementNS(svgNS, 'path');
-    line.setAttribute('d', `M ${a.x} ${a.y} C ${a.x} ${a.y + offset} ${b.x} ${b.y - offset} ${b.x} ${b.y}`);
+    const line = document.createElementNS(svgNS, 'path');
+    line.setAttribute('d', `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
     line.setAttribute('stroke',          lineCol);
     line.setAttribute('stroke-width',    '4');
     line.setAttribute('stroke-linecap',  'round');
@@ -200,27 +221,31 @@ function renderPath(): void {
     let textColor:   string;
     let shadow:      string;
 
+    // Depth overlay stacked above every base color: highlight top-left, shadow bottom-right
+    const DEPTH = 'radial-gradient(ellipse at 30% 25%, rgba(255,255,255,0.30) 0%, transparent 65%),'
+      + 'radial-gradient(ellipse at 72% 78%, rgba(0,0,0,0.05) 0%, transparent 60%),';
+
     if (locked) {
-      bgGrad      = 'radial-gradient(circle at 35% 30%, #e8d8c2, #d8c4a0)';
+      bgGrad      = `${DEPTH}radial-gradient(circle at 35% 30%, #e8d8c2, #d8c4a0)`;
       borderColor = '#b8a5d4';
       borderWidth = '4px';
       textColor   = '#c4b49a';
       shadow      = '0 3px 6px rgba(0,0,0,0.1)';
     } else if (completed) {
       const bc = stars >= 3 ? '#ffbe0b' : '#fb5607';
-      bgGrad      = 'radial-gradient(circle at 35% 30%, #fcecd8, #f0d2a8)';
+      bgGrad      = `${DEPTH}radial-gradient(circle at 35% 30%, #fcecd8, #f0d2a8)`;
       borderColor = bc;
       borderWidth = '4px';
       textColor   = C_TEXT;
       shadow      = '0 3px 6px rgba(0,0,0,0.1)';
     } else if (isCurrent) {
-      bgGrad      = 'radial-gradient(circle at 35% 30%, #ffffff, #ffe6f4)';
+      bgGrad      = `${DEPTH}radial-gradient(circle at 35% 30%, #ffffff, #ffe6f4)`;
       borderColor = '#ff006e';
       borderWidth = '4px';
       textColor   = '#ff006e';
       shadow      = '0 0 12px rgba(255,0,110,0.5), 0 3px 6px rgba(0,0,0,0.1)';
     } else {
-      bgGrad      = 'radial-gradient(circle at 35% 30%, #fffff2, #f4f0da)';
+      bgGrad      = `${DEPTH}radial-gradient(circle at 35% 30%, #fffff2, #f4f0da)`;
       borderColor = '#d3cfc4';
       borderWidth = '3px';
       textColor   = C_TEXT;
@@ -274,13 +299,19 @@ function renderPath(): void {
 
     wrapper.appendChild(node);
 
-    // Earned stars only — overlap bottom of circle by 9px
+    // Earned stars — appended to pathEl (not wrapper) so they sit in the same
+    // stacking context as the node circles. z-index:5 > circles' z-index:3 means
+    // stars always render on top regardless of which circle they overlap.
     if (completed && stars > 0) {
       const starsRow = document.createElement('div');
       starsRow.style.cssText = [
+        'position:absolute',
+        `left:${pos.x}px`,
+        `top:${pos.y + radius - Math.round(radius * 0.28)}px`,
+        'transform:translateX(-50%)',
         'display:flex', 'gap:2px', 'align-items:center', 'justify-content:center',
-        `margin-top:-${Math.round(radius * 0.28)}px`,
-        'position:relative', 'z-index:1',
+        'z-index:5',
+        'pointer-events:none',
       ].join(';');
       for (let s = 0; s < stars; s++) {
         const starEl = document.createElement('div');
@@ -288,7 +319,7 @@ function renderPath(): void {
         starEl.innerHTML = starSVG(22, 3, '#b17025', `lsstar-${i}-${s}`);
         starsRow.appendChild(starEl);
       }
-      wrapper.appendChild(starsRow);
+      pathEl.appendChild(starsRow);
     }
 
     // Interaction (unlocked only)
@@ -401,6 +432,7 @@ function buildOverlay(ui: HTMLElement): void {
     'overflow-y:auto',
     '-webkit-overflow-scrolling:touch',
     'padding:20px 0 0',
+    'position:relative',
     'background-image:radial-gradient(circle, rgba(161,129,104,0.15) 2px, transparent 2px)',
     'background-size:30px 30px',
   ].join(';');
@@ -408,7 +440,19 @@ function buildOverlay(ui: HTMLElement): void {
   pathEl = document.createElement('div');
   pathEl.style.cssText = 'position:relative;width:100%;';
 
+  // Vignette: sticky at viewport top, overlays path, draws eye toward center
+  const vignette = document.createElement('div');
+  vignette.style.cssText = [
+    'position:sticky', 'top:0', 'left:0',
+    'width:100%', 'height:100vh',
+    'margin-bottom:-100vh',
+    'pointer-events:none',
+    'z-index:10',
+    'background:radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(240,210,168,0.30) 100%)',
+  ].join(';');
+
   scroll.appendChild(pathEl);
+  scroll.appendChild(vignette);
   overlayEl.appendChild(topBar);
   overlayEl.appendChild(scroll);
   ui.appendChild(overlayEl);

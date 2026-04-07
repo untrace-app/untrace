@@ -1,5 +1,7 @@
 # Untrace — Product Requirements Document
 
+> **Note:** Phases 1-2 are complete and their sections below reflect the original spec. The actual implementation evolved during development (e.g., pastel theme replaced dark theme, xylophone samples replaced synthesized audio, Lexend/Manrope replaced system fonts). See CLAUDE.md for the current implementation state. Phase 3 is mostly complete. Phases 4-5 are forward-looking.
+
 ## Overview
 
 Untrace is a dot-grid puzzle game where players trace over pre-drawn layered lines to erase them. Tracing empty connections accidentally draws new lines. Two level types: "clear" levels where the goal is a blank grid, and "reduce" levels where some lines must remain. Reduce levels introduce intentional drawing as a strategy (the "Rubik's Cube principle") since drawing to bridge gaps always leaves residual lines. Built as a web app first, then wrapped for iOS/Android via Capacitor.
@@ -366,13 +368,21 @@ Using the designer and solver, create the first 30 levels.
 
 - All levels stored in a single `levels.json` file (or split per world: `world1.json`, etc.)
 - Loaded at app startup (small file, no lazy loading needed for <100 levels)
-- Level unlock progression: completing level N unlocks level N+1. Completing all levels in a world unlocks the next world.
+- Level unlock progression: completing level N unlocks level N+1 within a world. Worlds are locked behind cumulative star counts (star-gate system):
+  - World 1: no requirement (always open)
+  - World 2: requires 30 stars (out of 75 possible from World 1, ~40%)
+  - World 3: requires 80 stars (out of 150 possible from Worlds 1-2, ~53%)
+  - World 4: requires 140 stars (out of 210 possible from Worlds 1-3, ~67%)
+  - World 5+: requires ~60% of all possible stars from previous worlds
+  - Star requirements are generous enough that decent players pass naturally, but players who rush with 1-star completions will need to replay and improve.
+  - Level select shows "X / Y stars needed" on locked worlds.
 - Unlock state stored in localStorage
 
 ### 3.2 Level Select Screen
 
 - World view: shows all worlds as distinct sections/cards with a color temperature matching the world theme
-- Each world shows: name, number of levels, stars earned / stars possible, lock state
+- Each world shows: name, number of levels, stars earned / stars possible, lock state, stars needed to unlock (if locked)
+- Locked worlds show the star requirement prominently: "30 stars to unlock" with a progress bar showing current total
 - Tapping a world shows its levels as a grid of numbered circles
 - Each level circle shows: level number, star count (0-3), lock/unlock state
 - Tapping an unlocked level starts it
@@ -416,30 +426,109 @@ Design and verify using the Phase 2 toolchain.
 - 1 star: reached targetLayers at all
 
 **Celebration screen on solve:**
-- For "clear" levels: all ghost trails dissolve in a cascade from the last-erased connection outward
-- For "reduce" levels: remaining lines glow briefly then settle, a "target reached" animation plays
 - Star rating animates in (1, then 2, then 3 with slight delays)
-- Stats displayed: moves used, par moves, time taken, and for reduce levels: remaining layers vs target
-- "Next Level" button (prominent, centered)
-- "Replay" button (smaller, secondary)
-- "Level Select" button (smaller, secondary)
+- Varied title text based on star count: 3 stars = random("Perfect!", "Flawless!", "Brilliant!"), 2 stars = random("Well done!", "Nice work!", "Solid!"), 1 star = random("Cleared!", "Done!", "Onward!")
+- Stats displayed: "Moves: X | Par: Y"
+- World unlock notification: if this completion crosses a star-gate threshold for an existing world, show "World N Unlocked! / New puzzles await" with scale-up animation. Triggers once per world (before/after star comparison).
+- "Next Level" button (primary gradient style)
+- "Replay" button (secondary style)
+- "Level Select" button (secondary style, transitions without flashing game board)
 
 ### 3.5 Save State
 
-- On every move, serialize the current game state to localStorage
-- On app open, check for saved state. If found, offer "Resume" or "Restart" for that level.
-- Save state includes: level ID, connection states, player dot, move count, undo stack (capped at last 50 moves to limit storage)
+**IMPLEMENTED.** Single active save at a time.
+
+- Auto-saves after every move (connections, playerDot position, moveCount)
+- On returning to a level with a save, shows "Resume where you left off?" dialog with saved board visible behind it
+- Resume restores full state including playerDot position
+- Starting a different level clears any save from other levels (only one save at a time)
+- Save cleared on: level win, restart, reset, or switching to a different level
+- Pressing back to level select keeps the save (no confirmation dialog, progress is preserved)
 - Level completion (stars, unlocks) persisted separately from mid-puzzle save state
+- Schema version tracked in localStorage key 'save-version' (currently 1)
 
-### 3.6 Hint System
+### 3.6 Hint System and Sparks Currency
 
-- Each level allows up to 3 hints
-- Hint 1: highlights the optimal starting dot with a pulsing glow
-- Hint 2: animates the first 3 moves of an optimal solution
-- Hint 3: animates the full optimal solution
-- Hints are earned through gameplay: 1 hint credit per 3 levels completed (credits pool, not per-level)
-- Hint credits stored in localStorage
-- Hint button visible during gameplay, shows remaining credits
+**Sparks** are the in-game currency used exclusively for hints. They are earned through gameplay, rewarded ads, or purchased with real money.
+
+**Earning Sparks:**
+- Start with 5 sparks on first launch
+- Earn 1 spark for every 3 levels completed (any star rating, cumulative across all worlds)
+- Earn 1 spark for 3-starring a level that previously had 1-2 stars (rewards replaying)
+- Earn 1 spark by watching a rewarded video ad (capped at 3 ads per day, resets at midnight local time)
+- Earn 1 spark per daily puzzle completion (when daily puzzles are implemented)
+
+**Spending Sparks (hints):**
+- Hint 1 - "Show starting dot" (1 spark): The optimal starting dot pulses with a bright glow for 3 seconds. No path shown.
+- Hint 2 - "Show first moves" (1 spark): The first 3 moves of the optimal solution animate on the board as ghost lines with a hand icon tracing the path. Ghost fades after 3 seconds.
+- Hint 3 - "Show full solution" (2 sparks): The entire optimal solution animates start to finish with a ghost hand. After animation, board resets to current state so the player can replicate.
+
+**Hint UI during gameplay:**
+- Small lightbulb icon in the game overlay (near undo/redo buttons)
+- Badge showing remaining spark count
+- Tapping opens the hint popup: same card style as other popups (#feffe5 background, rounded corners)
+- Popup title: "Need a hint?" in Lexend
+- Three hint options stacked vertically, each showing description and cost
+- Grayed out if not enough sparks
+- "X sparks remaining" counter at the top of the popup
+- "Watch ad for 1 spark" button at the bottom (grayed out if daily cap reached, shows "X remaining today")
+
+**Spark counter on level select:**
+- Top bar, right side (opposite the star counter on the left)
+- Spark icon (small lightning bolt or diamond shape) + "x 12" in Lexend 18px weight 700 color #b17025
+- Same styling as the star counter
+
+**Celebration popup spark reward:**
+- When the player earns a spark from completing levels (every 3rd completion), show "+1 Spark!" badge on the celebration popup
+
+**Rewarded ad daily cap:**
+- Store ad watch count and date in localStorage key 'untrace_ad_watches': { count: 3, date: "2026-04-07" }
+- Reset count to 0 when date changes
+- Show "2 remaining today" text on the watch ad button
+- After 3 watches, button grays out with "Come back tomorrow"
+
+**Sparks are NOT used for:**
+- Cosmetic themes (those are direct IAP $0.99 each)
+- Ad removal (that's the $3.99 premium unlock)
+- Level skipping or progression (sparks only buy hints)
+
+**Sparks do NOT:**
+- Expire or decay over time
+- Regenerate on a timer
+- Have a maximum cap
+
+**Persistence:** Sparks stored in localStorage key 'untrace_sparks' (integer). Migrate to Capacitor Preferences in Phase 4.
+
+### 3.6.1 Shop / Store
+
+The shop is accessible from multiple contextual entry points but is never forced or blocking.
+
+**Primary store (in settings screen):**
+Add a "Shop" section in the settings modal with three categories:
+- "Remove Ads" - $3.99 one-time purchase. Shows "Purchased" checkmark if already bought.
+- "Themes" - available cosmetic themes, $0.99 each. Shows preview swatch and "Purchased" if owned.
+  - Hacker theme (dark/green)
+  - Neon theme (dark/bright)
+  - Paper theme (sketch/pencil)
+  - Ocean theme (blue/teal)
+- "Sparks" - spark packs:
+  - 5 sparks: $0.99
+  - 15 sparks: $1.99
+  - 40 sparks: $3.99
+
+**Contextual entry points:**
+- Hint popup when out of sparks: "No sparks left" with "Get more" button opening spark purchase options. Also shows "Watch ad for 1 free spark" below.
+- After interstitial ad plays: small banner "Remove ads forever - $3.99" with one-tap purchase button. Shown briefly, dismissible.
+- Celebration popup (every ~10th level with 3 stars): subtle "Customize your look" prompt linking to themes. Only on high-euphoria moments.
+- Level select screen: subtle "Remove Ads" text link near the bottom of the scrollable area.
+
+**Store principles:**
+- No popup on app launch asking to buy anything
+- No blocking purchase screens that interrupt gameplay
+- No "sale" countdown timers or fake urgency
+- No full-screen store takeover
+- Store is always optional, always one tap away in settings, never forced
+- The player finds the store when they want it, not when it's pushed
 
 ### 3.7 Dead End Detection (Real-Time)
 
@@ -474,53 +563,46 @@ For 3x3 grids, the full solver can optionally run as well (<100ms) for a precise
 - Streak tracking: consecutive days with a completed daily puzzle, stored in localStorage
 - No global leaderboard in Phase 3 (requires backend, deferred to Phase 5)
 
-### 3.9 Tutorial Hand Animation
+### 3.9 Tutorial System
 
-A semi-transparent hand/finger SVG icon that animates on top of the game board, showing the player exactly what to do on early levels. Plays once when the level loads, fades out permanently when the player makes their first move.
+**IMPLEMENTED.** A separate 5-step guided tutorial that plays on first launch, before the level select. Not part of the numbered levels. Stored in src/ui/tutorial.ts.
 
-**Implementation:**
-- Hand icon: SVG pointing finger (Font Awesome fa-hand-pointer or custom), semi-transparent, positioned absolutely over the canvas
-- Animation: hand moves between dots using CSS transitions or requestAnimationFrame, following a predefined path. A ghost trail line draws behind it as it moves, mimicking the actual trace behavior.
-- Position computed using the same gridToPixel function the renderer uses
-- Loops every 2-3 seconds with a pause between loops until player touches the screen
-
-**Per-level tutorial scripts (stored in level data):**
-```json
-"tutorial": {
-  "moves": [[0,0], [1,0]],
-  "delay": 500,
-  "loop": true
-}
-```
-- Level 1: hand drags dot 1 to dot 2 (teaches basic tracing)
-- Level 2: hand drags 1 to 2 to 5 in one continuous motion (teaches continuous trace)
-- Level 3: no tutorial (player should know by now)
-- Level 5: hand traces the same connection twice (teaches multi-layer)
-
-**Behavior:**
-- Only shows on levels that have a "tutorial" field in their level data
-- Fades out on first pointerdown event
-- Never shows again on a level the player has already completed (check localStorage)
+- Welcome popup: "Welcome to Untrace" with "Let's go" button
+- 5 hardcoded tutorial levels with forced start dots, hand animation, instructional text
+- Step 1: Single line, hand shows swipe to erase
+- Step 2: L-shape, teaches continuous tracing
+- Step 3: Accidental draw discovery (no hand)
+- Step 4: 2-layer connection, hand shows double pass
+- Step 5: Real mini puzzle, no hints
+- Tutorial UI matches game layout: undo/redo buttons, reset (no confirmation), moves counter
+- "TUTORIAL / Step N of 5" header replaces level indicator
+- Completion messages in cards: "Nice!", "Watch your path!", "You got it!", "You're ready!"
+- Tutorial skip: if player has ANY completed levels in localStorage, skip tutorial entirely
+- localStorage 'tutorial-complete' flag set on completion
 
 ### 3.10 Splash Screen
 
-A brief branded screen that shows on every app launch before the level select.
+**IMPLEMENTED.** Animated SVG logo splash on every app launch.
 
-- Full screen, background #f8f6f2
-- "Untrace" title centered in Plus Jakarta Sans, 3.5rem, weight 700, color #2e2f2c
-- Optional subtle animation: a single line being traced and erased
-- Auto-transitions to level select after 1.5 seconds, or on tap
-- Covers any loading/initialization time
-- Prevents raw level select from being the first thing a new player sees
+- Full screen, background #ffedcd
+- Inline SVG of the UNTRACE dot-and-line logo with stroke-dashoffset animation (lines draw in, dots fade in)
+- Animation CSS loaded from public/splash-animation.css
+- Subtitle "a line puzzle" in Manrope 14px color #7f7c6c below the logo
+- Stays visible until BOTH: minimum 2 seconds elapsed AND all assets loaded (levels JSON, fonts via document.fonts.ready, audio samples)
+- If assets take longer than 2 seconds, subtle pulsing dot loading indicator appears
+- No tap to skip
+- Fade out 300ms transition to tutorial (first launch) or level select (returning player)
 
 ### 3.11 Settings Screen
 
-- Volume slider
-- Mute toggle
-- Pattern mode toggle (accessibility / colorblind support)
-- Haptic feedback toggle (only shown on devices that support vibration)
-- Reset all progress (confirm dialog with two-step confirmation)
-- Version number
+**IMPLEMENTED.** Accessible via gear icon on level select screen (top-right). Modal card style matching other dialogs (background #feffe5).
+
+- **Sound:** Volume slider (styled with #fb5607 accent) + mute toggle. Persisted in localStorage.
+- **Accessibility:** Colorblind patterns toggle (solid/dashed/dotted/double/pulsing per layer). Persisted in localStorage.
+- **Progress:** "Reset all progress" with two-step confirmation ("Are you sure?" then "This cannot be undone").
+- **About:** Version number, studio name, privacy policy link.
+- Close button (X) in top-right corner.
+- Only visible on level select, not during gameplay or tutorial.
 
 ### 3.12 Performance Targets
 
@@ -552,20 +634,29 @@ A brief branded screen that shows on every app launch before the level select.
 ### 4.2 Native Enhancements
 
 - **Haptic feedback:** Capacitor Haptics plugin. Short impact on dot touch, medium impact on layer erase, heavy impact on puzzle complete.
-- **Splash screen:** Capacitor Splash Screen plugin. Dark background matching game theme, app icon centered. Auto-hide after app load.
-- **Status bar:** transparent/dark to blend with game background
+- **Splash screen:** Capacitor Splash Screen plugin. Warm background #ffedcd matching game theme, app icon centered. Auto-hide after web app splash takes over.
+- **Status bar:** transparent, blending with #ffedcd page background. Use Capacitor StatusBar plugin to set style and color.
 - **App icon:** design in Figma, export at all required sizes (1024x1024 master)
 - **No native navigation:** the web app handles all navigation internally
+- **Lock orientation to portrait:** Set `orientation: 'portrait'` in capacitor.config.ts. This replaces the CSS landscape overlay used on web.
+- **Safe areas:** Verify all UI elements respect env(safe-area-inset-top) and env(safe-area-inset-bottom) on notched phones (iPhone X+). Check: top bar, bottom bar, celebration card, settings modal, tutorial text, level transition splash.
+- **WKWebView content process crash recovery (iOS):** If iOS kills the WebView content process due to memory pressure, the screen goes white. Add a handler via Capacitor's webViewDidTerminate event to reload the app. For this simple 2D canvas game this is extremely unlikely, but the handler costs nothing.
+- **Android WebView version:** Minimum target Android 12+. Canvas 2D API is well-supported. Test on at least one older Android 12 device and one current Android 15+ device to verify rendering consistency.
+- **Battery optimization:** When the game is idle (level select, celebration, settings, dialogs), reduce requestAnimationFrame to 30fps or pause the render loop. Only run at 60fps during active gameplay and intro animations. This prevents unnecessary battery drain while browsing levels.
+- **Migrate localStorage to Capacitor Preferences plugin:** Some Android OEM WebViews can clear localStorage unexpectedly. `@capacitor/preferences` uses native storage (SharedPreferences on Android, UserDefaults on iOS) which is more reliable. Migrate all game data (level completions, stars, tutorial-complete, save state, settings, save-version) from localStorage to Preferences on first Capacitor launch. Keep localStorage as a fallback for the web version.
+- **Plugin initialization order:** Never call Capacitor plugins inside DOMContentLoaded. Plugins initialize after the WebView loads and the Capacitor bridge is ready. Wait for the Capacitor `ready` event or use `Capacitor.isNativePlatform()` checks before calling any plugin APIs. This is a classic cause of silent crashes.
+- **Disable text selection and tap highlight:** Add `-webkit-tap-highlight-color: transparent` and `user-select: none` to all game elements. Verify these are set in index.html CSS. Without this, long-press on game elements shows a text selection UI that breaks immersion.
 
 ### 4.3 App Store Preparation
 
 - App name: Untrace
+- Developer/studio name: TBD (e.g., "Mikan Games", "Dotline Games", "Soft Grid Studio"). Needed for App Store and Play Store accounts. Does not require formal company registration for individual developer accounts.
 - Subtitle: "Erase the Lines"
 - Screenshots: 6.7" (iPhone 15 Pro Max), 6.1" (iPhone 15), 5.5" (iPhone 8 Plus), 12.9" iPad Pro
 - Description: focus on the unique mechanic, mention the Rubik's Cube principle
 - Keywords: puzzle, lines, trace, minimal, logic, brain, grid
 - Age rating: 4+ (no objectionable content)
-- Privacy policy: no data collection (all data is local/localStorage)
+- Privacy policy: gameplay progress stored in player's Google Drive (Android) or iCloud (iOS) via cloud save. No personal data collected by the developer. No analytics, no tracking, no third-party data sharing.
 - IP lawyer review before submission
 
 ### 4.4 Android-Specific
@@ -574,10 +665,36 @@ A brief branded screen that shows on every app launch before the level select.
 - Signing key: generate and store securely
 - Google Play listing mirrors App Store
 
+### 4.5 Cloud Save (Cross-Device Progress Sync)
+
+Sync player progress across devices so switching phones doesn't lose progress. The save data is tiny: `{ completedLevels: { "w1-01": 3, "w1-02": 2, ... }, tutorialComplete: true }`. A few kilobytes at most.
+
+**Android:** Google Play Games Services Saved Games API via `@capacitor-community/google-play-games-services` plugin.
+- Player signs in with Google account (automatic or prompted)
+- Save progress to cloud on every level completion
+- Load progress from cloud on app launch
+- Requires Google Play Console setup and Play Games Services configuration
+
+**iOS:** Apple Game Center via Capacitor Game Center plugin.
+- Player signs in with Apple ID (automatic)
+- Save progress to iCloud
+- Load progress from cloud on app launch
+- Requires Game Center capability enabled in Xcode and App Store Connect
+
+**Conflict resolution:** If cloud save and local save disagree, always keep whichever has more total stars. Simple max-merge: for each level, keep the higher star count from either source. This means progress is never lost, only gained.
+
+**Privacy policy update:** With cloud save enabled, the app stores gameplay progress data in the player's Google Drive (Android) or iCloud (iOS). No personal data is collected by the developer.
+
 **Acceptance criteria for Phase 4:**
 - App installs and runs on iOS 16+ and Android 12+
+- Orientation locked to portrait on both platforms
 - Haptics fire correctly on both platforms
 - Splash screen displays, no white flash on load
+- Status bar blends with #ffedcd background, safe areas respected on notched phones
+- Cloud save syncs progress across two devices on the same account
+- App recovers gracefully from background/foreground transitions (audio resumes, touch state resets, animations recover)
+- WKWebView crash recovery handler is in place (iOS)
+- Battery drain is minimal when idle on level select screen
 - App Store / Play Store submissions accepted
 
 ---
@@ -592,8 +709,28 @@ Not fully specced. Key items for future PRDs:
 - **Power-up details:** Shatter removes a connection without traversing (changes dot degree, can fix parity). Phase teleports to any dot without traversing (skip bridge cost on reduce levels). Freeze protects a connection from accidental draw for 5 moves. All earned through gameplay, never purchased, never trivialize a level.
 - **Grid modifiers:** Walls (connection can't exist or be drawn), missing dots (irregular topology), disabled dots (visible but unvisitable)
 - Cosmetic themes (Hacker, Neon, Paper, Ocean) as in-app purchases
-- Premium unlock ($3.99) to remove ads and unlock all content
-- Ad integration (interstitial between levels, never during gameplay)
+- **Monetization implementation:**
+  - **IAP:** RevenueCat SDK via `@capgo/capacitor-purchases` Capacitor plugin. Handles both App Store and Google Play billing with one codebase. Products: premium unlock ($3.99), cosmetic themes ($0.99 each). Configure in App Store Connect + Google Play Console. RevenueCat handles receipt validation and cross-platform sync. **WARNING:** Use ONLY `purchases-capacitor`, NOT `purchases-js` (the web SDK). Mixing them causes purchase sheet failures and silent conflicts.
+  - **Ads:** Google AdMob via `@capacitor-community/admob` Capacitor plugin. Two formats: (1) Interstitial ads between levels for free tier only, shown every 3-4 levels (not every level, not during gameplay). Premium users never see interstitials. (2) Rewarded video ads for sparks (1 spark per ad, max 3 per day), available in both free and premium tiers. Player chooses to watch, never forced. No banner ads. **WARNING:** Do NOT load ads on app launch. Load ads only after first user interaction (after audio unlock). Otherwise ads block audio initialization and cause startup jank.
+  - **Ad quality:** Set AdMob content rating to "G". Block categories: Dating, Gambling, Political, Sexual. Monitor Ad Review Center. Use only AdMob, no cheaper networks.
+  - **Revenue split:** Apple/Google take 30% (15% if under $1M/year per platform). $3.99 premium = ~$3.39 net.
+  - **Why this balance:** Interstitials between levels motivate the premium purchase ("remove ads forever"), while rewarded video is the player-friendly standard that even premium users appreciate for earning sparks. The 3 ads/day cap ensures spark packs still have purchase value.
+- **Analytics (Firebase):**
+  - Firebase Analytics via `@capacitor-firebase/analytics` Capacitor plugin. Free, no data limits, works on Web/iOS/Android.
+  - Key events to log: `level_start` (world, level), `level_complete` (world, level, moves, stars), `level_quit` (world, level, moves at quit), `tutorial_complete` (step), `purchase` (item, value), `hint_used` (world, level, hint_type, sparks_remaining), `ad_watched` (placement, sparks_earned), `spark_spent` (amount, reason, sparks_remaining), `spark_earned` (amount, source).
+  - Dashboard provides: completion rates per level, where players quit/uninstall, retention curves, session lengths, funnel analysis (tutorial > world 1 > world 2 > purchase).
+  - Use data to identify difficulty spikes (levels with high fail/quit rates) and rebalance.
+  - Add Crashlytics alongside analytics for crash reporting.
+- **"Rate Us" prompt:**
+  - Trigger ONLY after high-euphoria moments: beating a level they failed 3+ times, completing a world, or hitting a 10-level win streak. Never after failure or mid-level.
+  - Use soft prompt first: "Enjoying Untrace?" with thumbs up/down. Thumbs down opens private feedback email. Thumbs up routes to App Store/Play Store review page.
+- **Returning player level select:**
+  - When a returning player opens the app, the level select grid auto-scrolls to center their current/next uncompleted level on screen. The player immediately sees where they left off without hunting through the grid. No separate "Continue" button needed.
+- **Account creation (optional, incentivized):**
+  - Do NOT prompt at first launch. Prompt after completing World 1 or around level 15-20.
+  - Incentivize: "Sign in to save progress across devices" (ties into cloud save).
+  - Use Google/Apple sign-in only (no custom email/password). Platform accounts handle identity.
+  - For email marketing, add an optional newsletter signup on a future website, not in the app.
 - Community level editor (derived from internal designer tool)
 - **Procedural level generation:** Random walk algorithm for clear levels (walk = guaranteed solution), random graph + solver for reduce levels. Use for daily puzzles, endless mode, and bulk level screening. Worlds 1-4 remain hand-designed.
 - Global daily leaderboard (requires a lightweight backend, possibly Supabase)

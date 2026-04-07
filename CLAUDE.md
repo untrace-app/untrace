@@ -4,12 +4,14 @@
 
 Untrace is a dot-grid puzzle game where players trace over pre-drawn layered lines to erase them. Tracing empty connections accidentally draws new lines. Two level types: "clear" levels (erase everything) and "reduce" levels (minimize remaining lines to a target). Intentional drawing as a strategy is exclusive to reduce levels since bridge lines always leave residual layers. Web-first, then wrapped for iOS/Android via Capacitor.
 
+**Progression:** Levels are sequential within worlds. Worlds are locked behind cumulative star counts (star-gate system). Players earn 1-3 stars per level based on move efficiency. Rushing with 1-star completions won't unlock later worlds, encouraging replaying levels for better scores.
+
 ## Stack
 
 - **Build:** Vite
 - **Language:** TypeScript (strict mode)
 - **Rendering:** Canvas 2D (no WebGL, no DOM-based game rendering)
-- **Audio:** Tone.js (synthesized sounds only, no sample files)
+- **Audio:** Tone.js (xylophone samples from nbrosowsky CDN for marimba, plus mp3 sound effects: pop.mp3, board.mp3)
 - **Styling (UI chrome only):** CSS (no Tailwind, no CSS framework). Game board is pure Canvas.
 - **Deploy:** Vercel (static)
 - **Testing:** Vitest for unit tests on game logic and solver
@@ -20,32 +22,42 @@ Untrace is a dot-grid puzzle game where players trace over pre-drawn layered lin
 ```
 untrace/
   src/
-    main.ts              # Entry point, initializes canvas and game
+    main.ts              # Entry point, splash screen, game loop, level loading
+    types.ts             # Shared type definitions
+    constants.ts         # Colors, sizes, timing values, all tunable numbers
     engine/
       state.ts           # GameState interface and state management
       input.ts           # Touch/pointer input handling, dot snapping, path interpolation
       logic.ts           # Erase/draw logic, win detection, undo/redo
       renderer.ts        # Canvas 2D rendering (grid, dots, lines, animations)
       animations.ts      # Animation queue and easing utilities
+      intro-animation.ts # Level intro: board fade, dot pop, line draw
     audio/
-      audio.ts           # Tone.js setup, all sound event triggers
+      audio.ts           # Tone.js setup, marimba sampler, progress notes, sound effects
     levels/
       levels.ts          # Level loading and level data types
       test-levels.ts     # Hardcoded Phase 1 test levels
     ui/
-      overlay.ts         # In-game UI (undo, move counter, settings icon)
-      settings.ts        # Settings panel
-      level-select.ts    # Level select screen (Phase 3)
-      celebration.ts     # Win celebration screen (Phase 3)
+      overlay.ts         # In-game UI (undo/redo, move counter, reset, back button)
+      settings.ts        # Settings panel (volume, colorblind, reset progress)
+      level-select.ts    # Level select screen with star display and unlock progression
+      celebration.ts     # Win celebration with stars, varied messages, world unlock
+      level-transition.ts # Splash between levels ("Level 7 / Corner")
+      tutorial.ts        # 5-step guided tutorial with hand animation and forced starts
     solver/
-      solver.ts          # BFS puzzle solver (Phase 2)
-      worker.ts          # Web Worker wrapper for solver (Phase 2)
-    types.ts             # Shared type definitions
-    constants.ts         # Colors, sizes, timing values, all tunable numbers
+      solver.ts          # BFS puzzle solver with Euler parity analysis
+      worker.ts          # Web Worker wrapper for solver
   tools/
-    designer/            # Puzzle designer web tool (Phase 2, separate entry point)
+    designer/            # Puzzle designer web tool
+    color-tuner/         # Real-time color palette editor
+    font-tuner/          # Real-time typography editor
   public/
-    levels/              # Exported level JSON files (Phase 2+)
+    levels/world1.json   # World 1 level data
+    untrace-logo.svg     # Animated dot-and-line logo
+    splash-animation.css # SVG stroke-dashoffset animation for logo
+    pop.mp3              # Dot appear sound
+    board.mp3            # Board fade-in sound
+    hand.svg             # Tutorial hand pointer
   index.html
   vite.config.ts
   tsconfig.json
@@ -60,115 +72,82 @@ untrace/
 4. **State is authoritative, rendering is cosmetic.** The game state in `state.ts` is the single source of truth. The renderer reads state and draws it. Animations are overlays that never block input or mutate state.
 5. **Input handling never mutates state directly.** Input events produce "intents" (e.g., "player moved to dot [1,2]"). The logic module in `logic.ts` processes intents and returns a new state.
 6. **Canvas only for the game board.** Menus, settings, overlays, and level select are DOM elements positioned over the canvas. Do not render UI text or buttons on the canvas itself.
-7. **No external assets.** No images, no icon fonts, no audio samples. All visuals are drawn on canvas. All sounds are Tone.js synthesis. Icons are simple SVG inline or canvas-drawn shapes.
+7. **Minimal external assets.** Game visuals are drawn on canvas. Audio uses Tone.js xylophone samples from nbrosowsky CDN plus local mp3 files (pop.mp3, board.mp3). SVG icons are inline. Fonts from Google Fonts (Lexend, Manrope).
 8. **Mobile-first.** All touch targets minimum 44x44px. Test on small screens (375px width) first.
 9. **Performance budget.** 60fps on iPhone SE (2nd gen). The render loop must complete in <16ms. Profile before optimizing. No premature optimization.
-10. **No localStorage in Phase 1** except for audio volume/mute preference. Save state comes in Phase 3.
+10. **localStorage for persistence.** Level completions, star ratings, save state, tutorial-complete flag, audio volume/mute, settings, and save-version are all stored in localStorage. See "Data Persistence Rules" section below.
 
 ## Color Palette
 
 | Element            | Color   |
 |--------------------|---------|
-| Background         | #0A0A0F |
-| Dot (inactive)     | #2A2A35 |
-| Dot (active)       | #FFFFFF |
-| Red layer          | #FF6B6B |
-| Amber layer        | #FFB347 |
-| Teal layer         | #4ECDC4 |
-| Violet layer       | #9B6BFF |
-| White layer        | #E8E8F0 |
-| Accidental flash   | #FF4444 |
-| UI text            | #FFFFFF |
-| UI text secondary  | #8888AA |
-| Star (earned)      | #FFD700 |
-| Star (empty)       | #333344 |
-| Success/win        | #4ECDC4 |
-| Warning/confirm    | #FF6B6B |
-| Button background  | rgba(255,255,255,0.08) |
-| Button hover       | rgba(255,255,255,0.15) |
-| Card background    | #141420 |
-| Card border        | rgba(255,255,255,0.06) |
-| Overlay backdrop   | rgba(0,0,0,0.75) |
+| Page background    | #ffedcd |
+| Board background   | #f7e6ca |
+| Recessed bg        | #f0d2a8 |
+| Dot (inactive)     | #a68168 |
+| Dot (active)       | #ffffff |
+| Layer 1 (red)      | #ffbe0b |
+| Layer 2 (amber)    | #fb5607 |
+| Layer 3 (teal)     | #ff006e |
+| Layer 4 (violet)   | #8338ec |
+| Layer 5 (white)    | #3a86ff |
+| Accidental flash   | #d4726a |
+| UI text primary    | #b17025 |
+| UI text secondary  | #7f7c6c |
+| Primary accent     | #fb5607 |
+| Card background    | #feffe5 |
+| Star (earned)      | #ffbe0b |
+| Star (empty)       | #d3d1c7 |
+| Locked level opacity | 0.35  |
 
 ## Design Tokens
 
 ### Typography
-- Font family: system-ui, -apple-system, "Segoe UI", sans-serif
-- Level title (top bar): 16px, weight 600, white
-- Move counter: 16px, weight 600, white
-- Reduce indicator number: 14px, weight 600, white
-- Reduce indicator label: 10px, weight 400, #8888AA
-- Celebration title: 28px, weight 700, white
-- Celebration stats: 16px, weight 500, white
-- Celebration stats secondary: 14px, weight 400, #8888AA
-- Button text (primary): 16px, weight 600, white
-- Button text (secondary): 14px, weight 500, #8888AA
-- Level select title "Untrace": 32px, weight 700, white
-- Level select world name: 14px, weight 500, #8888AA
-- Level circle number: 18px, weight 600, white
-- Level circle number (locked): 18px, weight 600, #333344
+- Headings: Lexend (Google Fonts), weight 600-700
+- Body/labels: Manrope (Google Fonts), weight 400-500
+- Level title: Lexend 16px weight 600 color #b17025
+- Level name: Manrope 12px weight 400 color #7f7c6c
+- Move counter: Manrope 16px weight 600 color #b17025
+- Celebration title: Lexend 22px weight 700 color #fb5607
+- Celebration stats: Manrope 16px weight 500 color #b17025
+- Button text (primary): Manrope 16px weight 600 white
+- Button text (secondary): Manrope 14px weight 500 color #7f7c6c
+- Tutorial tip text: Manrope 14px weight 400 color #7f7c6c
+- Tutorial header: Lexend 16px weight 600 color #b17025
 
 ### Spacing
 - Top bar height: 48px
-- Top bar horizontal padding: 12px
+- Top bar horizontal padding: 12px (plus env(safe-area-inset-top))
 - Bottom bar height: 56px
-- Bottom bar horizontal padding: 16px
-- Grid margin from screen edge: 15% of smaller dimension
+- Bottom bar horizontal padding: 16px (plus env(safe-area-inset-bottom))
 - Card padding: 24px
-- Card gap between elements: 16px
 - Button internal padding: 12px 24px
-- Level select grid gap: 12px
-- Level circle size: 72px
 
 ### Corners
 - Buttons: 12px border-radius
 - Cards and modals: 16px border-radius
-- Level circles: 16px border-radius
-- Icon buttons (grid, reset): 10px border-radius
-- Dots: fully round
+- Icon buttons (grid, reset): 40x40px with centered icon
 
-### Opacity and Effects
-- Disabled buttons: 0.3 opacity
-- Locked levels: 0.4 opacity
-- Ghost trail: 0.4 opacity, fades to 0
-- Modal backdrop: 0.75 opacity
-- Inactive UI text: 0.6 opacity
-- Icon buttons background: rgba(255,255,255,0.08)
-- Line glow: 4px blur, same color as line at 60% opacity
-- Dot glow (active): 8px blur, white at 50% opacity
-- Card shadow: 0 8px 32px rgba(0,0,0,0.5)
+### Visual Identity
+- Warm pastel aesthetic with cream/amber/orange palette
+- Page background #ffedcd, board background #f7e6ca
+- Cards use #feffe5 background with box-shadow 0 4px 16px rgba(0,0,0,0.08)
+- Modal backdrop: rgba(255,237,205,0.85)
+- Primary gradient button: solid #fb5607 with white text
+- Button press feedback: scale 0.92 on pointerdown, ease-out back to 1.0
+- All transitions use ease-out curves
 
-### Touch Targets
-- Minimum: 44x44px
-- Preferred: 48x48px
-- Level circles: 72x72px
+## Audio System
 
-### Animations
-- Page transitions: 250ms ease-out
-- Card appear: 300ms ease-out, scale 0.95 to 1.0 + fade in
-- Card dismiss: 200ms ease-in, fade out
-- Star appear: staggered 200ms delay between each, scale 0 to 1 with bounce ease
-- Button press: scale 0.96 for 100ms
-- Glow pulse (locked dot): 1s ease-in-out infinite alternate, radius 1x to 1.8x
+**Marimba progress notes:** Uses Tone.Sampler with xylophone samples from `https://nbrosowsky.github.io/tonejs-instruments/samples/xylophone/` (only G4, C5, G5, C6, G6, C7 exist on CDN). Musical cursor walks up/down white keys only (C3 to B5, 21 notes). Cursor starts at index 7 (C4). Each erase increments cursor by 1, each accidental draw decrements by 1. Clamped 0-20. Connects directly to Destination, no effects chain.
 
-### Visual Identity Rules
-- Lines are the light source. They glow against the dark background.
-- Every line has a subtle glow: 4px blur shadow in the line's own color at 60% opacity.
-- Dots have a faint inner glow, not a flat circle. Active dots are bright white with a soft radial glow.
-- No hard borders anywhere in the UI. Use subtle rgba borders (rgba(255,255,255,0.06)) or shadows instead.
-- No pure white backgrounds. Darkest surface is #0A0A0F, cards are #141420, elevated elements are #1A1A2E.
-- All transitions use ease-out. Nothing should feel snappy or mechanical.
-- The game should feel like glowing threads on a dark surface. Every visual decision supports this metaphor.
+**Sound effects:**
+- pop.mp3: plays on each dot appearing during level intro animation
+- board.mp3: plays when recessed board fades in during level intro
+- Button tap: short synth click on all UI button presses
+- Puzzle complete: rapid ascending arpeggio of top notes using marimba sampler
 
-## Audio Pitch Map (Layer Erase)
-
-| Layer  | Note |
-|--------|------|
-| Red    | C5   |
-| Amber  | A4   |
-| Teal   | F4   |
-| Violet | D4   |
-| White  | B3   |
+**iOS Safari fix:** AudioContext must be created synchronously inside a touch handler. No async/await. Tone.setContext(rawCtx) with a raw AudioContext created in the touchstart handler. This is critical and must not be changed.
 
 ## Connection Key Format
 
@@ -258,24 +237,67 @@ The checkWin function sums all connection layers and returns true when total <= 
 
 ## Current Phase
 
-**Phase 2: Toolchain.** Phase 1 (core prototype) is complete: 10 playable levels with rendering, input, erase/draw logic, audio, animations, undo/redo, and win detection. See PRD.md Phase 2 for full scope. Focus: puzzle solver (BFS with Euler parity analysis) and puzzle designer (web tool for creating and verifying levels).
+**Phase 3: Full Game (in progress).** Phases 1 (core prototype) and 2 (solver/designer) are complete. Phase 3 is mostly complete: splash screen with animated SVG logo, tutorial system (5 guided levels with hand animation and forced starts), level select with star display and save state, celebration screen with varied messages and world unlock notification, level intro animation (board fade, dot pop, line draw), level transition splash between levels, settings screen (volume, colorblind toggle, reset progress), marimba progress audio, iOS Safari audio fix. Remaining: design 20+ real levels, hint system, daily puzzle, colorblind patterns in renderer, dead-end detection.
 
 ## What NOT to Build Yet
 
-- Level select screen (Phase 3)
-- Save state / localStorage persistence (Phase 3)
-- Hint system (Phase 3)
-- Daily puzzle (Phase 3)
-- Star ratings and celebration screen (Phase 3)
-- Capacitor / native wrap (Phase 4)
-- Monetization, ads, IAP (Phase 5)
+- Hint system with Sparks currency (Phase 3, remaining). Sparks are the in-game currency for hints ONLY. Start with 5 sparks, earn 1 per 3 levels completed, earn 1 per rewarded ad (max 3 ads/day). Hints: show starting dot (1 spark), show first 3 moves (1 spark), show full solution (2 sparks). Spark counter on level select top bar (right side). Lightbulb icon in game overlay opens hint popup. Spark packs purchasable: 5/$0.99, 15/$1.99, 40/$3.99. Sparks do NOT buy cosmetics or ad removal. Sparks never expire. Store in localStorage key 'untrace_sparks'.
+- Daily puzzle (Phase 3, remaining)
+- Colorblind patterns in renderer (Phase 3, remaining)
+- Dead-end detection (Phase 3, remaining)
+- Capacitor / native wrap (Phase 4). Includes:
+  - Lock orientation to portrait in capacitor.config.ts
+  - Verify safe areas on all notched phones (env safe-area-inset-top/bottom)
+  - WKWebView crash recovery handler (iOS)
+  - Battery optimization: pause/reduce rAF when idle
+  - Status bar blending with #ffedcd
+  - Haptics plugin (dot touch, layer erase, puzzle complete)
+  - Migrate localStorage to @capacitor/preferences (Android OEMs can clear localStorage)
+  - Plugin initialization order: never call plugins in DOMContentLoaded, wait for Capacitor ready
+  - Disable text selection: -webkit-tap-highlight-color transparent, user-select none
+- Cloud save via Google Play Games + Apple Game Center (Phase 4, alongside Capacitor wrap)
+- Monetization, ads, IAP (Phase 5) -- interstitial ads every 3-4 levels (free tier, removed with premium) + rewarded video for sparks (all tiers, max 3/day). No banners. Shop accessible from settings screen: Remove Ads $3.99, Cosmetic Themes $0.99 each (Hacker, Neon, Paper, Ocean), Spark Packs (5/$0.99, 15/$1.99, 40/$3.99). Contextual purchase prompts: hint popup when out of sparks, post-interstitial "Remove ads" banner, occasional celebration popup theme prompt. Never popup on launch, never blocking, never forced. WARNING: use purchases-capacitor ONLY (not purchases-js). Load ads after first user interaction, not on launch.
+- Analytics via Firebase Analytics + `@capacitor-firebase/analytics` (Phase 5). WARNING: use ONLY the Capacitor plugin, NOT the Firebase web SDK. Web SDK fails silently inside iOS WebView.
+- "Rate Us" prompt after high moments (Phase 5)
+- Level select auto-scroll to current level for returning players (Phase 5)
+- Optional account creation after World 1 (Phase 5)
 - Power-ups: Shatter, Phase, Freeze (Phase 5, World 6+)
 - Walls, missing dots, disabled dots (Phase 5, World 5+)
 
+## Mobile Robustness (Web)
+
+These are implemented in the web version to handle common mobile issues:
+
+- **Browser suspension recovery:** visibilitychange listener recovers from screen lock/unlock. Restarts rAF loop, re-binds celebration buttons, skips stuck animations, resumes audio context.
+- **Phone call / notification interruption:** blur event ends any active trace (isTracing = false, clears stroke). focus event resumes audio.
+- **Landscape overlay:** When width > height, shows "Please rotate your device" overlay hiding the game.
+- **Pull-to-refresh prevention:** overscroll-behavior: none, touchmove preventDefault on canvas.
+- **Double-tap zoom prevention:** touch-action: manipulation on html/body.
+- **Canvas context reuse:** getContext('2d') called exactly once. Resize handler debounced to 200ms.
+- **iOS Safari audio:** AudioContext created synchronously in touchstart handler. No async/await. See audio.ts.
+
+## Data Persistence Rules (NEVER BREAK)
+
+Player progress is stored in localStorage. App updates (web deploys, App Store/Play Store updates) do NOT clear localStorage. But code changes can orphan or break saved data. Follow these rules strictly after launch:
+
+1. **Never rename localStorage keys.** If stars are stored under `level-stars`, that key name is permanent. Renaming it makes existing player data invisible.
+2. **Never change level IDs.** If a level has id `"w1-01"`, that ID is permanent. Star data and completion state are keyed to it. Changing the ID orphans the player's progress on that level.
+3. **Never reorder or remove published levels.** Only append new levels to the end of a world. Removing level 5 and shifting levels 6-25 down would break every player's save data.
+4. **Never change star-gate thresholds downward.** Increasing the star requirement for a world is safe (players already past it stay unlocked). Decreasing could cause confusion but won't break data.
+5. **Never change the star calculation formula retroactively.** Players keep their earned stars even if par values change. Their star count stays but might not match new criteria. This is acceptable.
+6. **Store a schema version.** localStorage key `save-version` tracks the data format version (start at 1). If the format ever needs to change, increment the version and write migration code that converts old format to new format on app load. Never delete old data without migrating it first.
+7. **Adding new worlds, levels, features is always safe.** New data keys, new level IDs, new worlds appended to the end -- none of these affect existing player data.
+
 ## Development Notes
 
-- Use `npx vite` for dev server, `npx vite build` for production build
-- Vercel auto-deploys from main branch
+- Dev server: `npm run dev -- --host` (--host for mobile testing on same WiFi)
+- Production build: `npx vite build`
+- Deploy: `npx vercel --prod` from ~/untrace
+- Test solver: `npm run test-solver`
+- Puzzle designer: open tools/designer/index.html directly in browser
+- Color tuner: open tools/color-tuner/index.html directly in browser
+- Font tuner: open tools/font-tuner/index.html directly in browser
 - Context7 MCP is available for looking up Tone.js and Canvas 2D API docs
-- Playwright MCP is available for automated testing
-- Run `npx vitest` for unit tests
+- Xylophone samples: only G4, C5, G5, C6, G6, C7 exist on nbrosowsky CDN, Tone.Sampler pitch-shifts the rest
+- Safari audio: must be 100% synchronous in touch handler, no await/promises
+- Dynamic snap radius needed for 4x4/5x5 grids: `min(SNAP_RADIUS, gridSpacing * 0.45)`
