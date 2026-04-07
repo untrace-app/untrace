@@ -3,14 +3,7 @@
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
-import { WORLD_GATES } from '../constants.ts';
-
-const FONT         = "'Lexend', system-ui, sans-serif";
-const FONT_HEADING = "'Lexend', system-ui, sans-serif";
-const C_TEXT       = '#b17025';
-const C_TEXT_SEC   = '#7f7c6c';
-const C_RECESSED   = '#f0d2a8';
-const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
+import { WORLD_GATES, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
 
 const TITLES_3_STAR: readonly string[] = ['Perfect!', 'Flawless!', 'Brilliant!'];
 const TITLES_2_STAR: readonly string[] = ['Well done!', 'Nice work!', 'Solid!'];

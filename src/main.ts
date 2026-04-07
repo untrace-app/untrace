@@ -12,7 +12,7 @@ import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
 import { showLevelTransition, recoverLevelTransition } from './ui/level-transition.ts';
 import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
-import { GRID_FILL_RATIO } from './constants.ts';
+import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from './constants.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;
@@ -129,19 +129,11 @@ const gameState: GameState = {
 
 // ─── Level indicator (top-left) ───────────────────────────────────────────────
 
-const FONT         = "'Lexend', system-ui, sans-serif";
-const FONT_HEADING = "'Lexend', system-ui, sans-serif";
-const C_TEXT       = '#b17025';
-const C_TEXT_SEC   = '#7f7c6c';
-const C_RECESSED   = '#f0d2a8';
-const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
-const BG   = 'rgba(10,10,20,0.72)';
-
 const levelIndicatorEl = document.createElement('div');
 levelIndicatorEl.style.cssText = [
   'position:fixed', 'top:20px', 'left:20px',
-  `background:${BG}`, 'border-radius:12px', 'padding:8px 18px',
-  'color:#ffffff', `font-family:${FONT}`, 'font-size:14px', 'font-weight:500',
+  `background:${C_RECESSED}`, 'border-radius:12px', 'padding:8px 18px',
+  `color:${C_TEXT}`, `font-family:${FONT}`, 'font-size:14px', 'font-weight:500',
   'letter-spacing:0.04em', 'white-space:nowrap', 'user-select:none', 'pointer-events:none',
 ].join(';');
 document.getElementById('ui')!.appendChild(levelIndicatorEl);
@@ -174,7 +166,6 @@ function saveGameState(levelId: string): void {
     playerDot:   gameState.playerDot,
     moveCount:   gameState.moveCount,
   };
-  console.log(`SAVE: saving level ${levelId}, moves: ${gameState.moveCount}, playerDot: ${JSON.stringify(gameState.playerDot)}`);
   try { localStorage.setItem(_saveKey(levelId), JSON.stringify(data)); } catch { /* ignore */ }
 }
 
@@ -193,8 +184,7 @@ function loadSave(levelId: string): SavedState | null {
   } catch { return null; }
 }
 
-function clearSave(levelId: string, reason: string): void {
-  console.log(`SAVE: clearing save for ${levelId}, reason: ${reason}`);
+function clearSave(levelId: string, _reason: string): void {
   localStorage.removeItem(_saveKey(levelId));
 }
 
@@ -206,7 +196,6 @@ function clearOtherSaves(keepLevelId: string): void {
     if (key && key.startsWith('untrace-save-') && key !== keepKey) toRemove.push(key);
   }
   for (const key of toRemove) {
-    console.log(`SAVE: clearing save for ${key.replace('untrace-save-', '')}, reason: switching levels`);
     localStorage.removeItem(key);
   }
 }
@@ -229,7 +218,6 @@ document.addEventListener('visibilitychange', () => {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
-  console.log('PAGE RESUMED, recovering state');
   // (f) Resume audio context — browsers suspend it on page hide.
   void Tone.context.resume();
   // (a) Restart render loop: cancel the stale pending rAF and schedule fresh,
@@ -262,7 +250,6 @@ function applySave(save: SavedState): void {
   gameState.undoStack                = [];
   gameState.redoStack                = [];
   gameState.currentStrokeConnections = new Set();
-  console.log(`SAVE: restoring playerDot: ${JSON.stringify(gameState.playerDot)}`);
 }
 
 function showResumeDialog(levelId: string, save: SavedState): void {
@@ -388,10 +375,8 @@ function loadLevel(index: number, skipIntro = false): void {
   // If gameplay is already active (canvas visible), check for a mid-level save.
   // Skips silently on the startup loadLevel(0) call when the canvas is still hidden.
   if (canvas.style.opacity === '1') {
-    console.log(`SAVE: checking for save on level ${level.id}`);
     const save = loadSave(level.id);
     if (save) {
-      console.log(`SAVE: found save for level ${level.id}`);
       applySave(save);
       inputEnabled = true;
       boardBgEl.style.transition = 'none';
@@ -399,7 +384,6 @@ function loadLevel(index: number, skipIntro = false): void {
       boardBgEl.style.display    = 'block';
       showResumeDialog(level.id, save);
     } else {
-      console.log('SAVE: no save found');
       runIntro();
     }
   }
@@ -456,7 +440,6 @@ function nextLevelWithTransition(): void {
   ).then(() => {
     // Splash is fully gone (opacity 0, pointer-events none).
     transitionActive = false;
-    console.log('TRANSITION SPLASH: fully gone, starting intro');
     runIntro();
   });
 }

@@ -73,6 +73,16 @@ export const LAYER_PITCHES: readonly string[] = [
   AUDIO_PITCH_WHITE,
 ];
 
+// ─── Shared UI constants ──────────────────────────────────────────────────────
+
+export const FONT         = "'Lexend', system-ui, sans-serif";
+export const FONT_HEADING = "'Lexend', system-ui, sans-serif";
+export const C_TEXT       = '#b17025';
+export const C_TEXT_SEC   = '#7f7c6c';
+export const C_RECESSED   = '#f0d2a8';
+export const C_PRIMARY    = '#fb5607';
+export const GRAD_PRIMARY = '#fb5607';
+
 // ─── World unlock gates ───────────────────────────────────────────────────────
 
 /** Total stars required to unlock each world. */

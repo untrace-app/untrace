@@ -4,6 +4,7 @@ import type { GameState } from '../types.ts';
 import { playUndo, playButtonTap } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
 import { getCurrentLevel } from '../levels/levels.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
 
 export interface OverlayCallbacks {
   onUndo:        () => void;
@@ -52,15 +53,6 @@ const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
   + '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'
   + '<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
   + '</svg>';
-
-// ─── Style constants ──────────────────────────────────────────────────────────
-
-const FONT         = "'Lexend', system-ui, sans-serif";
-const FONT_HEADING = "'Lexend', system-ui, sans-serif";
-const C_TEXT       = '#b17025';
-const C_TEXT_SEC   = '#7f7c6c';
-const C_RECESSED   = '#f0d2a8';
-const GRAD_PRIMARY = 'linear-gradient(135deg, #fb5607, #fb5607)';
 
 // Inline button for use inside the top/bottom bar (no position:fixed).
 const BTN_INLINE = [

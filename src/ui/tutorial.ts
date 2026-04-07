@@ -8,16 +8,12 @@ import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActiva
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro } from '../engine/intro-animation.ts';
 import { playProgressNote, resetProgressAudio, playPuzzleComplete, playButtonTap, playUndo } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
-import { GRID_FILL_RATIO } from '../constants.ts';
+import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LS_KEY = 'tutorial-complete';
-const FONT         = "'Lexend', system-ui, sans-serif";
-const FONT_HEADING = "'Lexend', system-ui, sans-serif";
-const C_TEXT       = '#b17025';
-const C_TEXT_SEC   = '#7f7c6c';
-const C_SUCCESS    = '#fb5607';
+const LS_KEY    = 'tutorial-complete';
+const C_SUCCESS = '#fb5607';
 
 // ─── Tutorial level definitions ───────────────────────────────────────────────
 
@@ -329,8 +325,6 @@ const SVG_CLOSE = '</svg>';
 const UNDO_ICON  = `${SVG_OPEN}<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.5"/>${SVG_CLOSE}`;
 const REDO_ICON  = `${SVG_OPEN}<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.5"/>${SVG_CLOSE}`;
 const RESET_ICON = '<svg width="18" height="18" viewBox="0 0 512 512" fill="#7f7c6c"><path d="M65.9 228.5c13.3-93 93.4-164.5 190.1-164.5 53 0 101 21.5 135.8 56.2 .2 .2 .4 .4 .6 .6l7.6 7.2-47.9 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 53.4-11.3-10.7C390.5 28.6 326.5 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1zm443.5 64c2.5-17.5-9.7-33.7-27.1-36.2s-33.7 9.7-36.2 27.1c-13.3 93-93.4 164.5-190.1 164.5-53 0-101-21.5-135.8-56.2-.2-.2-.4-.4-.6-.6l-7.6-7.2 47.9 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 320c-8.5 0-16.7 3.4-22.7 9.5S-.1 343.7 0 352.3l1 127c.1 17.7 14.6 31.9 32.3 31.7S65.2 496.4 65 478.7l-.4-51.5 10.7 10.1c46.3 46.1 110.2 74.7 180.7 74.7 129 0 235.7-95.4 253.4-219.5z"/></svg>';
-
-const C_RECESSED = '#f0d2a8';
 
 const BTN_INLINE = [
   'width:40px', 'height:40px', 'flex-shrink:0',

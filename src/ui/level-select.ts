@@ -4,15 +4,9 @@ import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { initSettings, showSettings } from './settings.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const FONT         = "'Lexend', system-ui, sans-serif";
-const FONT_HEADING = "'Lexend', system-ui, sans-serif";
-const C_TEXT       = '#b17025';
-const C_TEXT_SEC   = '#7f7c6c';
-const C_RECESSED   = '#f0d2a8';
-const C_PRIMARY    = '#fb5607';
 const LS_UNLOCKED = 'untrace_unlocked'; // highest unlocked level index (0-based)
 const LS_STARS    = 'untrace_stars';    // JSON object: { [levelId]: starCount (0–3) }
 

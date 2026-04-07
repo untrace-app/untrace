@@ -4,16 +4,11 @@
 import * as Tone from 'tone';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
-const FONT         = "'Lexend', system-ui, sans-serif";
-const FONT_HEADING = "'Lexend', system-ui, sans-serif";
-const C_TEXT       = '#b17025';
-const C_TEXT_SEC   = '#7f7c6c';
-const C_RECESSED   = '#f0d2a8';
-const C_PRIMARY    = '#fb5607';
-const C_DANGER     = '#d4726a';
+const C_DANGER = '#d4726a';
 
 // Placeholder link until a real privacy policy URL exists.
 const PRIVACY_URL  = 'https://untrace.game/privacy';
