@@ -726,11 +726,26 @@ Not fully specced. Key items for future PRDs:
   - Use soft prompt first: "Enjoying Untrace?" with thumbs up/down. Thumbs down opens private feedback email. Thumbs up routes to App Store/Play Store review page.
 - **Returning player level select:**
   - When a returning player opens the app, the level select grid auto-scrolls to center their current/next uncompleted level on screen. The player immediately sees where they left off without hunting through the grid. No separate "Continue" button needed.
-- **Account creation (optional, incentivized):**
-  - Do NOT prompt at first launch. Prompt after completing World 1 or around level 15-20.
-  - Incentivize: "Sign in to save progress across devices" (ties into cloud save).
-  - Use Google/Apple sign-in only (no custom email/password). Platform accounts handle identity.
-  - For email marketing, add an optional newsletter signup on a future website, not in the app.
+- **Account creation (optional, never required):**
+  - **Launch (Phase 4): No accounts.** Everything is local (localStorage, then Capacitor Preferences). Zero friction. No login screen before gameplay. Players just play.
+  - **Post-launch (Phase 5): Optional sign-in.** Only prompted AFTER the player completes World 1 (level 25). Soft prompt on the celebration popup: "Save your progress across devices?" with "Sign in" and "Maybe later" buttons. Never blocking, never required.
+  - **Sign-in methods:** Google Sign-In and Apple Sign-In only. No email/password. Platform accounts handle identity, authentication, and security. Use Capacitor plugins: `@codetrix-studio/capacitor-google-auth` for Google, `@capacitor-community/apple-sign-in` for Apple.
+  - **What sign-in enables:**
+    - Cloud save sync between devices (phone to tablet, iOS to Android)
+    - Leaderboards for daily puzzles
+    - Cross-platform progress restoration on reinstall
+    - Spark balance sync across devices
+  - **Where sign-in appears (Phase 5 only):**
+    - After completing World 1: soft prompt on celebration popup
+    - Settings screen: "Account" section with "Sign in" button (shows "Signed in as [name]" if already signed in)
+    - On app reinstall/new device: "Sign in to restore progress" option on the main menu, small and non-intrusive
+  - **Where sign-in NEVER appears:**
+    - First launch / main menu (before any gameplay)
+    - Mid-level interruptions
+    - As a required step for any feature (playing, hints, purchases all work without sign-in)
+    - As a popup on app launch for returning players who declined previously
+  - **Privacy:** Signed-in users' gameplay progress is stored in their Google Drive (Android) or iCloud (iOS) via cloud save. No personal data is collected or stored by the developer. No analytics tied to identity. Privacy policy must be updated before enabling sign-in.
+  - **App Store requirement:** Apple requires apps that offer Sign in with Apple to also offer it if they offer any other third-party sign-in. So if Google Sign-In is offered, Apple Sign-In must also be offered.
 - Community level editor (derived from internal designer tool)
 - **Procedural level generation:** Random walk algorithm for clear levels (walk = guaranteed solution), random graph + solver for reduce levels. Use for daily puzzles, endless mode, and bulk level screening. Worlds 1-4 remain hand-designed.
 - Global daily leaderboard (requires a lightweight backend, possibly Supabase)

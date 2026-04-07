@@ -260,7 +260,7 @@ The checkWin function sums all connection layers and returns true when total <= 
 - Analytics via Firebase Analytics + `@capacitor-firebase/analytics` (Phase 5). WARNING: use ONLY the Capacitor plugin, NOT the Firebase web SDK. Web SDK fails silently inside iOS WebView.
 - "Rate Us" prompt after high moments (Phase 5)
 - Level select auto-scroll to current level for returning players (Phase 5)
-- Optional account creation after World 1 (Phase 5)
+- Optional account creation after World 1 (Phase 5). NO accounts at launch. Google Sign-In + Apple Sign-In only, no email/password. Prompted softly after completing World 1 on celebration popup: "Save your progress across devices?" Never on first launch, never blocking, never required. Enables cloud save sync, daily leaderboards, cross-device progress. Settings screen shows "Account" section. Privacy: no personal data collected by developer.
 - Power-ups: Shatter, Phase, Freeze (Phase 5, World 6+)
 - Walls, missing dots, disabled dots (Phase 5, World 5+)
 
