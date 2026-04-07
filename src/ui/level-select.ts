@@ -1,14 +1,38 @@
-// Level select screen (Phase 3)
+// Level select screen — winding path map layout
 
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { initSettings, showSettings } from './settings.ts';
-import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const LS_UNLOCKED = 'untrace_unlocked'; // highest unlocked level index (0-based)
-const LS_STARS    = 'untrace_stars';    // JSON object: { [levelId]: starCount (0–3) }
+
+const LS_UNLOCKED = 'untrace_unlocked';
+const LS_STARS    = 'untrace_stars';
+
+// Node dimensions
+const NODE_SIZE    = 64;  // px diameter, standard
+const NODE_CURRENT = 78;  // px diameter, active level
+const V_SPACING    = 120; // px between node centers vertically
+const TOP_PAD      = 28;  // px above first node center
+const BOT_PAD      = 72;  // px below last node bottom
+
+// Winding x-positions grouped in sets of 5 so each group of levels has its own feel
+const X_PATTERN = [
+  // Group 1 — gentle left-to-right drift
+  0.20, 0.35, 0.55, 0.72, 0.82,
+  // Group 2 — tight zigzag
+  0.22, 0.78, 0.24, 0.76, 0.26,
+  // Group 3 — wide sweep right-to-left
+  0.80, 0.60, 0.42, 0.24, 0.18,
+  // Group 4 — clustered center with variance
+  0.48, 0.62, 0.38, 0.55, 0.44,
+  // Group 5 — alternating far extremes
+  0.16, 0.84, 0.12, 0.88, 0.14,
+  // Group 6 — relaxed wave
+  0.68, 0.50, 0.32, 0.58, 0.76,
+];
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
@@ -27,7 +51,6 @@ function loadStars(): Record<string, number> {
     const raw = localStorage.getItem(LS_STARS);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    // Reject legacy array format (migrated automatically to empty object).
     if (Array.isArray(parsed)) return {};
     return parsed as Record<string, number>;
   } catch {
@@ -44,45 +67,66 @@ function persistStars(levelIndex: number, stars: number): void {
   }
 }
 
+function getTotalStars(): number {
+  const map = loadStars();
+  return Object.values(map).reduce((sum, n) => sum + (typeof n === 'number' ? n : 0), 0);
+}
+
 // ─── Module state ─────────────────────────────────────────────────────────────
 
 let overlayEl:  HTMLDivElement | null = null;
-let gridEl:     HTMLDivElement | null = null;
+let pathEl:     HTMLDivElement | null = null;
 let onSelectCb: ((index: number) => void) | null = null;
 
-// ─── Star dots row ────────────────────────────────────────────────────────────
+// ─── CSS injection ────────────────────────────────────────────────────────────
 
-function makeStarDots(count: number): HTMLElement {
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:3px;align-items:center;height:8px;';
-  for (let i = 0; i < 3; i++) {
-    const dot = document.createElement('div');
-    const filled = i < count;
-    dot.style.cssText = [
-      'width:5px', 'height:5px', 'border-radius:50%', 'flex-shrink:0',
-      `background:${filled ? '#ffbe0b' : '#d3d1c7'}`,
-    ].join(';');
-    row.appendChild(dot);
-  }
-  return row;
+let _stylesInjected = false;
+function injectStyles(): void {
+  if (_stylesInjected) return;
+  _stylesInjected = true;
+  const s = document.createElement('style');
+  s.textContent = [
+    '@keyframes ls-pulse {',
+    '  0%,100% { transform:scale(1.0); }',
+    '  50%      { transform:scale(1.08); }',
+    '}',
+  ].join('\n');
+  document.head.appendChild(s);
 }
 
-// ─── Grid rendering ───────────────────────────────────────────────────────────
+// ─── Star SVG ─────────────────────────────────────────────────────────────────
 
-function renderGrid(): void {
-  if (!gridEl) return;
+function starSVG(size: number, strokeW: number, strokeColor: string, gradId: string): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" `
+    + `fill="url(#${gradId})" stroke="${strokeColor}" stroke-width="${strokeW}" `
+    + `stroke-linecap="round" stroke-linejoin="round">`
+    + `<defs><radialGradient id="${gradId}" cx="50%" cy="30%" r="65%">`
+    + `<stop offset="0%" stop-color="#ffbe0b"/>`
+    + `<stop offset="100%" stop-color="#f59e0b"/>`
+    + `</radialGradient></defs>`
+    + `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+    + `</svg>`;
+}
+
+// ─── Path rendering ───────────────────────────────────────────────────────────
+
+function getNodeX(index: number, pathWidth: number, radius: number): number {
+  const frac = X_PATTERN[index % X_PATTERN.length]!;
+  return Math.max(radius + 10, Math.min(pathWidth - radius - 10, frac * pathWidth));
+}
+
+function renderPath(): void {
+  if (!pathEl) return;
+
   const count    = getLevelCount();
   const starsMap = loadStars();
 
-  // Unlock logic: level 0 always unlocked; each subsequent level requires
-  // the previous level to have at least 1 star saved.
   function isUnlocked(i: number): boolean {
     if (i === 0) return true;
     return (starsMap[getCurrentLevel(i - 1).id] ?? 0) > 0;
   }
 
-  // "Current" level: the first unlocked-but-not-yet-completed level.
-  // This gets the accent highlight (state 2).
+  // First unlocked-but-not-yet-completed level is "current"
   let currentIdx = -1;
   for (let i = 0; i < count; i++) {
     if (isUnlocked(i) && (starsMap[getCurrentLevel(i).id] ?? 0) === 0) {
@@ -91,67 +135,126 @@ function renderGrid(): void {
     }
   }
 
-  gridEl.innerHTML = '';
+  pathEl.innerHTML = '';
 
+  const pathWidth  = pathEl.offsetWidth || 320;
+  const nodeRadius = NODE_SIZE / 2;
+  const minHeight  = TOP_PAD + nodeRadius + (count - 1) * V_SPACING + nodeRadius + 32 + BOT_PAD;
+  pathEl.style.minHeight = `${minHeight}px`;
+
+  // Compute center positions for every node
+  const positions: { x: number; y: number }[] = [];
   for (let i = 0; i < count; i++) {
+    const isCurrent = i === currentIdx;
+    const radius    = (isCurrent ? NODE_CURRENT : NODE_SIZE) / 2;
+    positions.push({
+      x: getNodeX(i, pathWidth, radius),
+      y: TOP_PAD + nodeRadius + i * V_SPACING,
+    });
+  }
+
+  // ── SVG connecting lines (z-index:1, behind nodes) ────────────────────────
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg   = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width',  String(pathWidth));
+  svg.setAttribute('height', String(minHeight));
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
+
+  for (let i = 0; i < count - 1; i++) {
+    const a = positions[i]!;
+    const b = positions[i + 1]!;
+    const aStars  = starsMap[getCurrentLevel(i).id] ?? 0;
+    const bStars  = starsMap[getCurrentLevel(i + 1).id] ?? 0;
+    const lineCol = (aStars > 0 && bStars > 0) ? '#ffbe0b' : '#f0d2a8';
+
+    // S-curve: control points anchor to each node's side, curving into midpoint
+    const offset = V_SPACING * 0.38;
+    const line   = document.createElementNS(svgNS, 'path');
+    line.setAttribute('d', `M ${a.x} ${a.y} C ${a.x} ${a.y + offset} ${b.x} ${b.y - offset} ${b.x} ${b.y}`);
+    line.setAttribute('stroke',          lineCol);
+    line.setAttribute('stroke-width',    '4');
+    line.setAttribute('stroke-linecap',  'round');
+    line.setAttribute('fill',            'none');
+    svg.appendChild(line);
+  }
+  pathEl.appendChild(svg);
+
+  // ── Level nodes ───────────────────────────────────────────────────────────
+  for (let i = 0; i < count; i++) {
+    const pos       = positions[i]!;
     const levelData = getCurrentLevel(i);
     const locked    = !isUnlocked(i);
     const stars     = starsMap[levelData.id] ?? 0;
     const completed = stars > 0;
     const isCurrent = i === currentIdx;
+    const nodeSize  = isCurrent ? NODE_CURRENT : NODE_SIZE;
+    const radius    = nodeSize / 2;
 
-    // ── Cell wrapper ─────────────────────────────────────────────────────────
-    const cell = document.createElement('div');
-    cell.style.cssText = [
-      'display:flex', 'flex-direction:column', 'align-items:center', 'gap:7px',
+    // Visual state
+    let bgGrad:      string;
+    let borderColor: string;
+    let borderWidth: string;
+    let textColor:   string;
+    let shadow:      string;
+
+    if (locked) {
+      bgGrad      = 'radial-gradient(circle at 35% 30%, #e8d8c2, #d8c4a0)';
+      borderColor = '#b8a5d4';
+      borderWidth = '4px';
+      textColor   = '#c4b49a';
+      shadow      = '0 3px 6px rgba(0,0,0,0.1)';
+    } else if (completed) {
+      const bc = stars >= 3 ? '#ffbe0b' : '#fb5607';
+      bgGrad      = 'radial-gradient(circle at 35% 30%, #fcecd8, #f0d2a8)';
+      borderColor = bc;
+      borderWidth = '4px';
+      textColor   = C_TEXT;
+      shadow      = '0 3px 6px rgba(0,0,0,0.1)';
+    } else if (isCurrent) {
+      bgGrad      = 'radial-gradient(circle at 35% 30%, #ffffff, #ffe6f4)';
+      borderColor = '#ff006e';
+      borderWidth = '4px';
+      textColor   = '#ff006e';
+      shadow      = '0 0 12px rgba(255,0,110,0.5), 0 3px 6px rgba(0,0,0,0.1)';
+    } else {
+      bgGrad      = 'radial-gradient(circle at 35% 30%, #fffff2, #f4f0da)';
+      borderColor = '#d3cfc4';
+      borderWidth = '3px';
+      textColor   = C_TEXT;
+      shadow      = '0 3px 6px rgba(0,0,0,0.1)';
+    }
+
+    // Wrapper — absolute, centered at pos
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = [
+      'position:absolute',
+      `left:${pos.x}px`,
+      `top:${pos.y}px`,
+      'transform:translate(-50%,-50%)',
+      'display:flex', 'flex-direction:column', 'align-items:center',
       `cursor:${locked ? 'default' : 'pointer'}`,
       '-webkit-tap-highlight-color:transparent',
       'touch-action:manipulation',
+      'z-index:3',
     ].join(';');
 
-    // ── Rounded-square tile ───────────────────────────────────────────────────
-    // Four states:
-    //   1. Completed  – #e9e8e4 bg, #2e2f2c text, no border, star dots
-    //   2. Current    – #ffffff bg, #993c49 text, 2px #993c49 border, no stars
-    //   3. Unlocked   – #ffffff bg, #2e2f2c text, 1px #d3d1c7 border, no stars
-    //   4. Locked     – #e9e8e4 bg @ 0.4 opacity, lock icon, no stars
-    const tile = document.createElement('div');
-    let bg:        string;
-    let border:    string;
-    let textColor: string;
-
-    if (locked) {
-      bg        = C_RECESSED;
-      border    = 'none';
-      textColor = '#a68168';
-    } else if (completed) {
-      bg        = C_RECESSED;
-      border    = 'none';
-      textColor = C_TEXT;
-    } else if (isCurrent) {
-      bg        = '#feffe5';
-      border    = `2px solid ${C_PRIMARY}`;
-      textColor = C_PRIMARY;
-    } else {
-      bg        = '#feffe5';
-      border    = '1px solid #d3d1c7';
-      textColor = C_TEXT;
-    }
-
-    tile.style.cssText = [
-      'width:62px', 'height:62px',
-      'border-radius:16px',
-      `background:${bg}`,
-      `border:${border}`,
-      'display:flex', 'align-items:center', 'justify-content:center',
+    // Node circle
+    const node = document.createElement('div');
+    node.style.cssText = [
+      `width:${nodeSize}px`, `height:${nodeSize}px`,
+      'border-radius:50%',
       'flex-shrink:0',
-      locked ? 'opacity:0.4' : 'opacity:1',
-      'transition:transform 0.15s ease-out, filter 0.15s ease-out',
+      `background:${bgGrad}`,
+      `border:${borderWidth} solid ${borderColor}`,
+      'display:flex', 'align-items:center', 'justify-content:center',
+      `box-shadow:${shadow}`,
+      'position:relative', 'z-index:2',
+      ...(isCurrent ? ['animation:ls-pulse 1s ease-in-out infinite'] : []),
     ].join(';');
 
     if (locked) {
-      tile.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
-        + 'stroke="#7f7c6c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+      node.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" '
+        + `stroke="${textColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">`
         + '<rect x="3" y="11" width="18" height="11" rx="2"/>'
         + '<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     } else {
@@ -159,37 +262,49 @@ function renderGrid(): void {
       num.textContent = String(i + 1);
       num.style.cssText = [
         `color:${textColor}`,
-        'font-size:18px', 'font-weight:700',
+        `font-size:${isCurrent ? '24px' : '22px'}`, 'font-weight:700',
         `font-family:${FONT_HEADING}`,
         'line-height:1', 'user-select:none',
       ].join(';');
-      tile.appendChild(num);
+      node.appendChild(num);
     }
 
-    // ── Interaction (unlocked only) ───────────────────────────────────────────
+    wrapper.appendChild(node);
+
+    // Earned stars only — overlap bottom of circle by 9px
+    if (completed && stars > 0) {
+      const starsRow = document.createElement('div');
+      starsRow.style.cssText = [
+        'display:flex', 'gap:2px', 'align-items:center', 'justify-content:center',
+        `margin-top:-${Math.round(radius * 0.28)}px`,
+        'position:relative', 'z-index:1',
+      ].join(';');
+      for (let s = 0; s < stars; s++) {
+        const starEl = document.createElement('div');
+        starEl.style.cssText = 'display:inline-flex;';
+        starEl.innerHTML = starSVG(22, 2.5, '#b17025', `lsstar-${i}-${s}`);
+        starsRow.appendChild(starEl);
+      }
+      wrapper.appendChild(starsRow);
+    }
+
+    // Interaction (unlocked only)
     if (!locked) {
-      addPressFeedback(tile);
-      cell.addEventListener('click', () => {
+      addPressFeedback(node);
+      wrapper.addEventListener('click', () => {
         if (onSelectCb) { playButtonTap(); hideLevelSelect(); onSelectCb(i); }
       });
     }
 
-    cell.appendChild(tile);
-    // Show star dots only for completed levels; spacer keeps grid alignment.
-    if (completed) {
-      cell.appendChild(makeStarDots(stars));
-    } else {
-      const spacer = document.createElement('div');
-      spacer.style.cssText = 'height:8px;';
-      cell.appendChild(spacer);
-    }
-    gridEl.appendChild(cell);
+    pathEl.appendChild(wrapper);
   }
 }
 
 // ─── Build overlay ────────────────────────────────────────────────────────────
 
 function buildOverlay(ui: HTMLElement): void {
+  injectStyles();
+
   overlayEl = document.createElement('div');
   overlayEl.style.cssText = [
     'position:fixed', 'inset:0',
@@ -204,90 +319,68 @@ function buildOverlay(ui: HTMLElement): void {
     'will-change:opacity,transform',
   ].join(';');
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  const header = document.createElement('div');
-  header.style.cssText = [
-    'padding:env(safe-area-inset-top,0px) 28px 0',
-    'padding-top:calc(env(safe-area-inset-top,0px) + 48px)',
-    'padding-bottom:18px',
+  // ── Top bar ───────────────────────────────────────────────────────────────
+  const topBar = document.createElement('div');
+  topBar.style.cssText = [
     'flex-shrink:0',
+    'padding-top:calc(env(safe-area-inset-top,0px) + 14px)',
+    'padding-bottom:14px',
+    'padding-left:20px', 'padding-right:20px',
+    'background:#feffe5',
+    'border-radius:0 0 16px 16px',
+    'display:flex', 'align-items:center',
+    'z-index:10',
+    'box-shadow:0 2px 8px rgba(177,112,37,0.07)',
   ].join(';');
 
-  const title = document.createElement('h1');
-  title.textContent = 'Untrace';
-  title.style.cssText = [
-    `color:${C_TEXT}`,
-    'font-size:34px', 'font-weight:700', 'letter-spacing:-0.03em',
-    `font-family:${FONT_HEADING}`, 'line-height:1',
-    'margin:0 0 6px', 'user-select:none',
+  // Star counter (left, flex:1)
+  const starCounter = document.createElement('div');
+  starCounter.style.cssText = 'flex:1;display:flex;align-items:center;gap:5px;';
+  const starIconEl = document.createElement('div');
+  starIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
+  starIconEl.innerHTML = starSVG(28, 3, '#b17025', 'ls-topstar');
+  const starCountText = document.createElement('span');
+  starCountText.style.cssText = [
+    `color:${C_TEXT}`, 'font-size:18px', 'font-weight:700',
+    `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
+  starCountText.textContent = `\u00D7\u00A0${getTotalStars()}`;
+  starCounter.appendChild(starIconEl);
+  starCounter.appendChild(starCountText);
 
-  const worldLabel = document.createElement('p');
-  worldLabel.style.cssText = [
-    `color:${C_TEXT_SEC}`,
-    'font-size:12px', 'font-weight:500', 'letter-spacing:0.08em',
-    'text-transform:uppercase',
-    `font-family:${FONT}`,
-    'margin:0', 'user-select:none',
-  ].join(';');
+  // Title + world name (center, flex:0)
+  const titleWrap = document.createElement('div');
+  titleWrap.style.cssText = 'flex:0;text-align:center;';
 
-  // Derive world name from level data
+  const titleEl = document.createElement('div');
   const levelCount = getLevelCount();
-  if (levelCount > 0) {
-    const firstLevel = getCurrentLevel(0);
-    const worldNum   = firstLevel.world;
-    const worldNames: Record<number, string> = {
-      1: 'First Light', 2: 'Layers', 3: 'The Knot', 4: 'Remnants',
-    };
-    worldLabel.textContent = `World ${worldNum} — ${worldNames[worldNum] ?? ''}`;
-  } else {
-    worldLabel.textContent = 'World 1 — First Light';
-  }
-
-  header.appendChild(title);
-  header.appendChild(worldLabel);
-
-  // ── Divider ───────────────────────────────────────────────────────────────
-  const divider = document.createElement('div');
-  divider.style.cssText = [
-    'height:1px',
-    `background:${C_RECESSED}`,
-    'flex-shrink:0',
-    'margin:0 28px',
+  let worldNum = 1;
+  if (levelCount > 0) worldNum = getCurrentLevel(0).world;
+  titleEl.textContent = `World ${worldNum}`;
+  titleEl.style.cssText = [
+    `color:${C_TEXT}`, 'font-size:16px', 'font-weight:600',
+    `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
 
-  // ── Scroll area with level grid ───────────────────────────────────────────
-  const scroll = document.createElement('div');
-  scroll.style.cssText = [
-    'flex:1',
-    'overflow-y:auto',
-    '-webkit-overflow-scrolling:touch',
-    'padding:24px 24px 64px',
+  const worldNames: Record<number, string> = { 1: 'First Light', 2: 'Layers', 3: 'The Knot', 4: 'Remnants' };
+  const subtitleEl = document.createElement('div');
+  subtitleEl.textContent = worldNames[worldNum] ?? '';
+  subtitleEl.style.cssText = [
+    `color:${C_TEXT_SEC}`, 'font-size:11px', 'font-weight:400',
+    `font-family:${FONT}`, 'user-select:none', 'letter-spacing:0.06em',
+    'text-transform:uppercase', 'margin-top:3px', 'line-height:1',
   ].join(';');
 
-  gridEl = document.createElement('div');
-  gridEl.style.cssText = [
-    'display:grid',
-    'grid-template-columns:repeat(3,1fr)',
-    'gap:18px 12px',
-    'max-width:380px',
-    'margin:0 auto',
-  ].join(';');
+  titleWrap.appendChild(titleEl);
+  titleWrap.appendChild(subtitleEl);
 
-  scroll.appendChild(gridEl);
-  overlayEl.appendChild(header);
-  overlayEl.appendChild(divider);
-  overlayEl.appendChild(scroll);
+  // Gear button (right, flex:1 end-aligned)
+  const rightCol = document.createElement('div');
+  rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;';
 
-  // ── Gear icon (top-right, opens settings modal) ──────────────────────────
-  // Matches the 40x40 inline button style used elsewhere; positioned to sit
-  // vertically centered against the "Untrace" title.
   const gearBtn = document.createElement('button');
   gearBtn.setAttribute('aria-label', 'Open settings');
   gearBtn.style.cssText = [
-    'position:absolute',
-    'right:28px',
-    'top:calc(env(safe-area-inset-top,0px) + 45px)',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
     `background:${C_RECESSED}`, 'border:none', 'border-radius:9999px',
@@ -295,24 +388,43 @@ function buildOverlay(ui: HTMLElement): void {
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
   ].join(';');
-  gearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="24" height="24">'
+  gearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20" height="20">'
     + '<path fill="#b17025" d="M195.1 9.5C198.1-5.3 211.2-16 226.4-16l59.8 0c15.2 0 28.3 10.7 31.3 25.5L332 79.5c14.1 6 27.3 13.7 39.3 22.8l67.8-22.5c14.4-4.8 30.2 1.2 37.8 14.4l29.9 51.8c7.6 13.2 4.9 29.8-6.5 39.9L447 233.3c.9 7.4 1.3 15 1.3 22.7s-.5 15.3-1.3 22.7l53.4 47.5c11.4 10.1 14 26.8 6.5 39.9l-29.9 51.8c-7.6 13.1-23.4 19.2-37.8 14.4l-67.8-22.5c-12.1 9.1-25.3 16.7-39.3 22.8l-14.4 69.9c-3.1 14.9-16.2 25.5-31.3 25.5l-59.8 0c-15.2 0-28.3-10.7-31.3-25.5l-14.4-69.9c-14.1-6-27.2-13.7-39.3-22.8L73.5 432.3c-14.4 4.8-30.2-1.2-37.8-14.4L5.8 366.1c-7.6-13.2-4.9-29.8 6.5-39.9l53.4-47.5c-.9-7.4-1.3-15-1.3-22.7s.5-15.3 1.3-22.7L12.3 185.8c-11.4-10.1-14-26.8-6.5-39.9L35.7 94.1c7.6-13.2 23.4-19.2 37.8-14.4l67.8 22.5c12.1-9.1 25.3-16.7 39.3-22.8L195.1 9.5zM256.3 336a80 80 0 1 0 -.6-160 80 80 0 1 0 .6 160z"/>'
     + '</svg>';
   addPressFeedback(gearBtn);
   gearBtn.addEventListener('click', () => { playButtonTap(); showSettings(); });
-  overlayEl.appendChild(gearBtn);
+  rightCol.appendChild(gearBtn);
 
+  topBar.appendChild(starCounter);
+  topBar.appendChild(titleWrap);
+  topBar.appendChild(rightCol);
+
+  // ── Scroll area with dot-grid background ─────────────────────────────────
+  const scroll = document.createElement('div');
+  scroll.style.cssText = [
+    'flex:1',
+    'overflow-y:auto',
+    '-webkit-overflow-scrolling:touch',
+    'padding:20px 0 0',
+    'background-image:radial-gradient(circle, rgba(161,129,104,0.15) 2px, transparent 2px)',
+    'background-size:30px 30px',
+  ].join(';');
+
+  pathEl = document.createElement('div');
+  pathEl.style.cssText = 'position:relative;width:100%;';
+
+  scroll.appendChild(pathEl);
+  overlayEl.appendChild(topBar);
+  overlayEl.appendChild(scroll);
   ui.appendChild(overlayEl);
 }
 
 // ─── Show / hide ──────────────────────────────────────────────────────────────
 
-/** Show the level select overlay. */
 export function showLevelSelect(): void {
   if (!overlayEl) return;
-  renderGrid();
+  renderPath();
   overlayEl.style.pointerEvents = 'auto';
-  // Double rAF to ensure transition plays after display state settles.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (overlayEl) {
@@ -323,7 +435,6 @@ export function showLevelSelect(): void {
   });
 }
 
-/** Hide the level select overlay. */
 export function hideLevelSelect(): void {
   if (!overlayEl) return;
   overlayEl.style.opacity       = '0';
@@ -333,11 +444,6 @@ export function hideLevelSelect(): void {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Build the level-select overlay and back button.
- * Call once after loadLevels() resolves.
- * @param onSelect  Invoked with the tapped level index when the player picks a level.
- */
 export function initLevelSelect(onSelect: (index: number) => void): void {
   const ui = document.getElementById('ui')!;
   onSelectCb = onSelect;
@@ -345,25 +451,15 @@ export function initLevelSelect(onSelect: (index: number) => void): void {
   initSettings();
 }
 
-/**
- * Tell level-select which level is currently loaded so it can highlight it.
- * Call inside loadLevel() in main.ts.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function setCurrentLevel(_index: number): void {
-  // Current level is now derived from star data in renderGrid(); no state needed here.
+  // Derived from star data in renderPath(); no state needed here.
 }
 
-/**
- * Record a level completion. Persists stars and unlocks the next level.
- * Call when the player wins before showing level select.
- */
 export function completedLevel(index: number, stars: number): void {
   persistStars(index, stars);
   saveUnlockedUpTo(index + 1);
 }
 
-/** Returns the highest currently unlocked level index. */
 export function getUnlockedLevel(): number {
   return loadUnlockedUpTo();
 }

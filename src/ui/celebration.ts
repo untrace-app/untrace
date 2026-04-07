@@ -5,6 +5,46 @@ import { addPressFeedback } from './overlay.ts';
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { WORLD_GATES, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
 
+// ─── Star keyframe animations ─────────────────────────────────────────────────
+
+let _celStylesInjected = false;
+function injectCelStyles(): void {
+  if (_celStylesInjected) return;
+  _celStylesInjected = true;
+  const s = document.createElement('style');
+  s.textContent = [
+    '@keyframes cel-star-earn {',
+    '  0%   { transform: scale(0); }',
+    '  65%  { transform: scale(1.15); }',
+    '  100% { transform: scale(1.0); }',
+    '}',
+    '@keyframes cel-star-pop {',
+    '  0%   { transform: scale(0); }',
+    '  75%  { transform: scale(1.05); }',
+    '  100% { transform: scale(1.0); }',
+    '}',
+  ].join('\n');
+  document.head.appendChild(s);
+}
+
+function celebStarSVG(index: number, earned: boolean): string {
+  if (earned) {
+    return `<svg width="32" height="32" viewBox="0 0 24 24" `
+      + `fill="url(#celstar-${index})" stroke="#b17025" stroke-width="2" `
+      + `stroke-linecap="round" stroke-linejoin="round">`
+      + `<defs><radialGradient id="celstar-${index}" cx="50%" cy="30%" r="65%">`
+      + `<stop offset="0%" stop-color="#ffbe0b"/><stop offset="100%" stop-color="#f59e0b"/>`
+      + `</radialGradient></defs>`
+      + `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+      + `</svg>`;
+  }
+  return `<svg width="32" height="32" viewBox="0 0 24 24" `
+    + `fill="#d3d1c7" stroke="#b17025" stroke-width="2" `
+    + `stroke-linecap="round" stroke-linejoin="round">`
+    + `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+    + `</svg>`;
+}
+
 const TITLES_3_STAR: readonly string[] = ['Perfect!', 'Flawless!', 'Brilliant!'];
 const TITLES_2_STAR: readonly string[] = ['Well done!', 'Nice work!', 'Solid!'];
 const TITLES_1_STAR: readonly string[] = ['Cleared!', 'Done!', 'Onward!'];
@@ -88,6 +128,7 @@ let _isShowing = false;
 // ─── Build ────────────────────────────────────────────────────────────────────
 
 export function initCelebration(): void {
+  injectCelStyles();
   const ui = document.getElementById('ui')!;
 
   backdropEl = document.createElement('div');
@@ -154,51 +195,44 @@ export function showCelebration(params: CelebrationParams): void {
   const checkEl = document.createElement('div');
   checkEl.style.cssText = [
     'width:48px', 'height:48px', 'border-radius:50%',
-    'background:#fde8d0',
+    'background:#ffedcd',
     'display:flex', 'align-items:center', 'justify-content:center',
     'margin:0 auto 14px',
   ].join(';');
   checkEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" '
-    + 'stroke="#fb5607" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+    + 'stroke="#fb5607" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
     + '<polyline points="20 6 9 17 4 12"/></svg>';
 
-  // Level name
-  const nameEl = document.createElement('p');
-  nameEl.textContent = params.levelName;
-  nameEl.style.cssText = [
-    `color:${C_TEXT_SEC}`,
-    'font-size:11px', 'font-weight:500', 'letter-spacing:0.08em',
-    'text-transform:uppercase', 'margin:0 0 4px', 'user-select:none',
-  ].join(';');
-
-  // Title
+  // "LEVEL X COMPLETE" headline
   const titleEl = document.createElement('p');
-  titleEl.textContent = pickTitle(params.stars);
+  titleEl.textContent = `Level ${params.levelNumber} Complete`;
   titleEl.style.cssText = [
     `color:${C_TEXT}`,
-    'font-size:26px', 'font-weight:700', 'letter-spacing:-0.02em',
+    'font-size:13px', 'font-weight:700', 'letter-spacing:0.12em',
+    'text-transform:uppercase', 'margin:0 0 4px', 'user-select:none',
+    `font-family:${FONT_HEADING}`,
+  ].join(';');
+
+  // Varied message below
+  const variedEl = document.createElement('p');
+  variedEl.textContent = pickTitle(params.stars);
+  variedEl.style.cssText = [
+    `color:${C_TEXT}`,
+    'font-size:24px', 'font-weight:700', 'letter-spacing:-0.02em',
     'margin:0 0 18px', 'user-select:none',
     `font-family:${FONT_HEADING}`,
   ].join(';');
 
-  // Stars row
+  // Stars row — always 3 slots, all start gray at scale(0)
   const starsRow = document.createElement('div');
-  starsRow.style.cssText = 'display:flex;gap:8px;justify-content:center;margin:0 0 18px;';
+  starsRow.style.cssText = 'display:flex;gap:10px;justify-content:center;margin:0 0 18px;';
   const starEls: HTMLElement[] = [];
   for (let i = 0; i < 3; i++) {
-    const filled = i < params.stars;
-    const star = document.createElement('div');
-    star.style.cssText = [
-      'flex-shrink:0',
-      `opacity:${filled ? '0' : '1'}`,
-      `transform:${filled ? 'scale(0)' : 'scale(1)'}`,
-      'transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease',
-    ].join(';');
-    star.innerHTML = filled
-      ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="#ffbe0b" stroke="#ffbe0b" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
-      : `<svg width="28" height="28" viewBox="0 0 24 24" fill="${C_RECESSED}" stroke="#d3d1c7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-    starsRow.appendChild(star);
-    starEls.push(star);
+    const starWrap = document.createElement('div');
+    starWrap.style.cssText = 'flex-shrink:0;display:inline-flex;transform:scale(0);';
+    starWrap.innerHTML = celebStarSVG(i, false); // start gray
+    starsRow.appendChild(starWrap);
+    starEls.push(starWrap);
   }
 
   // World unlock notification (shown only once per crossed star-gate)
@@ -238,7 +272,7 @@ export function showCelebration(params: CelebrationParams): void {
   // Stats pill
   const statsEl = document.createElement('div');
   statsEl.style.cssText = [
-    `background:${C_RECESSED}`,
+    'background:#ffedcd',
     'border-radius:16px', 'padding:14px 16px',
     'margin:0 0 22px',
     'display:flex', 'justify-content:space-around',
@@ -292,13 +326,13 @@ export function showCelebration(params: CelebrationParams): void {
 
   const selectBtn = document.createElement('button');
   selectBtn.textContent = 'Level Select';
-  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT_SEC};margin-bottom:0;`;
+  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT};margin-bottom:0;`;
   selectBtn.addEventListener('click', () => { playButtonTap(); dismiss(onLevelSelect); });
   addPressFeedback(selectBtn);
 
   cardEl.appendChild(checkEl);
-  cardEl.appendChild(nameEl);
   cardEl.appendChild(titleEl);
+  cardEl.appendChild(variedEl);
   cardEl.appendChild(starsRow);
   if (unlockEl) cardEl.appendChild(unlockEl);
   cardEl.appendChild(statsEl);
@@ -315,12 +349,17 @@ export function showCelebration(params: CelebrationParams): void {
         cardEl.style.opacity    = '1';
         cardEl.style.transform  = 'scale(1)';
       }
-      // Stagger filled star reveals after card entrance, 200ms between each.
-      for (let i = 0; i < params.stars; i++) {
-        const star = starEls[i];
-        if (star) setTimeout(() => {
-          star.style.transform = 'scale(1)';
-          star.style.opacity   = '1';
+      // Stagger all 3 star reveals, 200ms apart. Earned = gold bounce, unearned = gray pop.
+      for (let i = 0; i < 3; i++) {
+        const star = starEls[i]!;
+        const earned = i < params.stars;
+        setTimeout(() => {
+          if (earned) {
+            star.innerHTML = celebStarSVG(i, true);
+            star.style.animation = 'cel-star-earn 0.4s ease-out forwards';
+          } else {
+            star.style.animation = 'cel-star-pop 0.35s ease-out forwards';
+          }
         }, 220 + i * 200);
       }
       // World unlock popup: animate in after the last star finishes.

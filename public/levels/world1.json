@@ -288,5 +288,378 @@
       "solutionCount": null,
       "requiresDraw": false
     }
+  },
+  {
+    "id": "1-11",
+    "name": "The Tunnel",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 5, "minMoves": 5, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-12",
+    "name": "Steps",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 2], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 5, "minMoves": 4, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-13",
+    "name": "Long Way Round",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 6, "minMoves": 6, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-14",
+    "name": "Thick Start",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 6, "minMoves": 4, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-15",
+    "name": "Diamond",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [1, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [1, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 7, "minMoves": 4, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "1-16",
+    "name": "Loop and Tail",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 7, "minMoves": 5, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-17",
+    "name": "Double Weight",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 },
+      { "from": [1, 0], "to": [2, 0], "layers": 2 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 8, "minMoves": 5, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-18",
+    "name": "Outer Ring",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 8, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "1-19",
+    "name": "Ring Plus",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 9, "minMoves": 9, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-20",
+    "name": "Two Rooms",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 10, "minMoves": 7, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-21",
+    "name": "The Serpent",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 10, "minMoves": 7, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-22",
+    "name": "Weighted Ring",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 12, "minMoves": 9, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-23",
+    "name": "The X",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 1], "layers": 2 },
+      { "from": [1, 1], "to": [2, 2], "layers": 2 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 12, "minMoves": 6, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-24",
+    "name": "Heavy Start",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 15, "minMoves": 7, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-25",
+    "name": "The Web",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [1, 1], "layers": 1 },
+      { "from": [2, 2], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 15, "minMoves": 10, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-26",
+    "name": "Figure Eight",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 18, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "1-27",
+    "name": "Heavy Eight",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 2 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 20, "minMoves": 9, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-28",
+    "name": "The Galaxy",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 25, "minMoves": 8, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-29",
+    "name": "The Maze",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [1, 1], "to": [1, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 30, "minMoves": 10, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "1-30",
+    "name": "Grand Finale",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 40, "minMoves": 10, "solutionCount": 2, "requiresDraw": false }
   }
 ]

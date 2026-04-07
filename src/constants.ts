@@ -35,7 +35,7 @@ export const COLOR_UI_TEXT_SECONDARY = '#7f7c6c';
 // ─── Sizes ────────────────────────────────────────────────────────────────────
 
 export const DOT_RADIUS      = 12; // px — rendered dot circle radius
-export const LINE_WIDTH_BASE =  6; // px — single-layer line width
+export const LINE_WIDTH_BASE = 12; // px — single-layer line width (matches dot diameter)
 export const SNAP_RADIUS     = 40; // px — max distance from touch to snap to a dot
 
 // ─── Grid Layout ──────────────────────────────────────────────────────────────

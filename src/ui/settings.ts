@@ -190,7 +190,7 @@ function showConfirmDialog(
 
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = confirmLabel;
-  confirmBtn.style.cssText = `${DIALOG_BTN};background:${C_DANGER};color:#ffffff;`;
+  confirmBtn.style.cssText = `${DIALOG_BTN};background:${C_PRIMARY};color:#ffffff;`;
   addPressFeedback(confirmBtn);
 
   function dismiss(): void { backdrop.remove(); }
