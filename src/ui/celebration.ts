@@ -94,8 +94,9 @@ export interface CelebrationParams {
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
-let backdropEl: HTMLDivElement | null = null;
-let cardEl:     HTMLDivElement | null = null;
+let backdropEl:  HTMLDivElement | null = null;
+let cardEl:      HTMLDivElement | null = null;
+let _isShowing = false;
 
 // ─── Build ────────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,7 @@ export function initCelebration(): void {
 
 export function showCelebration(params: CelebrationParams): void {
   if (!backdropEl || !cardEl) return;
+  _isShowing = true;
 
   // Snapshot callbacks so closures don't reference a stale params object.
   const { onNextLevel, onReplay, onLevelSelect } = params;
@@ -349,6 +351,7 @@ export function showCelebration(params: CelebrationParams): void {
 }
 
 export function hideCelebration(): void {
+  _isShowing = false;
   if (!backdropEl || !cardEl) return;
   cardEl.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
   cardEl.style.opacity    = '0';
@@ -361,4 +364,22 @@ export function hideCelebration(): void {
       cardEl.style.transform  = 'scale(0.88)';
     }
   }, 200);
+}
+
+/**
+ * Force the celebration card to its fully-visible end state after page suspension.
+ * Suspended setTimeout/rAF may have left stars or the unlock badge un-animated.
+ */
+export function recoverCelebration(): void {
+  if (!_isShowing || !backdropEl || !cardEl) return;
+  cardEl.style.transition = 'none';
+  cardEl.style.opacity    = '1';
+  cardEl.style.transform  = 'scale(1)';
+  cardEl.querySelectorAll<HTMLElement>('*').forEach((el) => {
+    if (el.style.opacity === '0' || el.style.transform.includes('scale(0)')) {
+      el.style.transition = 'none';
+      el.style.opacity    = '1';
+      el.style.transform  = 'scale(1)';
+    }
+  });
 }

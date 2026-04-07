@@ -807,6 +807,26 @@ function _showWelcome(): Promise<void> {
   });
 }
 
+// ─── Suspension recovery ──────────────────────────────────────────────────────
+
+/**
+ * Recover tutorial state after page suspension.
+ * Resets the time reference so the large dt from suspension doesn't cause
+ * animation jumps, and restarts the hand animation if it was running.
+ */
+export function recoverTutorial(): void {
+  if (!_loopRunning) return;
+  // Reset so the first resumed frame treats dt as 0 (avoids giant animation jump).
+  _prevTime = 0;
+  // Restart hand animation if the element is still present but rAF chain died.
+  if (_handEl !== null && _handAnimId === null) {
+    const level = TUTORIAL_LEVELS[_currentIndex];
+    if (level?.handPath && _inputEnabled) {
+      _startHand(level.handPath, level.handLift);
+    }
+  }
+}
+
 // ─── Cleanup ──────────────────────────────────────────────────────────────────
 
 function _cleanup(): void {

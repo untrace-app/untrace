@@ -1,8 +1,11 @@
 // Full-screen level transition splash shown between levels on "Next Level".
 
-let overlayEl: HTMLDivElement | null = null;
-let numberEl:  HTMLElement | null = null;
-let nameEl:    HTMLElement | null = null;
+let overlayEl:         HTMLDivElement | null = null;
+let numberEl:          HTMLElement | null = null;
+let nameEl:            HTMLElement | null = null;
+let _pendingResolve:   (() => void) | null = null;
+let _pendingOnCovered: (() => void) | null = null;
+let _settled = true;
 
 function ensureOverlay(): HTMLDivElement {
   if (overlayEl) return overlayEl;
@@ -52,6 +55,9 @@ export function showLevelTransition(
   levelName: string,
   onCovered?: () => void,
 ): Promise<void> {
+  _settled = false;
+  _pendingOnCovered = onCovered ?? null;
+
   const el = ensureOverlay();
   numberEl!.textContent = `Level ${levelNumber}`;
   nameEl!.textContent   = levelName;
@@ -65,19 +71,44 @@ export function showLevelTransition(
   el.style.opacity    = '1';
 
   return new Promise((resolve) => {
+    _pendingResolve = resolve;
     // After fade-in (300ms): splash is fully opaque.
     setTimeout(() => {
+      if (_settled) return;
       // Safe to mutate the world behind the splash — user can't see it.
       onCovered?.();
+      _pendingOnCovered = null;
 
       // Hold for 1s, then fade out.
       setTimeout(() => {
+        if (_settled) return;
         el.style.opacity = '0';
         setTimeout(() => {
+          if (_settled) return;
+          _settled = true;
           el.style.pointerEvents = 'none';
+          _pendingResolve = null;
           resolve();
         }, 300);
       }, 1000);
     }, 300);
   });
+}
+
+/** Skip transition to completion after page suspension. */
+export function recoverLevelTransition(): void {
+  if (!_pendingResolve) return;
+  _settled = true;
+  if (_pendingOnCovered) {
+    _pendingOnCovered();
+    _pendingOnCovered = null;
+  }
+  if (overlayEl) {
+    overlayEl.style.transition    = 'none';
+    overlayEl.style.opacity       = '0';
+    overlayEl.style.pointerEvents = 'none';
+  }
+  const resolve = _pendingResolve;
+  _pendingResolve = null;
+  resolve();
 }

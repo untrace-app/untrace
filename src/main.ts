@@ -1,16 +1,16 @@
 import * as Tone from 'tone';
 import { render } from './engine/renderer.ts';
 import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActivation } from './engine/animations.ts';
-import { startIntroAnimation, isIntroActive, updateIntro, renderIntro } from './engine/intro-animation.ts';
+import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIntroAnimation } from './engine/intro-animation.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
 import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo } from './audio/audio.ts';
 import { initOverlay, updateOverlay } from './ui/overlay.ts';
-import { initCelebration, showCelebration, hideCelebration } from './ui/celebration.ts';
+import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
 import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
-import { showLevelTransition } from './ui/level-transition.ts';
-import { isTutorialComplete, startTutorial } from './ui/tutorial.ts';
+import { showLevelTransition, recoverLevelTransition } from './ui/level-transition.ts';
+import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO } from './constants.ts';
 
@@ -213,6 +213,26 @@ function saveOnSuspend(): void {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') saveOnSuspend();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  console.log('PAGE RESUMED, recovering state');
+  // (f) Resume audio context — browsers suspend it on page hide.
+  void Tone.context.resume();
+  // (a) Restart render loop: cancel the stale pending rAF and schedule fresh,
+  //     resetting prevLoopTime so the first resumed frame has dt = 0.
+  cancelAnimationFrame(_rafId);
+  prevLoopTime = 0;
+  _rafId = requestAnimationFrame(loop);
+  // (c) Skip intro animation if it was mid-play.
+  recoverIntroAnimation();
+  // (d) Skip level-transition splash if it was mid-play.
+  recoverLevelTransition();
+  // (b) Re-sync celebration card to fully-visible state.
+  recoverCelebration();
+  // (e) Reset tutorial time reference and restart hand animation.
+  recoverTutorial();
 });
 window.addEventListener('pagehide', saveOnSuspend);
 window.addEventListener('beforeunload', saveOnSuspend);
@@ -463,6 +483,7 @@ document.addEventListener('pointerdown', onFirstInteraction);
 // requestAnimationFrame is called, so it is always populated by the first frame.
 let inputState!: ReturnType<typeof initInput>;
 let prevLoopTime = 0;
+let _rafId       = 0;
 
 function loop(time: number): void {
   const dt = prevLoopTime > 0 ? time - prevLoopTime : 0;
@@ -480,7 +501,7 @@ function loop(time: number): void {
     animationManager.draw(ctx, gridToPixel, gameState);
   }
   updateOverlay(gameState, currentLevelIndex, getLevelCount());
-  requestAnimationFrame(loop);
+  _rafId = requestAnimationFrame(loop);
 }
 
 // ─── Async startup ────────────────────────────────────────────────────────────
@@ -623,5 +644,5 @@ function loop(time: number): void {
     },
   });
 
-  requestAnimationFrame(loop);
+  _rafId = requestAnimationFrame(loop);
 })();

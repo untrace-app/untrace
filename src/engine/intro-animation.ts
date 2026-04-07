@@ -33,6 +33,10 @@ const LINES_DURATION_MS = 500;
 // Track which dots have had their pop played
 let _poppedDots = 0;
 
+// For suspension recovery
+let _introResolve: (() => void) | null = null;
+let _boardBgElRef: HTMLElement | null  = null;
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /** Start the intro animation. Returns a Promise that resolves when done. */
@@ -40,6 +44,7 @@ export function startIntroAnimation(
   state: GameState,
   boardBgEl: HTMLElement,
 ): Promise<void> {
+  _boardBgElRef = boardBgEl;
   const dotCount = state.grid.cols * state.grid.rows;
   const dotInterval = dotCount > 1 ? DOTS_DURATION_MS / (dotCount - 1) : 0;
 
@@ -65,10 +70,12 @@ export function startIntroAnimation(
   const linesEndMs = DOTS_START_MS + DOTS_DURATION_MS + LINES_DURATION_MS;
 
   return new Promise((resolve) => {
+    _introResolve = resolve;
     function check(): void {
       if (_intro.elapsed >= linesEndMs) {
         _intro.active = false;
         boardBgEl.style.transition = '';
+        _introResolve = null;
         resolve();
       } else {
         requestAnimationFrame(check);
@@ -218,5 +225,21 @@ export function renderIntro(
 
       dotIndex++;
     }
+  }
+}
+
+/** Skip the intro to its completed state. Called on page resume after suspension. */
+export function recoverIntroAnimation(): void {
+  if (!_intro.active || !_boardBgElRef) return;
+  _intro.active       = false;
+  _intro.elapsed      = 999999;
+  _intro.lineProgress = 1;
+  _boardBgElRef.style.transition = '';
+  _boardBgElRef.style.opacity    = '1';
+  _boardBgElRef.style.display    = 'block';
+  if (_introResolve) {
+    const res = _introResolve;
+    _introResolve = null;
+    res();
   }
 }
