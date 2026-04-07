@@ -315,7 +315,9 @@ function loadLevel(index: number, skipIntro = false): void {
   currentLevelIndex = index % getLevelCount();
   setCurrentLevel(currentLevelIndex);
   const level = getCurrentLevel(currentLevelIndex);
-  clearOtherSaves(level.id);
+  // Only evict other saves when the player actively selects a level (canvas visible).
+  // Skip on startup (canvas still hidden) so saves for all levels survive page reload.
+  if (canvas.style.opacity === '1') clearOtherSaves(level.id);
 
   // Build connections map from level data.
   const connections = new Map<ConnectionKey, ConnectionState>();
