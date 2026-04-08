@@ -62,61 +62,66 @@ function _doInit(): void {
   Tone.setContext(ctx);
   Tone.start();
 
-  Tone.getDestination().volume.value = -6;
+  try {
+    // ── UI synths (direct to destination) ───────────────────────────────────
+    buttonSynth = new Tone.Synth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
+      volume: -18,
+    }).toDestination();
 
-  // ── UI synths (direct to destination) ─────────────────────────────────────
-  buttonSynth = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
-    volume: -18,
-  }).toDestination();
+    dotSynth = new Tone.Synth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.01 },
+    }).toDestination();
 
-  dotSynth = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.01 },
-  }).toDestination();
+    completePoly = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.01, decay: 0.25, sustain: 0, release: 0.12 },
+    }).toDestination();
 
-  completePoly = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.01, decay: 0.25, sustain: 0, release: 0.12 },
-  }).toDestination();
+    undoNoise = new Tone.NoiseSynth({
+      noise: { type: 'white' },
+      envelope: { attack: 0.001, decay: 0.13, sustain: 0, release: 0.05 },
+    });
+    undoFilter = new Tone.Filter({ frequency: 3000, type: 'lowpass' }).toDestination();
+    undoNoise.connect(undoFilter);
 
-  undoNoise = new Tone.NoiseSynth({
-    noise: { type: 'white' },
-    envelope: { attack: 0.001, decay: 0.13, sustain: 0, release: 0.05 },
-  });
-  undoFilter = new Tone.Filter({ frequency: 3000, type: 'lowpass' }).toDestination();
-  undoNoise.connect(undoFilter);
+    // ── Marimba (xylophone samples) ─────────────────────────────────────────
+    marimbaSampler = new Tone.Sampler({
+      urls: { G4: 'G4.mp3', C5: 'C5.mp3', G5: 'G5.mp3', C6: 'C6.mp3', G6: 'G6.mp3', C7: 'C7.mp3' },
+      baseUrl: 'https://nbrosowsky.github.io/tonejs-instruments/samples/xylophone/',
+      onload: () => { isMarimbaLoaded = true; },
+    }).toDestination();
 
-  // ── Marimba (xylophone samples) ───────────────────────────────────────────
-  marimbaSampler = new Tone.Sampler({
-    urls: { G4: 'G4.mp3', C5: 'C5.mp3', G5: 'G5.mp3', C6: 'C6.mp3', G6: 'G6.mp3', C7: 'C7.mp3' },
-    baseUrl: 'https://nbrosowsky.github.io/tonejs-instruments/samples/xylophone/',
-    onload: () => { isMarimbaLoaded = true; },
-  }).toDestination();
+    // ── Pop sound for intro animation ────────────────────────────────────────
+    popPlayer = new Tone.Player({
+      url: '/pop.mp3',
+      onload: () => { isPopLoaded = true; },
+    }).toDestination();
 
-  // ── Pop sound for intro animation ──────────────────────────────────────────
-  popPlayer = new Tone.Player({
-    url: '/pop.mp3',
-    onload: () => { isPopLoaded = true; },
-  }).toDestination();
+    // ── Board appear sound for intro animation ───────────────────────────────
+    boardPlayer = new Tone.Player({
+      url: '/board.mp3',
+      onload: () => { isBoardLoaded = true; },
+    }).toDestination();
 
-  // ── Board appear sound for intro animation ─────────────────────────────────
-  boardPlayer = new Tone.Player({
-    url: '/board.mp3',
-    onload: () => { isBoardLoaded = true; },
-  }).toDestination();
+    // ── Background music (looping ambient track) ─────────────────────────────
+    bgPlayer = new Tone.Player({
+      url: '/bg-music.mp3',
+      loop: true,
+      volume: -18,
+      onload: () => {
+        isBgLoaded = true;
+        if (_bgShouldPlay) bgPlayer.start();
+      },
+    }).toDestination();
 
-  // ── Background music (looping ambient track) ───────────────────────────────
-  bgPlayer = new Tone.Player({
-    url: '/bg-music.mp3',
-    loop: true,
-    volume: -18,
-    onload: () => {
-      isBgLoaded = true;
-      if (_bgShouldPlay) bgPlayer.start();
-    },
-  }).toDestination();
+    // Set master volume after all nodes are connected to the destination.
+    try { Tone.getDestination().volume.value = -6; } catch { /* destination not ready */ }
+  } catch {
+    return;
+  }
 
   isReady = true;
 }
