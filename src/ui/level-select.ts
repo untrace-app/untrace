@@ -14,7 +14,7 @@ const LS_STARS    = 'untrace_stars';
 // Node dimensions
 const NODE_SIZE    = 64;  // px diameter, standard
 const NODE_CURRENT = 78;  // px diameter, active level
-const V_SPACING    = 120; // px between node centers vertically
+const V_SPACING    = 110; // px between node centers vertically
 const TOP_PAD      = 28;  // px above first node center
 const BOT_PAD      = 40;  // px below last node bottom
 
@@ -146,8 +146,6 @@ function renderPath(): void {
 
   const pathWidth  = pathEl.offsetWidth || 320;
   const nodeRadius = NODE_SIZE / 2;
-  const minHeight  = TOP_PAD + nodeRadius + (count - 1) * V_SPACING + nodeRadius + 16 + BOT_PAD;
-  pathEl.style.minHeight = `${minHeight}px`;
 
   // Compute center positions for every node
   const positions: { x: number; y: number }[] = [];
@@ -160,11 +158,16 @@ function renderPath(): void {
     });
   }
 
+  // Total height: last node center + 80px (room for stars + comfortable bottom padding)
+  const lastNodeY = positions.length > 0 ? positions[positions.length - 1]!.y : 0;
+  const totalHeight = lastNodeY + 80;
+  pathEl.style.minHeight = `${totalHeight}px`;
+
   // ── SVG connecting lines (z-index:1, behind nodes) ────────────────────────
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg   = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('width',  String(pathWidth));
-  svg.setAttribute('height', String(minHeight));
+  svg.setAttribute('height', String(totalHeight));
   svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;';
 
   // Gradient for completed segments using objectBoundingBox so it applies to a
@@ -373,7 +376,7 @@ function buildOverlay(ui: HTMLElement): void {
   overlayEl = document.createElement('div');
   overlayEl.style.cssText = [
     'position:fixed', 'inset:0',
-    'background:linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
+    'background:#e8a8a0',
     'z-index:50',
     'display:flex', 'flex-direction:column',
     'overflow:hidden',
@@ -490,8 +493,9 @@ function buildOverlay(ui: HTMLElement): void {
     '-webkit-overflow-scrolling:touch',
     'padding-top:calc(env(safe-area-inset-top,0px) + 72px)',
     'position:relative',
-    'background-image:radial-gradient(circle, rgba(161,129,104,0.10) 2px, transparent 2px)',
-    'background-size:30px 30px',
+    'background-image:radial-gradient(circle, rgba(161,129,104,0.10) 2px, transparent 2px), linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
+    'background-size:30px 30px, 100% 100%',
+    'background-repeat:repeat, no-repeat',
   ].join(';');
 
   // Trigger topBar frosted backdrop when scroll content slides under the bar
@@ -502,21 +506,20 @@ function buildOverlay(ui: HTMLElement): void {
   pathEl = document.createElement('div');
   pathEl.style.cssText = 'position:relative;width:100%;';
 
-  // Vignette: sticky at viewport top, overlays path, draws eye toward center
+  // Vignette: fixed overlay covering the viewport, draws eye toward center.
+  // position:fixed keeps it out of the scroll flow so it can't affect scrollHeight.
   const vignette = document.createElement('div');
   vignette.style.cssText = [
-    'position:sticky', 'top:0', 'left:0',
-    'width:100%', 'height:100vh',
-    'margin-bottom:-100vh',
+    'position:fixed', 'inset:0',
     'pointer-events:none',
-    'z-index:10',
+    'z-index:1',
     'background:radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(240,210,168,0.30) 100%)',
   ].join(';');
 
   scroll.appendChild(pathEl);
-  scroll.appendChild(vignette);
   overlayEl.appendChild(topBar);
   overlayEl.appendChild(scroll);
+  overlayEl.appendChild(vignette);
   ui.appendChild(overlayEl);
 }
 
