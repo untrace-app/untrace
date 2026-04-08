@@ -2,7 +2,7 @@
 // Handles sound volume/mute, accessibility toggles, progress reset, about info.
 
 import * as Tone from 'tone';
-import { playButtonTap } from '../audio/audio.ts';
+import { playButtonTap, playBgMusic, stopBgMusic } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
 
@@ -281,6 +281,7 @@ function buildSoundSection(): HTMLElement {
     saveMuted(!getSavedMuted());
     renderMuteIcon();
     applyAudioSettings();
+    if (getSavedMuted()) { stopBgMusic(); } else { playBgMusic(); }
   });
 
   row.appendChild(slider);

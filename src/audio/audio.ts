@@ -28,6 +28,11 @@ let isPopLoaded = false;
 let boardPlayer!: Tone.Player;
 let isBoardLoaded = false;
 
+// Background music (looping ambient track).
+let bgPlayer!: Tone.Player;
+let isBgLoaded    = false;
+let _bgShouldPlay = false; // tracks intent while file is still loading
+
 
 // ─── White-key scale (no sharps/flats) ────────────────────────────────────────
 
@@ -100,6 +105,17 @@ function _doInit(): void {
   boardPlayer = new Tone.Player({
     url: '/board.mp3',
     onload: () => { isBoardLoaded = true; },
+  }).toDestination();
+
+  // ── Background music (looping ambient track) ───────────────────────────────
+  bgPlayer = new Tone.Player({
+    url: '/bg-music.mp3',
+    loop: true,
+    volume: -18,
+    onload: () => {
+      isBgLoaded = true;
+      if (_bgShouldPlay) bgPlayer.start();
+    },
   }).toDestination();
 
   isReady = true;
@@ -199,4 +215,21 @@ export function playUndo(): void {
   undoFilter.frequency.setValueAtTime(3000, now);
   undoFilter.frequency.linearRampToValueAtTime(150, now + 0.2);
   undoNoise.triggerAttackRelease(0.15, now);
+}
+
+export function playBgMusic(): void {
+  if (!isReady) return;
+  _bgShouldPlay = true;
+  if (isBgLoaded && !bgPlayer.state.includes('started')) bgPlayer.start();
+}
+
+export function stopBgMusic(): void {
+  _bgShouldPlay = false;
+  if (!isReady || !isBgLoaded) return;
+  if (bgPlayer.state.includes('started')) bgPlayer.stop();
+}
+
+export function setBgVolume(vol: number): void {
+  if (!isReady) return;
+  bgPlayer.volume.value = vol;
 }

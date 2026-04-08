@@ -4,7 +4,7 @@ import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActiva
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIntroAnimation } from './engine/intro-animation.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
-import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playButtonTap } from './audio/audio.ts';
+import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playButtonTap, playBgMusic, stopBgMusic } from './audio/audio.ts';
 import { initOverlay, updateOverlay } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
@@ -213,13 +213,14 @@ function saveOnSuspend(): void {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') saveOnSuspend();
+  if (document.visibilityState === 'hidden') { saveOnSuspend(); stopBgMusic(); }
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   // (f) Resume audio context — browsers suspend it on page hide.
   void Tone.context.resume();
+  playBgMusic();
   // (a) Restart render loop: cancel the stale pending rAF and schedule fresh,
   //     resetting prevLoopTime so the first resumed frame has dt = 0.
   cancelAnimationFrame(_rafId);
@@ -650,6 +651,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
   // The tap gesture is the first user interaction, which unlocks the iOS
   // AudioContext via the existing onFirstInteraction pointerdown listener.
   await showMainMenu(splash);
+  playBgMusic();
 
   // Show tutorial on first launch, otherwise go straight to level select.
   if (!isTutorialComplete()) {
