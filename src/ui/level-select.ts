@@ -492,7 +492,7 @@ function buildOverlay(ui: HTMLElement): void {
     '-webkit-overflow-scrolling:touch',
     'padding-top:calc(env(safe-area-inset-top,0px) + 72px)',
     'position:relative',
-    'background-image:radial-gradient(circle, rgba(161,129,104,0.10) 2px, transparent 2px), linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
+    'background-image:radial-gradient(circle, rgba(161,129,104,0.25) 2px, transparent 2px), linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
     'background-size:30px 30px, 100% 100%',
     'background-repeat:repeat, no-repeat',
   ].join(';');
