@@ -343,7 +343,7 @@ function renderPath(): void {
       num.style.cssText = [
         `color:${textColor}`,
         `font-size:${isCurrent ? '31px' : '29px'}`, 'font-weight:700',
-        `font-family:${FONT_HEADING}`,
+        "font-family:'Chewy', cursive",
         'line-height:1', 'user-select:none',
       ].join(';');
       node.appendChild(num);
