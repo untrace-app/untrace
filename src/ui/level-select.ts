@@ -16,7 +16,6 @@ const NODE_SIZE    = 64;  // px diameter, standard
 const NODE_CURRENT = 78;  // px diameter, active level
 const V_SPACING    = 110; // px between node centers vertically
 const TOP_PAD      = 28;  // px above first node center
-const BOT_PAD      = 40;  // px below last node bottom
 
 // X-positions per level, designed to create angular interest via straight connecting lines.
 // Each group uses a distinct positional rhythm; no two adjacent groups share the same feel.
