@@ -108,6 +108,7 @@ export function redo(state: GameState): void {
  * below `targetLayers` (default 0, i.e. fully cleared).
  */
 export function checkWin(state: GameState, targetLayers = state.targetLayers): boolean {
+  if (state.moveCount === 0) return false;
   let total = 0;
   for (const conn of state.connections.values()) {
     total += conn.layers;

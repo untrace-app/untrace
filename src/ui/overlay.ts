@@ -26,6 +26,8 @@ let remainingIndicatorEl: HTMLElement | null = null;
 let _reduceNumEl:         HTMLElement | null = null;
 let levelIndicatorEl:     HTMLElement | null = null;
 let levelNameEl:          HTMLElement | null = null;
+let _topBarEl:            HTMLElement | null = null;
+let _bottomBarEl:         HTMLElement | null = null;
 // targetIndicatorEl removed — target value is now shown inline inside remainingIndicatorEl.
 let _levelIndex = 0;
 let _levelTotal = 1;
@@ -270,6 +272,18 @@ export function setLevelIndicator(text: string): void {
   if (levelIndicatorEl !== null) levelIndicatorEl.textContent = text;
 }
 
+/** Show the in-game overlay bars (top + bottom). Call when gameplay begins. */
+export function showOverlay(): void {
+  if (_topBarEl)    _topBarEl.style.display    = 'flex';
+  if (_bottomBarEl) _bottomBarEl.style.display = 'flex';
+}
+
+/** Hide the in-game overlay bars. Call when returning to level select or menu. */
+export function hideOverlay(): void {
+  if (_topBarEl)    _topBarEl.style.display    = 'none';
+  if (_bottomBarEl) _bottomBarEl.style.display = 'none';
+}
+
 export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void {
   const ui = document.getElementById('ui')!;
 
@@ -287,13 +301,14 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'position:fixed', 'top:0', 'left:0', 'right:0',
     'padding-top:calc(env(safe-area-inset-top, 0px) + 12px)',
     'height:52px',
-    'display:flex', 'align-items:center', 'justify-content:space-between',
+    'display:none', 'align-items:center', 'justify-content:space-between',
     'padding-left:16px', 'padding-right:16px',
     'background:#ffedcd',
     'z-index:5',
     `font-family:${FONT}`,
     'box-sizing:content-box',
   ].join(';');
+  _topBarEl = topBar;
 
   const LABEL_STYLE = [
     `color:${C_TEXT}`, 'font-size:14px', 'font-weight:600',
@@ -354,12 +369,13 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
     'position:fixed', 'bottom:0', 'left:0', 'right:0',
     'padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)',
     'height:48px',
-    'display:flex', 'align-items:center', 'justify-content:space-between',
+    'display:none', 'align-items:center', 'justify-content:space-between',
     'padding-left:24px', 'padding-right:24px',
     'background:#ffedcd',
     `font-family:${FONT}`,
     'box-sizing:content-box',
   ].join(';');
+  _bottomBarEl = bottomBar;
 
   undoBtnEl = makeInlineBtn(UNDO_ICON, 'Undo');
   undoBtnEl.addEventListener('click', () => { playButtonTap(); callbacks.onUndo(); });

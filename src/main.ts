@@ -5,7 +5,7 @@ import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIn
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
 import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playButtonTap, playBgMusic, stopBgMusic } from './audio/audio.ts';
-import { initOverlay, updateOverlay } from './ui/overlay.ts';
+import { initOverlay, updateOverlay, showOverlay, hideOverlay } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
 import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
@@ -135,6 +135,7 @@ levelIndicatorEl.style.cssText = [
   `background:${C_RECESSED}`, 'border-radius:12px', 'padding:8px 18px',
   `color:${C_TEXT}`, `font-family:${FONT}`, 'font-size:14px', 'font-weight:500',
   'letter-spacing:0.04em', 'white-space:nowrap', 'user-select:none', 'pointer-events:none',
+  'display:none',
 ].join(';');
 document.getElementById('ui')!.appendChild(levelIndicatorEl);
 
@@ -588,7 +589,11 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       pressUp();
       playButtonTap();
       menuEl.style.opacity = '0';
-      setTimeout(() => { menuEl.remove(); pulseStyle.remove(); resolve(); }, 300);
+      // Resolve immediately so the caller (showLevelSelect) starts rendering
+      // underneath while the menu CSS transition is still playing.
+      // DOM cleanup happens after the 0.3s fade completes.
+      resolve();
+      setTimeout(() => { menuEl.remove(); pulseStyle.remove(); }, 300);
     });
 
     // Fade in after double-rAF so the CSS transition fires.
@@ -636,11 +641,11 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
 
   initLevelSelect((index) => {
     canvas.style.opacity    = '1';
+    levelIndicatorEl.style.display = '';
+    showOverlay();
     // Board-bg display is handled by runIntro / applySave — not set here.
     loadLevel(index);
   });
-
-  loadLevel(0);
 
   // Fade out splash, then remove it.
   splash.style.transition = 'opacity 0.3s ease';
@@ -655,9 +660,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
 
   // Show tutorial on first launch, otherwise go straight to level select.
   if (!isTutorialComplete()) {
-    levelIndicatorEl.style.display = 'none';
     await startTutorial(canvas, ctx, boardBgEl);
-    levelIndicatorEl.style.display = '';
   }
   showLevelSelect();
 
@@ -706,7 +709,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     onReset: resetGame,
     // onNextLevel is unused when onWin is provided, but required by the interface.
     onNextLevel: nextLevel,
-    onLevelSelect: () => { boardBgEl.style.display = 'none'; showLevelSelect(); },
+    onLevelSelect: () => { boardBgEl.style.display = 'none'; levelIndicatorEl.style.display = 'none'; hideOverlay(); showLevelSelect(); },
     onWin: (moveCount: number) => {
       const level    = getCurrentLevel(currentLevelIndex);
       clearSave(level.id, 'win');
@@ -732,7 +735,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
           targetLayers:   level.targetLayers,
           onNextLevel:    () => { nextLevelWithTransition(); },
           onReplay:       () => { resetGame();        },
-          onLevelSelect:  () => { boardBgEl.style.display = 'none'; showLevelSelect(); },
+          onLevelSelect:  () => { boardBgEl.style.display = 'none'; levelIndicatorEl.style.display = 'none'; hideOverlay(); showLevelSelect(); },
         });
       }, 150);
     },

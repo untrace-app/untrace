@@ -4,7 +4,7 @@ import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { initSettings, showSettings } from './settings.ts';
-import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED } from '../constants.ts';
+import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
