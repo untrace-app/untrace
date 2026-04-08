@@ -4,7 +4,7 @@ import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActiva
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIntroAnimation } from './engine/intro-animation.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
-import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playButtonTap, playBgMusic, stopBgMusic } from './audio/audio.ts';
+import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playBgMusic, stopBgMusic } from './audio/audio.ts';
 import { initOverlay, updateOverlay, showOverlay, hideOverlay } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
