@@ -4,18 +4,19 @@ import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { initSettings, showSettings } from './settings.ts';
-import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_RECESSED } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LS_UNLOCKED = 'untrace_unlocked';
 const LS_STARS    = 'untrace_stars';
+const LS_SPARKS   = 'untrace_sparks';
 
 // Node dimensions
 const NODE_SIZE    = 64;  // px diameter, standard
 const NODE_CURRENT = 78;  // px diameter, active level
 const V_SPACING    = 110; // px between node centers vertically
-const TOP_PAD      = 28;  // px above first node center
+const TOP_PAD      = 140; // px above first node center (room for World chip)
 
 // X-positions per level, designed to create angular interest via straight connecting lines.
 // Each group uses a distinct positional rhythm; no two adjacent groups share the same feel.
@@ -74,6 +75,13 @@ function getTotalStars(): number {
   return Object.values(map).reduce((sum, n) => sum + (typeof n === 'number' ? n : 0), 0);
 }
 
+function getSparkCount(): number {
+  const raw = localStorage.getItem(LS_SPARKS);
+  if (raw === null) return 5;
+  const n = parseInt(raw, 10);
+  return isNaN(n) ? 5 : n;
+}
+
 // ─── Module state ─────────────────────────────────────────────────────────────
 
 let overlayEl:  HTMLDivElement | null = null;
@@ -110,6 +118,19 @@ function starSVG(size: number, strokeW: number, strokeColor: string, gradId: str
     + `<stop offset="100%" stop-color="#f59e0b"/>`
     + `</radialGradient></defs>`
     + `<path d="${FA_STAR_PATH}" fill="url(#${gradId})" stroke="${strokeColor}" stroke-width="${strokeW}" vector-effect="non-scaling-stroke"/>`
+    + `</svg>`;
+}
+
+// Lightning bolt (Font Awesome bolt, viewBox 0 0 448 512)
+const FA_BOLT_PATH = 'M338.8-9.9c11.9 8.6 16.3 24.2 10.9 37.8L271.3 224 416 224c13.5 0 25.5 8.4 30.1 21.1s.7 26.9-9.6 35.5l-288 240c-11.3 9.4-27.4 9.9-39.3 1.3s-16.3-24.2-10.9-37.8L176.7 288 32 288c-13.5 0-25.5-8.4-30.1-21.1s-.7-26.9 9.6-35.5l288-240c11.3-9.4 27.4-9.9 39.3-1.3z';
+
+function sparkSVG(size: number, strokeW: number, strokeColor: string, gradId: string): string {
+  return `<svg width="${size}" height="${size}" viewBox="-3 -13 454 528" overflow="visible">`
+    + `<defs><linearGradient id="${gradId}" x1="0%" y1="0%" x2="0%" y2="100%">`
+    + `<stop offset="0%" stop-color="#00bcd4"/>`
+    + `<stop offset="100%" stop-color="#2196f3"/>`
+    + `</linearGradient></defs>`
+    + `<path d="${FA_BOLT_PATH}" fill="url(#${gradId})" stroke="${strokeColor}" stroke-width="${strokeW}" vector-effect="non-scaling-stroke"/>`
     + `</svg>`;
 }
 
@@ -157,9 +178,9 @@ function renderPath(): void {
     });
   }
 
-  // Total height: last node center + 80px (room for stars + comfortable bottom padding)
+  // Total height: last node + space for stars + World 2 chip + bottom padding
   const lastNodeY = positions.length > 0 ? positions[positions.length - 1]!.y : 0;
-  const totalHeight = lastNodeY + 80;
+  const totalHeight = lastNodeY + 200;
   pathEl.style.minHeight = `${totalHeight}px`;
 
   // ── SVG connecting lines (z-index:1, behind nodes) ────────────────────────
@@ -321,7 +342,7 @@ function renderPath(): void {
       num.textContent = String(i + 1);
       num.style.cssText = [
         `color:${textColor}`,
-        `font-size:${isCurrent ? '24px' : '22px'}`, 'font-weight:700',
+        `font-size:${isCurrent ? '31px' : '29px'}`, 'font-weight:700',
         `font-family:${FONT_HEADING}`,
         'line-height:1', 'user-select:none',
       ].join(';');
@@ -365,6 +386,78 @@ function renderPath(): void {
 
     pathEl.appendChild(wrapper);
   }
+
+  // ── World 1 chip (decorative, centered above level 1) ──────────────────────
+  const worldNum = count > 0 ? getCurrentLevel(0).world : 1;
+  const w1Chip = document.createElement('div');
+  w1Chip.style.cssText = [
+    'position:absolute', 'top:30px', 'left:50%', 'transform:translateX(-50%)',
+    'background:rgba(255,255,255,0.25)',
+    '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+    'border-radius:20px', 'padding:12px 32px',
+    'border:2.5px solid rgba(255,255,255,0.7)',
+    'box-shadow:0 4px 12px rgba(0,0,0,0.08)',
+    'z-index:4', 'pointer-events:none', 'user-select:none',
+    'white-space:nowrap',
+  ].join(';');
+  const w1Text = document.createElement('span');
+  w1Text.textContent = `World ${worldNum}`;
+  w1Text.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:28px', 'font-weight:700',
+    `color:${C_TEXT}`, 'line-height:1',
+  ].join(';');
+  w1Chip.appendChild(w1Text);
+  pathEl.appendChild(w1Chip);
+
+  // ── World 2 chip (locked/unlocked, below last level) ───────────────────────
+  const STAR_GATE = 30;
+  const lastCompleted = count > 0 && (starsMap[getCurrentLevel(count - 1).id] ?? 0) > 0;
+  const hasEnoughStars = getTotalStars() >= STAR_GATE;
+  const w2Unlocked = lastCompleted && hasEnoughStars;
+
+  const w2Chip = document.createElement('div');
+  w2Chip.style.cssText = [
+    'position:absolute',
+    `top:${lastNodeY + 80}px`,
+    'left:50%', 'transform:translateX(-50%)',
+    `background:${w2Unlocked ? 'rgba(255,255,255,0.5)' : 'rgba(180,165,212,0.3)'}`,
+    ...(w2Unlocked ? ['-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)'] : []),
+    'border-radius:16px', 'padding:10px 18px',
+    `border:1px solid ${w2Unlocked ? 'rgba(255,255,255,0.3)' : 'rgba(180,165,212,0.2)'}`,
+    'box-shadow:0 4px 12px rgba(0,0,0,0.06)',
+    'z-index:4', 'user-select:none',
+    'display:flex', 'align-items:center', 'gap:8px',
+    'white-space:nowrap', 'max-width:calc(100% - 48px)',
+    `cursor:${w2Unlocked ? 'pointer' : 'default'}`,
+    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
+  ].join(';');
+
+  if (!w2Unlocked) {
+    const lockIcon = document.createElement('span');
+    lockIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+      + '<rect x="3" y="11" width="18" height="11" rx="2"/>'
+      + '<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+    lockIcon.style.cssText = 'display:inline-flex;color:#b8a5d4;flex-shrink:0;';
+    w2Chip.appendChild(lockIcon);
+  }
+
+  const w2Label = document.createElement('span');
+  w2Label.textContent = `Go to World ${worldNum + 1}`;
+  w2Label.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:15px', 'font-weight:600',
+    `color:${w2Unlocked ? C_TEXT : '#b8a5d4'}`, 'line-height:1',
+  ].join(';');
+  w2Chip.appendChild(w2Label);
+
+  if (w2Unlocked) {
+    addPressFeedback(w2Chip);
+    w2Chip.addEventListener('click', () => {
+      playButtonTap();
+      console.log('Navigate to World 2');
+    });
+  }
+
+  pathEl.appendChild(w2Chip);
 }
 
 // ─── Build overlay ────────────────────────────────────────────────────────────
@@ -400,20 +493,6 @@ function buildOverlay(ui: HTMLElement): void {
     'z-index:11',
   ].join(';');
 
-  // Frosted backdrop — fades in when scroll content reaches the bar
-  const topBarBackdrop = document.createElement('div');
-  topBarBackdrop.style.cssText = [
-    'position:absolute', 'inset:0',
-    'background:rgba(245,200,190,0.7)',
-    '-webkit-backdrop-filter:blur(12px)',
-    'backdrop-filter:blur(12px)',
-    'opacity:0',
-    'transition:opacity 0.2s ease',
-    'pointer-events:none',
-    'z-index:-1',
-  ].join(';');
-  topBar.appendChild(topBarBackdrop);
-
   // Star counter (left, flex:1) — frosted pill chip
   const starCounter = document.createElement('div');
   starCounter.style.cssText = 'flex:1;display:flex;align-items:center;';
@@ -422,15 +501,15 @@ function buildOverlay(ui: HTMLElement): void {
     'display:flex', 'align-items:center', 'gap:5px',
     'background:rgba(255,255,255,0.55)',
     '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
-    'border-radius:20px', 'padding:6px 14px',
+    'border-radius:20px', 'padding:4px 10px',
     'border:1px solid rgba(255,255,255,0.3)',
   ].join(';');
   const starIconEl = document.createElement('div');
   starIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
-  starIconEl.innerHTML = starSVG(22, 3, '#b17025', 'ls-topstar');
+  starIconEl.innerHTML = starSVG(18, 2, '#b17025', 'ls-topstar');
   const starCountText = document.createElement('span');
   starCountText.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:16px', 'font-weight:700',
+    `color:${C_TEXT}`, 'font-size:14px', 'font-weight:600',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
   starCountText.textContent = `\u00D7\u00A0${getTotalStars()}`;
@@ -438,22 +517,28 @@ function buildOverlay(ui: HTMLElement): void {
   starChip.appendChild(starCountText);
   starCounter.appendChild(starChip);
 
-  // Title + world name (center, flex:0)
-  const titleWrap = document.createElement('div');
-  titleWrap.style.cssText = 'flex:0;text-align:center;';
-
-  const titleEl = document.createElement('div');
-  const levelCount = getLevelCount();
-  let worldNum = 1;
-  if (levelCount > 0) worldNum = getCurrentLevel(0).world;
-  titleEl.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:18px', 'font-weight:700',
+  // Spark counter chip
+  const sparkChip = document.createElement('div');
+  sparkChip.style.cssText = [
+    'display:flex', 'align-items:center', 'gap:5px',
+    'background:rgba(255,255,255,0.55)',
+    '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+    'border-radius:20px', 'padding:4px 10px',
+    'border:1px solid rgba(255,255,255,0.3)',
+    'margin-left:12px',
+  ].join(';');
+  const sparkIconEl = document.createElement('div');
+  sparkIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
+  sparkIconEl.innerHTML = sparkSVG(18, 2, '#b17025', 'ls-topspark');
+  const sparkCountText = document.createElement('span');
+  sparkCountText.style.cssText = [
+    `color:${C_TEXT}`, 'font-size:14px', 'font-weight:600',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
-
-  titleEl.textContent = `World ${worldNum}`;
-
-  titleWrap.appendChild(titleEl);
+  sparkCountText.textContent = `\u00D7\u00A0${getSparkCount()}`;
+  sparkChip.appendChild(sparkIconEl);
+  sparkChip.appendChild(sparkCountText);
+  starCounter.appendChild(sparkChip);
 
   // Gear button (right, flex:1 end-aligned)
   const rightCol = document.createElement('div');
@@ -464,9 +549,8 @@ function buildOverlay(ui: HTMLElement): void {
   gearBtn.style.cssText = [
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'background:rgba(255,255,255,0.45)',
-    '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
-    'border:1px solid rgba(255,255,255,0.3)', 'border-radius:50%',
+    `background:${C_RECESSED}`,
+    'border:none', 'border-radius:9999px',
     'padding:0', 'cursor:pointer', 'outline:none',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
@@ -479,7 +563,6 @@ function buildOverlay(ui: HTMLElement): void {
   rightCol.appendChild(gearBtn);
 
   topBar.appendChild(starCounter);
-  topBar.appendChild(titleWrap);
   topBar.appendChild(rightCol);
 
   // ── Scroll area with dot-grid background ─────────────────────────────────
@@ -492,15 +575,10 @@ function buildOverlay(ui: HTMLElement): void {
     '-webkit-overflow-scrolling:touch',
     'padding-top:calc(env(safe-area-inset-top,0px) + 72px)',
     'position:relative',
-    'background-image:radial-gradient(circle, rgba(161,129,104,0.25) 2px, transparent 2px), linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
-    'background-size:30px 30px, 100% 100%',
-    'background-repeat:repeat, no-repeat',
+    'background-image:repeating-linear-gradient(0deg, rgba(161,129,104,0.12) 0px, rgba(161,129,104,0.12) 1px, transparent 1px, transparent 30px), repeating-linear-gradient(90deg, rgba(161,129,104,0.12) 0px, rgba(161,129,104,0.12) 1px, transparent 1px, transparent 30px), linear-gradient(180deg, #f5d0c0 0%, #f0b8b0 50%, #e8a8a0 100%)',
+    'background-size:auto, auto, 100% 100%',
+    'background-repeat:repeat, repeat, no-repeat',
   ].join(';');
-
-  // Trigger topBar frosted backdrop when scroll content slides under the bar
-  scroll.addEventListener('scroll', () => {
-    topBarBackdrop.style.opacity = scroll.scrollTop > 8 ? '1' : '0';
-  }, { passive: true });
 
   pathEl = document.createElement('div');
   pathEl.style.cssText = 'position:relative;width:100%;';
