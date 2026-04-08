@@ -1,35 +1,37 @@
 // Tone.js setup, all sound event triggers
-// Synths are NOT created at import time — iOS Safari requires AudioContext to
-// be created and resumed inside a direct user-gesture handler.
-
-import * as Tone from 'tone';
+// Tone.js is dynamically imported inside initAudio() to prevent AudioContext
+// creation before a user gesture. No top-level import.
 
 // ─── State ────────────────────────────────────────────────────────────────────
+
+type ToneModule = typeof import('tone');
+let Tone: ToneModule | null = null;
 
 let isReady      = false;
 let _initStarted = false;
 
 // Synth references — assigned inside _doInit(), only accessed when isReady.
-let buttonSynth!:  Tone.Synth;
-let dotSynth!:     Tone.Synth;
-let completePoly!: Tone.PolySynth;
-let undoNoise!:    Tone.NoiseSynth;
-let undoFilter!:   Tone.Filter;
+// Typed as `any` because Tone types aren't available until the dynamic import.
+let buttonSynth:    any;
+let dotSynth:       any;
+let completePoly:   any;
+let undoNoise:      any;
+let undoFilter:     any;
 
 // Marimba sampler (xylophone samples).
-let marimbaSampler!: Tone.Sampler;
+let marimbaSampler: any;
 let isMarimbaLoaded  = false;
 
 // Pop sound for dot intro animation.
-let popPlayer!: Tone.Player;
+let popPlayer:  any;
 let isPopLoaded = false;
 
 // Board appear sound for intro animation.
-let boardPlayer!: Tone.Player;
+let boardPlayer:  any;
 let isBoardLoaded = false;
 
 // Background music (looping ambient track).
-let bgPlayer!: Tone.Player;
+let bgPlayer:      any;
 let isBgLoaded    = false;
 let _bgShouldPlay = false; // tracks intent while file is still loading
 
@@ -45,9 +47,11 @@ const NOTE_INDEX_MAX = WHITE_KEYS.length - 1; // 20
 
 // ─── Initialization ───────────────────────────────────────────────────────────
 
-function _doInit(): void {
+async function _doInit(): Promise<void> {
   if (_initStarted) return;
   _initStarted = true;
+
+  Tone = await import('tone');
 
   const RawAC = (window.AudioContext
     ?? (window as unknown as Record<string, unknown>).webkitAudioContext) as typeof AudioContext;
@@ -128,8 +132,20 @@ function _doInit(): void {
 
 // ─── Public init ──────────────────────────────────────────────────────────────
 
-export function initAudio(): void {
-  _doInit();
+export async function initAudio(): Promise<void> {
+  await _doInit();
+}
+
+// ─── Audio context helpers (for main.ts visibility/focus handlers) ────────────
+
+export function resumeAudioContext(): void {
+  if (!Tone) return;
+  void Tone.context.resume();
+}
+
+export function getDestinationNode(): { volume: { value: number }; mute: boolean } | null {
+  if (!Tone) return null;
+  try { return Tone.getDestination(); } catch { return null; }
 }
 
 // ─── Progress note state ──────────────────────────────────────────────────────
@@ -143,29 +159,29 @@ export function resetProgressAudio(): void {
 // ─── Trigger functions ────────────────────────────────────────────────────────
 
 export function playButtonTap(): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
   buttonSynth.triggerAttackRelease('A5', 0.05);
 }
 
 export function playDotTouch(): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
   dotSynth.triggerAttackRelease('C6', 0.05);
 }
 
 export function playPop(): void {
-  if (!isReady || !isPopLoaded) return;
+  if (!Tone || !isReady || !isPopLoaded) return;
   popPlayer.stop();
   popPlayer.start();
 }
 
 export function playBoardAppear(): void {
-  if (!isReady || !isBoardLoaded) return;
+  if (!Tone || !isReady || !isBoardLoaded) return;
   boardPlayer.stop();
   boardPlayer.start();
 }
 
 export function playProgressNote(erased: boolean): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
 
   if (erased) {
     _noteCursor += 1;
@@ -196,7 +212,7 @@ const COMPLETE_WHITE_NOTES: readonly string[] = [
 ];
 
 export function playPuzzleComplete(): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
   const now = Tone.now();
   if (isMarimbaLoaded) {
     COMPLETE_WHITE_NOTES.forEach((note, i) => {
@@ -210,7 +226,7 @@ export function playPuzzleComplete(): void {
 }
 
 export function playUndo(): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
   const now = Tone.now();
   undoFilter.frequency.cancelScheduledValues(now);
   undoFilter.frequency.setValueAtTime(3000, now);
@@ -219,18 +235,18 @@ export function playUndo(): void {
 }
 
 export function playBgMusic(): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
   _bgShouldPlay = true;
   if (isBgLoaded && !bgPlayer.state.includes('started')) bgPlayer.start();
 }
 
 export function stopBgMusic(): void {
   _bgShouldPlay = false;
-  if (!isReady || !isBgLoaded) return;
+  if (!Tone || !isReady || !isBgLoaded) return;
   if (bgPlayer.state.includes('started')) bgPlayer.stop();
 }
 
 export function setBgVolume(vol: number): void {
-  if (!isReady) return;
+  if (!Tone || !isReady) return;
   bgPlayer.volume.value = vol;
 }

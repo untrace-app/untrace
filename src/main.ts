@@ -1,10 +1,9 @@
-import * as Tone from 'tone';
 import { render } from './engine/renderer.ts';
 import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActivation } from './engine/animations.ts';
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIntroAnimation } from './engine/intro-animation.ts';
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
-import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playBgMusic, stopBgMusic } from './audio/audio.ts';
+import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playBgMusic, stopBgMusic, resumeAudioContext } from './audio/audio.ts';
 import { initOverlay, updateOverlay, showOverlay, hideOverlay } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
@@ -220,7 +219,7 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   // (f) Resume audio context — browsers suspend it on page hide.
-  void Tone.context.resume();
+  resumeAudioContext();
   playBgMusic();
   // (a) Restart render loop: cancel the stale pending rAF and schedule fresh,
   //     resetting prevLoopTime so the first resumed frame has dt = 0.
@@ -574,11 +573,11 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     btn.addEventListener('pointerleave',  pressUp);
 
     let dismissed = false;
-    btn.addEventListener('pointerup', () => {
+    btn.addEventListener('pointerup', async () => {
       if (dismissed) return;
       dismissed = true;
       pressUp();
-      initAudio();
+      await initAudio();
       playBgMusic();
       menuEl.style.opacity = '0';
       // Resolve immediately so the caller (showLevelSelect) starts rendering
@@ -687,7 +686,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
 
   // Fix 2: end any active trace on phone call / notification / tab switch.
   window.addEventListener('blur', () => { inputState.cancelTrace(); });
-  window.addEventListener('focus', () => { void Tone.context.resume(); });
+  window.addEventListener('focus', () => { resumeAudioContext(); });
 
   initOverlay(gameState, {
     onUndo: () => {

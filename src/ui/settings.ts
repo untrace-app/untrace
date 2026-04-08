@@ -1,8 +1,7 @@
 // Settings modal: accessible from the level select screen.
 // Handles sound volume/mute, accessibility toggles, progress reset, about info.
 
-import * as Tone from 'tone';
-import { playButtonTap, playBgMusic, stopBgMusic } from '../audio/audio.ts';
+import { playButtonTap, playBgMusic, stopBgMusic, getDestinationNode } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
 
@@ -101,8 +100,9 @@ function volumeToDb(v: number): number {
 
 /** Apply the currently-saved volume and mute state to the Tone destination. */
 function applyAudioSettings(): void {
+  const dest = getDestinationNode();
+  if (!dest) return;
   try {
-    const dest = Tone.getDestination();
     dest.volume.value = volumeToDb(getSavedVolume());
     dest.mute         = getSavedMuted();
   } catch { /* Tone context may not be ready yet — caller retries on gesture. */ }
