@@ -16,7 +16,7 @@ const NODE_SIZE    = 64;  // px diameter, standard
 const NODE_CURRENT = 78;  // px diameter, active level
 const V_SPACING    = 120; // px between node centers vertically
 const TOP_PAD      = 28;  // px above first node center
-const BOT_PAD      = 72;  // px below last node bottom
+const BOT_PAD      = 40;  // px below last node bottom
 
 // X-positions per level, designed to create angular interest via straight connecting lines.
 // Each group uses a distinct positional rhythm; no two adjacent groups share the same feel.
@@ -146,7 +146,7 @@ function renderPath(): void {
 
   const pathWidth  = pathEl.offsetWidth || 320;
   const nodeRadius = NODE_SIZE / 2;
-  const minHeight  = TOP_PAD + nodeRadius + (count - 1) * V_SPACING + nodeRadius + 32 + BOT_PAD;
+  const minHeight  = TOP_PAD + nodeRadius + (count - 1) * V_SPACING + nodeRadius + 16 + BOT_PAD;
   pathEl.style.minHeight = `${minHeight}px`;
 
   // Compute center positions for every node

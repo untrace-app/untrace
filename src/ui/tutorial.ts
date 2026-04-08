@@ -142,7 +142,16 @@ const _state: GameState = {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function isTutorialComplete(): boolean {
-  return localStorage.getItem(LS_KEY) === 'true';
+  if (localStorage.getItem(LS_KEY) === 'true') return true;
+  // Skip tutorial for returning players who already have level progress.
+  const stars = localStorage.getItem('untrace_stars');
+  if (stars) {
+    try {
+      const parsed = JSON.parse(stars) as Record<string, number>;
+      if (Object.values(parsed).some((v) => v > 0)) return true;
+    } catch { /* malformed — fall through */ }
+  }
+  return false;
 }
 
 /**
