@@ -126,10 +126,6 @@ function _doInit(): void {
   isReady = true;
 }
 
-// Primary trigger: touchstart on documentElement is more reliable on iOS Safari.
-document.documentElement.addEventListener('touchstart', _doInit, { once: true });
-document.addEventListener('click', _doInit, { once: true });
-
 // ─── Public init ──────────────────────────────────────────────────────────────
 
 export function initAudio(): void {

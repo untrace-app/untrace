@@ -466,15 +466,6 @@ function gridToPixel(col: number, row: number): { x: number; y: number } {
   return { x: originX + col * spacing, y: originY + row * spacing };
 }
 
-// ─── Audio init ───────────────────────────────────────────────────────────────
-// AudioContext must be resumed from a user gesture. Fire once on first touch.
-
-function onFirstInteraction(): void {
-  initAudio();
-  document.removeEventListener('pointerdown', onFirstInteraction);
-}
-document.addEventListener('pointerdown', onFirstInteraction);
-
 // ─── Render loop ──────────────────────────────────────────────────────────────
 
 // inputState is assigned inside the async startup below; loop() only runs after
@@ -587,7 +578,8 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       if (dismissed) return;
       dismissed = true;
       pressUp();
-      playButtonTap();
+      initAudio();
+      playBgMusic();
       menuEl.style.opacity = '0';
       // Resolve immediately so the caller (showLevelSelect) starts rendering
       // underneath while the menu CSS transition is still playing.
@@ -656,7 +648,6 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
   // The tap gesture is the first user interaction, which unlocks the iOS
   // AudioContext via the existing onFirstInteraction pointerdown listener.
   await showMainMenu(splash);
-  playBgMusic();
 
   // Show tutorial on first launch, otherwise go straight to level select.
   if (!isTutorialComplete()) {
