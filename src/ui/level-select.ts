@@ -4,7 +4,7 @@ import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { initSettings, showSettings } from './settings.ts';
-import { FONT, FONT_HEADING, C_TEXT, C_RECESSED } from '../constants.ts';
+import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -244,12 +244,15 @@ function renderPath(): void {
       rect.setAttribute('fill',      'url(#ls-comp-grad)');
       svg.appendChild(rect);
     } else {
+      const aLocked = !isUnlocked(i);
+      const bLocked = !isUnlocked(i + 1);
       const line = document.createElementNS(svgNS, 'path');
       line.setAttribute('d',              `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
       line.setAttribute('stroke',         '#f0d2a8');
       line.setAttribute('stroke-width',   String(thick));
       line.setAttribute('stroke-linecap', 'round');
       line.setAttribute('fill',           'none');
+      if (aLocked && bLocked) line.setAttribute('opacity', '0.5');
       svg.appendChild(line);
     }
   }
@@ -279,7 +282,7 @@ function renderPath(): void {
 
     if (locked) {
       bgGrad      = `${DEPTH}radial-gradient(circle at 35% 30%, #e8d8c2, #d8c4a0)`;
-      borderColor = '#b8a5d4';
+      borderColor = '#e8d8c2';
       borderWidth = '4px';
       textColor   = '#c4b49a';
       shadow      = '0 3px 6px rgba(0,0,0,0.1)';
@@ -567,15 +570,16 @@ function buildOverlay(ui: HTMLElement): void {
 
   // Gear button (right, flex:1 end-aligned)
   const rightCol = document.createElement('div');
-  rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;';
+  rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;gap:8px;';
 
   const gearBtn = document.createElement('button');
   gearBtn.setAttribute('aria-label', 'Open settings');
   gearBtn.style.cssText = [
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
-    `background:${C_RECESSED}`,
-    'border:none', 'border-radius:9999px',
+    'background:rgba(255,255,255,0.45)',
+    '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+    'border:1.5px solid rgba(255,255,255,0.3)', 'border-radius:9999px',
     'padding:0', 'cursor:pointer', 'outline:none',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
@@ -585,6 +589,24 @@ function buildOverlay(ui: HTMLElement): void {
     + '</svg>';
   addPressFeedback(gearBtn);
   gearBtn.addEventListener('click', () => { playButtonTap(); showSettings(); });
+
+  const shopBtn = document.createElement('button');
+  shopBtn.setAttribute('aria-label', 'Open shop');
+  shopBtn.style.cssText = [
+    'width:40px', 'height:40px',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'background:linear-gradient(180deg, #00bcd4, #2196f3)',
+    'border:1.5px solid #1976d2', 'border-radius:9999px',
+    'padding:0', 'cursor:pointer', 'outline:none',
+    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
+  ].join(';');
+  shopBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="22" height="22">'
+    + '<path fill="#ffffff" d="M547.6 103.8L490.3 13.1C485.2 5 476.1 0 466.4 0L109.6 0C99.9 0 90.8 5 85.7 13.1L28.3 103.8c-29.6 46.8-3.4 111.9 51.9 119.4c4 .5 8.1 .8 12.1 .8c26.1 0 49.3-11.4 65.2-29c15.9 17.6 39.1 29 65.2 29c26.1 0 49.3-11.4 65.2-29c15.9 17.6 39.1 29 65.2 29c26.2 0 49.3-11.4 65.2-29c16 17.6 39.1 29 65.2 29c4.1 0 8.1-.3 12.1-.8c55.5-7.4 81.8-72.5 52.1-119.4zM499.7 254.9c0 0 0 0-.1 0c-5.3 .7-10.7 1.1-16.2 1.1c-12.4 0-24.3-1.9-35.4-5.3L448 384l-320 0 0-133.4c-11.2 3.5-23.2 5.4-35.6 5.4c-5.5 0-11-.4-16.3-1.1l-.1 0c-4.1-.6-8.1-1.3-12-2.3L64 384l0 64c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-64 0-131.4c-4 1-8 1.8-12.3 2.3z"/>'
+    + '</svg>';
+  addPressFeedback(shopBtn);
+  shopBtn.addEventListener('click', () => { playButtonTap(); console.log('SHOP: tapped'); });
+  rightCol.appendChild(shopBtn);
   rightCol.appendChild(gearBtn);
 
   topBar.appendChild(starCounter);

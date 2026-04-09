@@ -4,7 +4,7 @@ import { startIntroAnimation, isIntroActive, updateIntro, renderIntro, recoverIn
 import { initInput } from './engine/input.ts';
 import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/logic.ts';
 import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playBgMusic, stopBgMusic, resumeAudioContext } from './audio/audio.ts';
-import { initOverlay, updateOverlay, showOverlay, hideOverlay } from './ui/overlay.ts';
+import { initOverlay, updateOverlay, showOverlay, hideOverlay, addPressFeedback } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
 import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
@@ -30,15 +30,15 @@ landscapeOverlay.style.cssText = [
 const lsTitleEl = document.createElement('p');
 lsTitleEl.textContent = 'Please rotate your device';
 lsTitleEl.style.cssText = [
-  "font-family:'Lexend',system-ui,sans-serif",
-  'font-size:18px', 'font-weight:600', 'color:#b17025',
+  `font-family:${FONT}`,
+  'font-size:18px', 'font-weight:600', `color:${C_TEXT}`,
   'margin:0', 'text-align:center', 'padding:0 24px',
 ].join(';');
 const lsSubEl = document.createElement('p');
 lsSubEl.textContent = 'Untrace is best in portrait mode';
 lsSubEl.style.cssText = [
-  "font-family:'Lexend',system-ui,sans-serif",
-  'font-size:14px', 'color:#7f7c6c',
+  `font-family:${FONT}`,
+  'font-size:14px', `color:${C_TEXT_SEC}`,
   'margin:0', 'text-align:center', 'padding:0 24px',
 ].join(';');
 landscapeOverlay.appendChild(lsTitleEl);
@@ -298,13 +298,6 @@ function showResumeDialog(levelId: string, save: SavedState): void {
 
   function dismiss(): void { backdrop.remove(); }
 
-  function addPressFeedback(btn: HTMLElement): void {
-    btn.addEventListener('pointerdown', () => { btn.style.transform = 'scale(0.92)'; btn.style.filter = 'brightness(1.1)'; });
-    btn.addEventListener('pointerup', () => { btn.style.transform = 'scale(1)'; btn.style.filter = 'brightness(1)'; });
-    btn.addEventListener('pointercancel', () => { btn.style.transform = 'scale(1)'; btn.style.filter = 'brightness(1)'; });
-    btn.addEventListener('pointerleave', () => { btn.style.transform = 'scale(1)'; btn.style.filter = 'brightness(1)'; });
-  }
-
   const restartBtn = document.createElement('button');
   restartBtn.textContent = 'Restart';
   restartBtn.style.cssText = `${DIALOG_BTN};background:${C_RECESSED};color:${C_TEXT};`;
@@ -313,7 +306,7 @@ function showResumeDialog(levelId: string, save: SavedState): void {
 
   const resumeBtn = document.createElement('button');
   resumeBtn.textContent = 'Resume';
-  resumeBtn.style.cssText = `${DIALOG_BTN};background:${GRAD_PRIMARY};color:#ffffff;`;
+  resumeBtn.style.cssText = `${DIALOG_BTN};background:${GRAD_PRIMARY};color:#ffffff;font-size:16px;padding:14px 0;`;
   resumeBtn.addEventListener('click', () => { dismiss(); });
   addPressFeedback(resumeBtn);
 
@@ -510,29 +503,26 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       'position:fixed', 'inset:0',
       'background:#ffedcd',
       'z-index:9998',
-      'display:flex', 'align-items:center', 'justify-content:center',
       'opacity:0',
       'transition:opacity 0.3s ease',
     ].join(';');
 
     // Clone the SVG logo from the live splash element, stripping svg-elem-N
     // animation classes so it renders fully drawn (not re-animated).
+    // Position absolutely to match splash layout (padding-top:35vh, centered).
     const splashSvg = splash.querySelector('svg');
     if (splashSvg) {
       const logo = splashSvg.cloneNode(true) as SVGElement;
       logo.querySelectorAll<Element>('*').forEach(el => el.removeAttribute('class'));
       logo.removeAttribute('class');
-      logo.style.cssText = 'max-width:80%;height:auto;display:block;';
+      logo.style.cssText = 'position:absolute;top:35vh;left:50%;transform:translateX(-50%);max-width:80%;height:auto;display:block;';
       menuEl.appendChild(logo);
     }
 
-    // Button wrapper — position:absolute keeps it out of the flex flow so the
-    // logo stays at exact center. top:calc(50% + 52px) ≈ SVG half-height (20px)
-    // + 32px gap, placing the button just below the logo on typical phone screens.
     const btnWrap = document.createElement('div');
     btnWrap.style.cssText = [
       'position:absolute',
-      'top:calc(50% + 52px)',
+      'top:calc(35vh + 70px)',
       'left:0', 'right:0',
       'display:flex', 'justify-content:center',
       'pointer-events:none',
@@ -541,7 +531,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     const btn = document.createElement('button');
     btn.textContent = 'Tap to Begin';
     btn.style.cssText = [
-      "font-family:'Lexend',system-ui,sans-serif",
+      `font-family:${FONT}`,
       'font-size:17px', 'font-weight:700',
       'color:#ffffff',
       'background:#fb5607',
@@ -556,6 +546,19 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     ].join(';');
     btnWrap.appendChild(btn);
     menuEl.appendChild(btnWrap);
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'position:absolute;bottom:24px;left:0;right:0;text-align:center;pointer-events:none;user-select:none;';
+    const line1 = document.createElement('div');
+    line1.textContent = '\u00A9 2026 Myntell Games';
+    line1.style.cssText = `font-family:${FONT};font-size:11px;font-weight:400;color:rgba(177,112,37,0.4);line-height:1.4;`;
+    const line2 = document.createElement('div');
+    line2.textContent = 'v1.0';
+    line2.style.cssText = `font-family:${FONT};font-size:10px;font-weight:300;color:rgba(177,112,37,0.4);line-height:1.4;`;
+    footer.appendChild(line1);
+    footer.appendChild(line2);
+    menuEl.appendChild(footer);
+
     document.body.appendChild(menuEl);
 
     function pressDown(): void {

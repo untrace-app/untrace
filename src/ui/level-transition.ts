@@ -1,5 +1,7 @@
 // Full-screen level transition splash shown between levels on "Next Level".
 
+import { FONT, C_TEXT, C_TEXT_SEC } from '../constants.ts';
+
 let overlayEl:         HTMLDivElement | null = null;
 let numberEl:          HTMLElement | null = null;
 let nameEl:            HTMLElement | null = null;
@@ -22,15 +24,15 @@ function ensureOverlay(): HTMLDivElement {
 
   numberEl = document.createElement('div');
   numberEl.style.cssText = [
-    "font-family:'Lexend',system-ui,sans-serif",
-    'font-size:3rem', 'font-weight:700', 'color:#b17025',
+    `font-family:${FONT}`,
+    'font-size:3rem', 'font-weight:700', `color:${C_TEXT}`,
     'margin:0', 'line-height:1.2',
   ].join(';');
 
   nameEl = document.createElement('div');
   nameEl.style.cssText = [
-    "font-family:'Lexend',system-ui,sans-serif",
-    'font-size:14px', 'font-weight:400', 'color:#7f7c6c',
+    `font-family:${FONT}`,
+    'font-size:14px', 'font-weight:400', `color:${C_TEXT_SEC}`,
     'letter-spacing:0.1em', 'text-transform:uppercase',
     'margin:8px 0 0',
   ].join(';');

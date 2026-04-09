@@ -157,7 +157,7 @@ function buildResetDialog(ui: HTMLElement, onConfirm: () => void): () => void {
 
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = 'Reset';
-  confirmBtn.style.cssText = `${DIALOG_BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;`;
+  confirmBtn.style.cssText = `${DIALOG_BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;font-size:16px;padding:14px 0;`;
 
   function hide(): void { backdrop.style.display = 'none'; }
   backdrop.addEventListener('click', hide);
@@ -229,7 +229,7 @@ function buildWinOverlay(
 
   const replayBtn = document.createElement('button');
   replayBtn.textContent = 'Replay';
-  replayBtn.style.cssText = `${WIN_BTN};background:${C_RECESSED};color:${C_TEXT};`;
+  replayBtn.style.cssText = `${WIN_BTN};background:${C_RECESSED};color:${C_TEXT};font-size:15px;padding:13px 0;`;
 
   nextBtn.addEventListener('click',   () => { hide(); onNextLevel(); });
   replayBtn.addEventListener('click', () => { hide(); onReplay();    });

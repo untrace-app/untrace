@@ -302,7 +302,7 @@ export function showCelebration(params: CelebrationParams): void {
   const BTN_BASE = [
     'width:100%', 'padding:14px 0',
     'border:none', 'border-radius:9999px',
-    'font-size:15px', 'font-weight:600', 'cursor:pointer',
+    'font-size:16px', 'font-weight:600', 'cursor:pointer',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'display:block', 'box-sizing:border-box',
     `font-family:${FONT}`,
@@ -318,13 +318,13 @@ export function showCelebration(params: CelebrationParams): void {
 
   const replayBtn = document.createElement('button');
   replayBtn.textContent = 'Replay';
-  replayBtn.style.cssText = `${BTN_BASE};background:${C_RECESSED};color:${C_TEXT};margin-bottom:10px;`;
+  replayBtn.style.cssText = `${BTN_BASE};background:${C_RECESSED};color:${C_TEXT};margin-bottom:10px;font-size:15px;padding:13px 0;`;
   replayBtn.addEventListener('click', () => { playButtonTap(); dismiss(onReplay); });
   addPressFeedback(replayBtn);
 
   const selectBtn = document.createElement('button');
   selectBtn.textContent = 'Back to Levels';
-  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT};margin-bottom:0;text-decoration:underline;`;
+  selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT};margin-bottom:0;text-decoration:underline;font-size:15px;padding:13px 0;`;
   selectBtn.addEventListener('click', () => { playButtonTap(); dismiss(onLevelSelect); });
   addPressFeedback(selectBtn);
 

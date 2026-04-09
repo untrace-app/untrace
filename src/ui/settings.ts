@@ -3,11 +3,11 @@
 
 import { playButtonTap, playBgMusic, stopBgMusic, getDestinationNode } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
-import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY, COLOR_ACCIDENTAL_FLASH } from '../constants.ts';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
-const C_DANGER = '#d4726a';
+const C_DANGER = COLOR_ACCIDENTAL_FLASH;
 
 // Placeholder link until a real privacy policy URL exists.
 const PRIVACY_URL  = 'https://untrace.game/privacy';
@@ -144,15 +144,15 @@ const DIALOG_BACKDROP = [
 ].join(';');
 
 const DIALOG_CARD = [
-  'background:#feffe5', 'border-radius:16px',
-  'padding:24px', 'max-width:280px', 'width:calc(100% - 48px)',
+  'background:#feffe5', 'border-radius:24px',
+  'padding:28px 24px 24px', 'max-width:280px', 'width:calc(100% - 48px)',
   'text-align:center', `font-family:${FONT}`,
-  'box-shadow:0 4px 16px rgba(0,0,0,0.08)',
+  'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
 ].join(';');
 
 const DIALOG_BTN = [
-  'flex:1', 'padding:12px 0', 'border:none', 'border-radius:9999px',
-  'font-size:14px', 'font-weight:600', 'cursor:pointer',
+  'flex:1', 'padding:13px 0', 'border:none', 'border-radius:9999px',
+  'font-size:15px', 'font-weight:600', 'cursor:pointer',
   `font-family:${FONT}`,
   'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
   'transition:transform 0.15s ease-out, filter 0.15s ease-out',
@@ -190,7 +190,7 @@ function showConfirmDialog(
 
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = confirmLabel;
-  confirmBtn.style.cssText = `${DIALOG_BTN};background:${C_PRIMARY};color:#ffffff;`;
+  confirmBtn.style.cssText = `${DIALOG_BTN};background:${C_PRIMARY};color:#ffffff;font-size:16px;padding:14px 0;`;
   addPressFeedback(confirmBtn);
 
   function dismiss(): void { backdrop.remove(); }
@@ -442,10 +442,10 @@ function buildModal(ui: HTMLElement): void {
   cardEl = document.createElement('div');
   cardEl.style.cssText = [
     'position:relative',
-    'background:#feffe5', 'border-radius:16px',
-    'padding:24px', 'max-width:320px', 'width:calc(100% - 48px)',
+    'background:#feffe5', 'border-radius:24px',
+    'padding:28px 24px 24px', 'max-width:320px', 'width:calc(100% - 48px)',
     `font-family:${FONT}`,
-    'box-shadow:0 4px 16px rgba(0,0,0,0.08)',
+    'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
     'opacity:0', 'transform:translateY(12px)',
     'transition:opacity 0.28s ease, transform 0.28s cubic-bezier(0.22,1,0.36,1)',
     'will-change:opacity,transform',
