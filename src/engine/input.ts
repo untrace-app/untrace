@@ -1,7 +1,7 @@
 // Touch/pointer input handling, dot snapping, path interpolation
 
 import type { GameState } from '../types.ts';
-import { SNAP_RADIUS, INPUT_DEBOUNCE_MS } from '../constants.ts';
+import { SNAP_RADIUS, INPUT_DEBOUNCE_MS, FONT, C_TEXT } from '../constants.ts';
 import { checkWin } from './logic.ts';
 import { triggerWrongDotFlash } from './animations.ts';
 
@@ -110,6 +110,7 @@ export function initInput(
   gridToPixel: GridToPixel,
   state: GameState,
   onMove: OnMove,
+  isTutorial?: boolean,
 ): InputState {
   // Prevent the browser from claiming touch events for scrolling.
   canvas.style.touchAction = 'none';
@@ -182,6 +183,46 @@ export function initInput(
     if (state.moveCount > 0 && state.playerDot !== null && !state.isTracing) {
       if (snapped[0] !== state.playerDot[0] || snapped[1] !== state.playerDot[1]) {
         triggerWrongDotFlash(snapped[0], snapped[1]);
+        // Tooltip: always in tutorial, first 3 times outside tutorial
+        const tipCount = parseInt(localStorage.getItem('untrace_wrongdot_tip_count') ?? '0', 10);
+        const showTip = isTutorial || tipCount < 3;
+        if (showTip) {
+          if (!isTutorial) localStorage.setItem('untrace_wrongdot_tip_count', String(tipCount + 1));
+          // Remove any existing tooltip before showing a new one
+          const prev = document.querySelector('[data-wrongdot-tip]');
+          if (prev) prev.remove();
+          const dotPx = gridToPixel(snapped[0], snapped[1]);
+          const rect = canvas.getBoundingClientRect();
+          const screenY = rect.top + dotPx.y;
+          const showBelow = screenY < 100;
+          const tipY = showBelow ? screenY + 30 : screenY - 65;
+          const tip = document.createElement('div');
+          tip.setAttribute('data-wrongdot-tip', '');
+          tip.textContent = 'Continue from the glowing dot';
+          tip.style.cssText = [
+            'position:fixed',
+            `top:${tipY}px`,
+            `font-family:${FONT}`,
+            'font-size:13px', 'font-weight:500', `color:${C_TEXT}`,
+            'background:#feffe5', 'border-radius:12px',
+            'padding:6px 12px',
+            'box-shadow:0 2px 8px rgba(0,0,0,0.1)',
+            'pointer-events:none', 'white-space:nowrap',
+            'z-index:100',
+            'transition:opacity 0.5s ease',
+          ].join(';');
+          document.body.appendChild(tip);
+          // Clamp horizontal position so tooltip stays on screen
+          const tipW = tip.offsetWidth;
+          const pad = 12;
+          const centerX = rect.left + dotPx.x;
+          let tipLeft = centerX - tipW / 2;
+          if (tipLeft < pad) tipLeft = pad;
+          if (tipLeft + tipW > window.innerWidth - pad) tipLeft = window.innerWidth - pad - tipW;
+          tip.style.left = `${tipLeft}px`;
+          setTimeout(() => { tip.style.opacity = '0'; }, 2000);
+          setTimeout(() => { tip.remove(); }, 2500);
+        }
         return;
       }
     }

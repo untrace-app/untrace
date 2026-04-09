@@ -27,6 +27,9 @@ interface TutorialLevel {
   completionDelay: number; // ms to show completion text before advancing
   handPath: [number, number][] | null; // dot coords for hand animation, null = no hand
   handLift?: number; // index in handPath where hand "lifts" (for multi-stroke demo)
+  handPauseAt?: number; // index where hand pauses (for lift-and-continue demo)
+  handPauseDuration?: number; // ms to pause at handPauseAt
+  reactiveHint?: string; // shown on first accidental draw instead of upfront hint
 }
 
 const TUTORIAL_LEVELS: TutorialLevel[] = [
@@ -55,7 +58,7 @@ const TUTORIAL_LEVELS: TutorialLevel[] = [
     completionDelay: 1000,
     handPath: [[0, 0], [1, 0], [1, 1]],
   },
-  // Level 3: Accidental drawing discovery
+  // Level 3: Lift and continue — teaches finger-lift mechanic
   {
     grid: { cols: 3, rows: 3 },
     connections: [
@@ -64,12 +67,32 @@ const TUTORIAL_LEVELS: TutorialLevel[] = [
     ],
     targetLayers: 0,
     forcedStart: [0, 0],
-    hint: 'Careful! Tracing empty space draws new lines',
+    hint: 'Lift and continue from your last dot',
+    completionText: 'Got it!',
+    completionDelay: 1000,
+    handPath: [[0, 0], [1, 0], [2, 0]],
+    handPauseAt: 1,
+    handPauseDuration: 1000,
+  },
+  // Level 4: Accidental drawing discovery
+  // L-shape + extension: natural rightward swipe from [1,0] hits empty [1,0]-[2,0].
+  // Correct path turns down at [1,0]: [0,0]->[1,0]->[1,1]->[2,1].
+  {
+    grid: { cols: 3, rows: 3 },
+    connections: [
+      { from: [0, 0], to: [1, 0], layers: 1 },
+      { from: [1, 0], to: [1, 1], layers: 1 },
+      { from: [1, 1], to: [2, 1], layers: 1 },
+    ],
+    targetLayers: 0,
+    forcedStart: [0, 0],
+    hint: '',
+    reactiveHint: 'Oops! Tracing empty spaces draws new lines',
     completionText: 'Watch your path!',
     completionDelay: 1000,
     handPath: null,
   },
-  // Level 4: Multi-layer (2 layers = amber), hand lifts and re-traces
+  // Level 5: Multi-layer (2 layers = amber), hand lifts and re-traces
   {
     grid: { cols: 3, rows: 3 },
     connections: [{ from: [0, 0], to: [1, 0], layers: 2 }],
@@ -81,7 +104,7 @@ const TUTORIAL_LEVELS: TutorialLevel[] = [
     handPath: [[0, 0], [1, 0]],
     handLift: 1, // lift after reaching [1,0], then reverse
   },
-  // Level 5: Real mini puzzle — no hints
+  // Level 6: Real mini puzzle — no hints
   {
     grid: { cols: 3, rows: 3 },
     connections: [
@@ -105,6 +128,7 @@ const TUTORIAL_LEVELS: TutorialLevel[] = [
 let _resolve: (() => void) | null = null;
 let _currentIndex = 0;
 let _inputEnabled = false;
+let _accidentalTipShown = false;
 let _loopRunning = false;
 let _prevTime = 0;
 let _inputState: ReturnType<typeof initInput> | null = null;
@@ -155,7 +179,7 @@ export function isTutorialComplete(): boolean {
 }
 
 /**
- * Run the full 5-level tutorial sequence.
+ * Run the full 6-level tutorial sequence.
  * Resolves when the tutorial is done.
  */
 export async function startTutorial(
@@ -225,6 +249,53 @@ function _setupInput(): void {
     } else if (layersBefore <= 0) {
       playProgressNote(false);
       triggerAccidentalDraw(key);
+      // Show reactive hint on first accidental draw (if level uses it)
+      const lvl = TUTORIAL_LEVELS[_currentIndex];
+      if (!_accidentalTipShown && lvl?.reactiveHint) {
+        _accidentalTipShown = true;
+        const parts = key.split('-');
+        const [c1, r1] = parts[0]!.split(',').map(Number);
+        const [c2, r2] = parts[1]!.split(',').map(Number);
+        const p1 = _gridToPixel(c1!, r1!);
+        const p2 = _gridToPixel(c2!, r2!);
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        const canvasRect = _canvas.getBoundingClientRect();
+        const screenY = canvasRect.top + midY;
+        const showBelow = screenY < 100;
+        const tipY = showBelow ? screenY + 30 : screenY - 65;
+        const tipDiv = document.createElement('div');
+        tipDiv.setAttribute('data-reactive-tip', '');
+        tipDiv.textContent = lvl.reactiveHint;
+        tipDiv.style.cssText = [
+          'position:fixed',
+          `top:${tipY}px`,
+          `font-family:${FONT}`,
+          'font-size:13px', 'font-weight:500', `color:${C_TEXT}`,
+          'background:#feffe5', 'border-radius:12px',
+          'padding:6px 12px',
+          'box-shadow:0 2px 8px rgba(0,0,0,0.1)',
+          'pointer-events:none', 'white-space:nowrap',
+          'z-index:100',
+          'transition:opacity 0.5s ease',
+        ].join(';');
+        document.getElementById('ui')!.appendChild(tipDiv);
+        // Clamp horizontal position so tooltip stays on screen
+        const tipW = tipDiv.offsetWidth;
+        const pad = 12;
+        const centerX = canvasRect.left + midX;
+        let tipLeft = centerX - tipW / 2;
+        if (tipLeft < pad) tipLeft = pad;
+        if (tipLeft + tipW > window.innerWidth - pad) tipLeft = window.innerWidth - pad - tipW;
+        tipDiv.style.left = `${tipLeft}px`;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => { tipDiv.style.opacity = '1'; });
+        });
+        setTimeout(() => {
+          tipDiv.style.opacity = '0';
+          setTimeout(() => tipDiv.remove(), 300);
+        }, 3000);
+      }
     } else {
       playProgressNote(true);
       triggerErase(key, layersBefore);
@@ -249,7 +320,7 @@ function _setupInput(): void {
         }, level.completionDelay);
       }, 150);
     }
-  });
+  }, true);
 }
 
 // ─── Level loading ────────────────────────────────────────────────────────────
@@ -284,6 +355,9 @@ function _startLevel(index: number): void {
   resetProgressAudio();
   _removeCompletion();
   _removeHand();
+  _accidentalTipShown = false;
+  const oldReactiveTip = document.querySelector('[data-reactive-tip]');
+  if (oldReactiveTip) oldReactiveTip.remove();
 
   // Update header and tip text
   if (_stepLabelEl) _stepLabelEl.textContent = `Step ${index + 1} of ${TUTORIAL_LEVELS.length}`;
@@ -301,7 +375,7 @@ function _startLevel(index: number): void {
     _inputEnabled = true;
     _canvas.style.pointerEvents = '';
     if (level.handPath) {
-      _startHand(level.handPath, level.handLift);
+      _startHand(level.handPath, level.handLift, level.handPauseAt, level.handPauseDuration);
     }
   });
 }
@@ -384,7 +458,7 @@ function _buildBars(): void {
   const leftCol = document.createElement('div');
   leftCol.style.cssText = 'flex:1;display:flex;align-items:center;';
 
-  // Center column — "TUTORIAL" + "Step N of 5" (mirrors game's level indicator).
+  // Center column — "TUTORIAL" + "Step N of 6" (mirrors game's level indicator).
   const centerCol = document.createElement('div');
   centerCol.style.cssText = 'flex:0;display:flex;align-items:center;';
 
@@ -562,12 +636,12 @@ function _showCompletion(text: string, onDone: () => void, delay: number): void 
     'transform:translate(-50%,-50%) scale(0.8)',
     'background:#feffe5',
     'border-radius:24px',
-    'padding:28px 24px 24px',
+    'padding:10px 24px',
     'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
     'text-align:center',
     'white-space:nowrap',
     'user-select:none', 'pointer-events:none',
-    'z-index:100',
+    'z-index:200',
     'opacity:0',
     'transition:opacity 0.3s ease, transform 0.3s ease',
   ].join(';');
@@ -576,7 +650,7 @@ function _showCompletion(text: string, onDone: () => void, delay: number): void 
   textEl.textContent = text;
   textEl.style.cssText = [
     `font-family:${FONT_HEADING}`,
-    'font-size:22px', 'font-weight:700',
+    'font-size:17px', 'font-weight:700',
     `color:${C_SUCCESS}`,
   ].join(';');
   _completionEl.appendChild(textEl);
@@ -615,7 +689,7 @@ function _removeCompletion(): void {
 
 // ─── Hand animation ───────────────────────────────────────────────────────────
 
-function _startHand(path: [number, number][], liftIndex?: number): void {
+function _startHand(path: [number, number][], liftIndex?: number, pauseAt?: number, pauseDuration?: number): void {
   _removeHand();
 
   _handEl = document.createElement('img');
@@ -632,9 +706,12 @@ function _startHand(path: [number, number][], liftIndex?: number): void {
   ].join(';');
   document.getElementById('ui')!.appendChild(_handEl);
 
-  // Build the full animation path (if liftIndex, add reverse after lift)
+  // Build the full animation path
   let fullPath: [number, number][];
-  if (liftIndex !== undefined && liftIndex < path.length) {
+  if (pauseAt !== undefined) {
+    // Pause variant: straight path, no reversal
+    fullPath = [...path];
+  } else if (liftIndex !== undefined && liftIndex < path.length) {
     // Forward path, then reversed path for second pass
     fullPath = [...path, ...path.slice().reverse()];
   } else {
@@ -653,36 +730,56 @@ function _startHand(path: [number, number][], liftIndex?: number): void {
   };
   _canvas.addEventListener('pointerdown', removeOnTouch);
 
+  // Pause timing
+  const hasPause = pauseAt !== undefined && pauseDuration !== undefined && pauseDuration > 0;
+  const totalSegments = fullPath.length - 1;
+  const pauseRatio = hasPause ? pauseAt! / totalSegments : 0;
+  const phase1Duration = hasPause ? MOVE_DURATION * pauseRatio : MOVE_DURATION;
+  const phase2Duration = hasPause ? MOVE_DURATION * (1 - pauseRatio) : 0;
+  const totalAnimDuration = hasPause ? phase1Duration + pauseDuration! + phase2Duration : MOVE_DURATION;
+
   function animateLoop(): void {
     if (cancelled || !_handEl) return;
 
-    let elapsed = 0;
     const startTime = performance.now();
 
     function frame(): void {
       if (cancelled || !_handEl) return;
 
-      elapsed = performance.now() - startTime;
-      const totalDuration = MOVE_DURATION;
+      const elapsed = performance.now() - startTime;
 
-      if (elapsed >= totalDuration) {
-        // Position at last dot
+      if (elapsed >= totalAnimDuration) {
         const last = fullPath[fullPath.length - 1]!;
         _positionHand(last[0], last[1]);
+        if (_handEl) _handEl.style.opacity = '0.7';
 
-        // Pause then loop
         setTimeout(() => {
           if (!cancelled && _handEl) animateLoop();
         }, PAUSE_BETWEEN);
         return;
       }
 
-      // Find current segment
-      const progress = elapsed / totalDuration;
-      const segIndex = Math.min(fullPath.length - 2, Math.floor(progress * (fullPath.length - 1)));
-      const segProgress = (progress * (fullPath.length - 1)) - segIndex;
+      let pathProgress: number;
 
-      // Ease in-out
+      if (hasPause) {
+        if (elapsed < phase1Duration) {
+          pathProgress = phase1Duration > 0 ? (elapsed / phase1Duration) * pauseRatio : pauseRatio;
+          if (_handEl) _handEl.style.opacity = '0.7';
+        } else if (elapsed < phase1Duration + pauseDuration!) {
+          pathProgress = pauseRatio;
+          if (_handEl) _handEl.style.opacity = '0.2';
+        } else {
+          const p2 = elapsed - phase1Duration - pauseDuration!;
+          pathProgress = pauseRatio + (phase2Duration > 0 ? (p2 / phase2Duration) * (1 - pauseRatio) : (1 - pauseRatio));
+          if (_handEl) _handEl.style.opacity = '0.7';
+        }
+      } else {
+        pathProgress = elapsed / MOVE_DURATION;
+      }
+
+      const segIndex = Math.min(totalSegments - 1, Math.floor(pathProgress * totalSegments));
+      const segProgress = (pathProgress * totalSegments) - segIndex;
+
       const t = segProgress < 0.5
         ? 2 * segProgress * segProgress
         : 1 - Math.pow(-2 * segProgress + 2, 2) / 2;
@@ -696,13 +793,11 @@ function _startHand(path: [number, number][], liftIndex?: number): void {
       const y = fromPx.y + (toPx.y - fromPx.y) * t;
 
       if (_handEl) {
-        // Offset so finger tip points at the position (shift left and up)
         _handEl.style.transform = `translate(${x - 8}px, ${y - 6}px) rotate(-15deg)`;
       }
 
-      // Check for lift animation at liftIndex
-      if (liftIndex !== undefined && segIndex === liftIndex - 1 && segProgress > 0.9 && _handEl) {
-        // Brief lift effect: scale down slightly
+      // Existing lift animation (for non-pause variant)
+      if (!hasPause && liftIndex !== undefined && segIndex === liftIndex - 1 && segProgress > 0.9 && _handEl) {
         _handEl.style.opacity = '0.4';
         setTimeout(() => {
           if (_handEl) _handEl.style.opacity = '0.7';
@@ -712,7 +807,6 @@ function _startHand(path: [number, number][], liftIndex?: number): void {
       _handAnimId = requestAnimationFrame(frame);
     }
 
-    // Start at first dot
     const firstDot = fullPath[0]!;
     _positionHand(firstDot[0], firstDot[1]);
     _handAnimId = requestAnimationFrame(frame);
@@ -839,6 +933,8 @@ function _cleanup(): void {
   _removeBars();
   _removeCompletion();
   _removeHand();
+  const reactiveTip = document.querySelector('[data-reactive-tip]');
+  if (reactiveTip) reactiveTip.remove();
   // Remove tutorial input listeners so main.ts can attach its own
   if (_inputState) {
     _inputState.destroy();

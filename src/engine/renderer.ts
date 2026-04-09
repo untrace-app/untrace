@@ -93,10 +93,29 @@ function drawDots(
         state.playerDot[0] === col &&
         state.playerDot[1] === row;
 
+      const isPulsing = isActive && !state.isTracing && state.moveCount > 0;
+      let radius = DOT_RADIUS;
+
+      if (isPulsing) {
+        const pulse = (Math.sin(performance.now() / 1000 * Math.PI * 2) + 1) / 2;
+        radius = DOT_RADIUS * (1.0 + 0.3 * pulse);
+        // Soft radial glow behind the dot
+        const glowR = 25;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+        grad.addColorStop(0, `rgba(255,255,255,${(0.15 + 0.15 * pulse).toFixed(2)})`);
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.save();
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, glowR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.save();
       ctx.fillStyle = isActive ? COLOR_DOT_ACTIVE : COLOR_DOT_INACTIVE;
       ctx.beginPath();
-      ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
