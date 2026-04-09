@@ -343,7 +343,7 @@ function renderPath(): void {
       num.style.cssText = [
         `color:${textColor}`,
         `font-size:${isCurrent ? '31px' : '29px'}`, 'font-weight:700',
-        "font-family:'Chewy', cursive",
+        "font-family:'Lexend'",
         'line-height:1', 'user-select:none',
       ].join(';');
       node.appendChild(num);
@@ -538,7 +538,32 @@ function buildOverlay(ui: HTMLElement): void {
   sparkCountText.textContent = `\u00D7\u00A0${getSparkCount()}`;
   sparkChip.appendChild(sparkIconEl);
   sparkChip.appendChild(sparkCountText);
-  starCounter.appendChild(sparkChip);
+
+  // Wrap spark chip in a relative container for the "+" button overlay
+  const sparkWrap = document.createElement('div');
+  sparkWrap.style.cssText = 'position:relative;display:flex;align-items:center;margin-left:12px;';
+  sparkWrap.appendChild(sparkChip);
+  sparkChip.style.marginLeft = '0'; // margin now on wrapper
+
+  const plusBtn = document.createElement('button');
+  plusBtn.textContent = '+';
+  plusBtn.style.cssText = [
+    'position:absolute', 'right:-6px', 'bottom:-6px',
+    'width:18px', 'height:18px',
+    'border-radius:50%',
+    'background:linear-gradient(180deg, #00bcd4, #2196f3)',
+    'border:1.5px solid #1976d2',
+    'color:#ffffff',
+    `font-family:${FONT}`, 'font-size:13px', 'font-weight:700',
+    'line-height:1',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'padding:0', 'cursor:pointer', 'outline:none',
+    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
+    'transition:transform 0.15s ease-out',
+  ].join(';');
+  addPressFeedback(plusBtn);
+  sparkWrap.appendChild(plusBtn);
+  starCounter.appendChild(sparkWrap);
 
   // Gear button (right, flex:1 end-aligned)
   const rightCol = document.createElement('div');

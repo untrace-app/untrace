@@ -380,13 +380,32 @@ Using the designer and solver, create the first 30 levels.
 
 ### 3.2 Level Select Screen
 
-- World view: shows all worlds as distinct sections/cards with a color temperature matching the world theme
-- Each world shows: name, number of levels, stars earned / stars possible, lock state, stars needed to unlock (if locked)
-- Locked worlds show the star requirement prominently: "30 stars to unlock" with a progress bar showing current total
-- Tapping a world shows its levels as a grid of numbered circles
-- Each level circle shows: level number, star count (0-3), lock/unlock state
-- Tapping an unlocked level starts it
-- Smooth transitions between views (no hard page loads)
+**IMPLEMENTED.** Single continuous scrollable path with all worlds on one screen.
+
+**Layout:** A winding vertical path that snakes left-to-right, then right-to-left as it goes down. Each level is a circle node on the path, connected by straight diagonal lines. The path pattern varies across groups of levels so it doesn't repeat the same zigzag.
+
+**World structure (single scrollable path):**
+- All worlds exist on one continuous path. World 1 levels at the top, World divider chip, World 2 levels continue below, etc.
+- Player scrolls up to revisit earlier worlds, scrolls down to reach later worlds.
+- No world switcher, no tabs, no separate screens per world.
+- World divider chips: "World 1" chip at the top (large, decorative), "World 2" chip between the last World 1 level and first World 2 level, etc.
+- World divider shows star-gate requirement if locked: "30 stars to unlock" with a lock icon.
+- When a world unlocks, the chip changes to an unlocked style and the levels below it become accessible.
+
+**World unlock transition:**
+- Player completes a level and crosses a star-gate threshold
+- Celebration popup shows "World 2 Unlocked! New puzzles await"
+- Player taps "Back to Levels"
+- Level select auto-scrolls down to reveal the new World section
+- First level of the new world pulses as the new active level
+
+**Top bar:** Star counter (left), spark counter (next to stars), settings gear (right). No world title in top bar. Transparent background with frosted blur on scroll.
+
+**Level nodes:** Circles, 64px diameter. Active level is 78px with pulsing glow. Completed levels show earned stars below (only earned, no empty stars). Locked levels are solid muted colors with lock icon.
+
+**Level data loading:** All worlds loaded from separate JSON files (world1.json, world2.json, etc.) at startup. Levels from all loaded worlds are concatenated into the single path. If a world JSON doesn't exist, those levels simply don't appear.
+
+**Returning players:** Auto-scroll to center the current/next uncompleted level on screen.
 
 ### 3.3 World 3: "The Knot" (Levels 31-45) and World 4: "Remnants" (Levels 46-60)
 
@@ -459,9 +478,18 @@ Design and verify using the Phase 2 toolchain.
 - Earn 1 spark per daily puzzle completion (when daily puzzles are implemented)
 
 **Spending Sparks (hints):**
-- Hint 1 - "Show starting dot" (1 spark): The optimal starting dot pulses with a bright glow for 3 seconds. No path shown.
+- Hint 1 - "Show starting dot" (1 spark): The optimal starting dot pulses with a bright glow. No path shown.
 - Hint 2 - "Show first moves" (1 spark): The first 3 moves of the optimal solution animate on the board as ghost lines with a hand icon tracing the path. Ghost fades after 3 seconds.
 - Hint 3 - "Show full solution" (2 sparks): The entire optimal solution animates start to finish with a ghost hand. After animation, board resets to current state so the player can replicate.
+
+**Hint replay and persistence:**
+- Hints are per-level, not global. Buying Hint 1 on level 5 does NOT give you Hint 1 on level 6.
+- Hint 1 (starting dot): Once purchased, the starting dot stays highlighted permanently on that level until solved or reset. Leaving and returning to the level keeps the highlight.
+- Hint 2 (first 3 moves): Plays animation once on purchase. A small "replay hint" button appears afterward, allowing unlimited free replays. The animation is fast and players may need 2-3 viewings.
+- Hint 3 (full solution): Same as Hint 2. Plays once, replayable unlimited times for free. Players need to watch, memorize, then replicate. Re-purchasing would feel unfair.
+- Hints are sequential: must purchase Hint 1 before Hint 2, and Hint 2 before Hint 3.
+- Hints reset (cleared) when: the player solves the level, or the player resets the level. Unused hints are never lost.
+- Storage: localStorage key `untrace_hints_used`: `{ "w1-05": [1, 2], "w1-12": [1] }`. Tracks which hints were purchased for each level. Migrate to Capacitor Preferences in Phase 4.
 
 **Hint UI during gameplay:**
 - Small lightbulb icon in the game overlay (near undo/redo buttons)
@@ -751,3 +779,11 @@ Not fully specced. Key items for future PRDs:
 - Global daily leaderboard (requires a lightweight backend, possibly Supabase)
 - Teleporters, mirrors, ice (new interactive element types)
 - Analytics (level completion rates, hint usage, drop-off points)
+- **Localization / i18n:**
+  - Not needed at launch. The game is almost entirely visual with ~50 translatable strings.
+  - Launch in English only. Use Firebase Analytics to identify top download countries, then add languages that matter.
+  - Implementation: simple `i18n.ts` with string keys per language. Detect language from `navigator.language`, fall back to English.
+  - Priority languages post-launch: Japanese (developer location, easy to test), Spanish/Portuguese (large mobile gaming markets), Korean/Chinese (big puzzle audiences), French/German.
+  - All UI strings must use `t('key')` calls instead of hardcoded text. This is a 2-hour refactor since there are so few strings.
+  - Level names can stay in English or be translated per world JSON file.
+  - App Store / Play Store listings should be localized for each supported language (title, description, keywords, screenshots).
