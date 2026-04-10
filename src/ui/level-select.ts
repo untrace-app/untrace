@@ -84,8 +84,10 @@ function getSparkCount(): number {
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
-let overlayEl:  HTMLDivElement | null = null;
-let pathEl:     HTMLDivElement | null = null;
+let overlayEl:      HTMLDivElement | null = null;
+let pathEl:         HTMLDivElement | null = null;
+let starCountTextEl: HTMLSpanElement | null = null;
+let sparkCountTextEl: HTMLSpanElement | null = null;
 let onSelectCb: ((index: number) => void) | null = null;
 
 // ─── CSS injection ────────────────────────────────────────────────────────────
@@ -583,14 +585,14 @@ function buildOverlay(ui: HTMLElement): void {
   const starIconEl = document.createElement('div');
   starIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
   starIconEl.innerHTML = starSVG(20, 2, '#b17025', 'ls-topstar');
-  const starCountText = document.createElement('span');
-  starCountText.style.cssText = [
+  starCountTextEl = document.createElement('span');
+  starCountTextEl.style.cssText = [
     `color:${C_TEXT}`, 'font-size:15px', 'font-weight:600',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
-  starCountText.textContent = `\u00D7\u00A0${getTotalStars()}`;
+  starCountTextEl.textContent = `\u00D7\u00A0${getTotalStars()}`;
   starChip.appendChild(starIconEl);
-  starChip.appendChild(starCountText);
+  starChip.appendChild(starCountTextEl);
   starCounter.appendChild(starChip);
 
   // Spark counter chip
@@ -607,14 +609,14 @@ function buildOverlay(ui: HTMLElement): void {
   const sparkIconEl = document.createElement('div');
   sparkIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
   sparkIconEl.innerHTML = sparkSVG(20, 2, '#b17025', 'ls-topspark');
-  const sparkCountText = document.createElement('span');
-  sparkCountText.style.cssText = [
+  sparkCountTextEl = document.createElement('span');
+  sparkCountTextEl.style.cssText = [
     `color:${C_TEXT}`, 'font-size:15px', 'font-weight:600',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
-  sparkCountText.textContent = `\u00D7\u00A0${getSparkCount()}`;
+  sparkCountTextEl.textContent = `\u00D7\u00A0${getSparkCount()}`;
   sparkChip.appendChild(sparkIconEl);
-  sparkChip.appendChild(sparkCountText);
+  sparkChip.appendChild(sparkCountTextEl);
 
   // Wrap spark chip in a relative container for the "+" button overlay
   const sparkWrap = document.createElement('div');
@@ -861,6 +863,14 @@ function _showDevPanel(): void {
 
 export function showLevelSelect(): void {
   if (!overlayEl) return;
+  // Refresh top-bar counters from localStorage so the latest stars earned
+  // from a just-completed level are reflected immediately.
+  if (starCountTextEl) {
+    starCountTextEl.textContent = `\u00D7\u00A0${getTotalStars()}`;
+  }
+  if (sparkCountTextEl) {
+    sparkCountTextEl.textContent = `\u00D7\u00A0${getSparkCount()}`;
+  }
   renderPath();
   _renderDevButton();
   overlayEl.style.pointerEvents = 'auto';

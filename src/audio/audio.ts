@@ -95,29 +95,57 @@ async function _doInit(): Promise<void> {
     marimbaSampler = new Tone.Sampler({
       urls: { G4: 'G4.mp3', C5: 'C5.mp3', G5: 'G5.mp3', C6: 'C6.mp3', G6: 'G6.mp3', C7: 'C7.mp3' },
       baseUrl: 'https://nbrosowsky.github.io/tonejs-instruments/samples/xylophone/',
-      onload: () => { isMarimbaLoaded = true; },
+      onload: () => {
+        isMarimbaLoaded = true;
+        console.log('[audio] marimba samples loaded from CDN');
+      },
+      onerror: (err: unknown) => {
+        console.error('[audio] marimba samples FAILED to load:', err);
+      },
     }).toDestination();
+
+    // Build absolute URLs so audio files resolve correctly in Capacitor
+    // (where the base URL is capacitor://localhost, not https://...).
+    const popUrl   = window.location.origin + '/pop.mp3';
+    const boardUrl = window.location.origin + '/board.mp3';
+    const bgUrl    = window.location.origin + '/bg-music.mp3';
 
     // ── Pop sound for intro animation ────────────────────────────────────────
     popPlayer = new Tone.Player({
-      url: '/pop.mp3',
-      onload: () => { isPopLoaded = true; },
+      url: popUrl,
+      onload: () => {
+        isPopLoaded = true;
+        console.log('[audio] pop.mp3 loaded:', popUrl);
+      },
+      onerror: (err: unknown) => {
+        console.error('[audio] pop.mp3 FAILED to load:', popUrl, err);
+      },
     }).toDestination();
 
     // ── Board appear sound for intro animation ───────────────────────────────
     boardPlayer = new Tone.Player({
-      url: '/board.mp3',
-      onload: () => { isBoardLoaded = true; },
+      url: boardUrl,
+      onload: () => {
+        isBoardLoaded = true;
+        console.log('[audio] board.mp3 loaded:', boardUrl);
+      },
+      onerror: (err: unknown) => {
+        console.error('[audio] board.mp3 FAILED to load:', boardUrl, err);
+      },
     }).toDestination();
 
     // ── Background music (looping ambient track) ─────────────────────────────
     bgPlayer = new Tone.Player({
-      url: '/bg-music.mp3',
+      url: bgUrl,
       loop: true,
       volume: -18,
       onload: () => {
         isBgLoaded = true;
+        console.log('[audio] bg-music.mp3 loaded:', bgUrl);
         if (_bgShouldPlay) bgPlayer.start();
+      },
+      onerror: (err: unknown) => {
+        console.error('[audio] bg-music.mp3 FAILED to load:', bgUrl, err);
       },
     }).toDestination();
 
