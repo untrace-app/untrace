@@ -5,9 +5,5 @@ export function hapticLight(): void {
 }
 
 export function hapticMedium(): void {
-  Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
-}
-
-export function hapticHeavy(): void {
-  Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
 }
