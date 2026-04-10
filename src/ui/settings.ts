@@ -3,20 +3,19 @@
 
 import { playButtonTap, playBgMusic, stopBgMusic, getDestinationNode } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
-import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY, COLOR_ACCIDENTAL_FLASH } from '../constants.ts';
+import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
-
-const C_DANGER = COLOR_ACCIDENTAL_FLASH;
 
 // Placeholder link until a real privacy policy URL exists.
 const PRIVACY_URL  = 'https://untrace.game/privacy';
 
 // ─── localStorage keys ────────────────────────────────────────────────────────
 
-const LS_VOLUME     = 'untrace_volume';     // 0–100 (integer)
-const LS_MUTED      = 'untrace_muted';      // 'true' | 'false'
+const LS_VOLUME     = 'untrace_volume';     // 0–100 (integer, snapped to 20)
+const LS_MUTED      = 'untrace_muted';      // '1' muted | '0' unmuted
 const LS_COLORBLIND = 'untrace_colorblind'; // 'true' | 'false'
+const LS_VIBRATION  = 'untrace_vibration';  // '1' on | '0' off
 
 // Keys (exact or prefixes) that represent game progress to clear on reset.
 const GAME_DATA_KEYS: readonly string[] = [
@@ -44,14 +43,14 @@ function injectSliderStyles(): void {
   style.textContent = [
     '.untrace-volume::-webkit-slider-thumb {',
     '  -webkit-appearance: none; appearance: none;',
-    '  width: 18px; height: 18px; border-radius: 50%;',
+    '  width: 24px; height: 24px; border-radius: 50%;',
     `  background: ${C_PRIMARY}; border: none; cursor: pointer;`,
-    '  box-shadow: 0 1px 3px rgba(0,0,0,0.15);',
+    '  box-shadow: 0 2px 4px rgba(0,0,0,0.18);',
     '}',
     '.untrace-volume::-moz-range-thumb {',
-    '  width: 18px; height: 18px; border-radius: 50%;',
+    '  width: 24px; height: 24px; border-radius: 50%;',
     `  background: ${C_PRIMARY}; border: none; cursor: pointer;`,
-    '  box-shadow: 0 1px 3px rgba(0,0,0,0.15);',
+    '  box-shadow: 0 2px 4px rgba(0,0,0,0.18);',
     '}',
     '.untrace-volume::-moz-range-track { background: transparent; border: none; }',
   ].join('\n');
@@ -60,26 +59,32 @@ function injectSliderStyles(): void {
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const DEFAULT_VOLUME = 50; // 0–100, maps to ~-6 dB via the log curve
+const DEFAULT_VOLUME = 60; // snapped to 20 (0,20,40,60,80,100)
+
+function snapVolume(v: number): number {
+  const clamped = Math.max(0, Math.min(100, v));
+  return Math.round(clamped / 20) * 20;
+}
 
 function getSavedVolume(): number {
   const raw = localStorage.getItem(LS_VOLUME);
   if (raw === null) return DEFAULT_VOLUME;
   const n = parseInt(raw, 10);
   if (Number.isNaN(n)) return DEFAULT_VOLUME;
-  return Math.max(0, Math.min(100, n));
+  return snapVolume(n);
 }
 
 function saveVolume(v: number): void {
-  localStorage.setItem(LS_VOLUME, String(Math.max(0, Math.min(100, Math.round(v)))));
+  localStorage.setItem(LS_VOLUME, String(snapVolume(v)));
 }
 
 function getSavedMuted(): boolean {
-  return localStorage.getItem(LS_MUTED) === 'true';
+  const raw = localStorage.getItem(LS_MUTED);
+  return raw === '1' || raw === 'true';
 }
 
 function saveMuted(m: boolean): void {
-  localStorage.setItem(LS_MUTED, m ? 'true' : 'false');
+  localStorage.setItem(LS_MUTED, m ? '1' : '0');
 }
 
 function getSavedColorblind(): boolean {
@@ -88,6 +93,16 @@ function getSavedColorblind(): boolean {
 
 function saveColorblind(c: boolean): void {
   localStorage.setItem(LS_COLORBLIND, c ? 'true' : 'false');
+}
+
+function getSavedVibration(): boolean {
+  const raw = localStorage.getItem(LS_VIBRATION);
+  if (raw === null) return true;
+  return raw === '1';
+}
+
+function saveVibration(v: boolean): void {
+  localStorage.setItem(LS_VIBRATION, v ? '1' : '0');
 }
 
 // ─── Audio application ───────────────────────────────────────────────────────
@@ -207,112 +222,15 @@ function showConfirmDialog(
 
 // ─── Sections ─────────────────────────────────────────────────────────────────
 
-function buildSoundSection(): HTMLElement {
-  const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
-
-  const label = document.createElement('p');
-  label.textContent = 'Sound';
-  label.style.cssText = SECTION_LABEL_STYLE;
-
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;gap:12px;';
-
-  // ── Volume slider ────────────────────────────────────────────────────────
-  const slider = document.createElement('input');
-  slider.type  = 'range';
-  slider.className = 'untrace-volume';
-  slider.min   = '0';
-  slider.max   = '100';
-  slider.step  = '1';
-  slider.value = String(getSavedVolume());
-  slider.style.cssText = [
-    'flex:1', 'appearance:none', '-webkit-appearance:none',
-    'height:6px', 'border-radius:9999px',
-    'outline:none', 'cursor:pointer',
-    'margin:0', 'padding:0',
-    'touch-action:manipulation',
-    // Filled portion of the track is drawn via a gradient that tracks the value.
-    `background:linear-gradient(to right, ${C_PRIMARY} 0%, ${C_PRIMARY} ${getSavedVolume()}%, ${C_RECESSED} ${getSavedVolume()}%, ${C_RECESSED} 100%)`,
-  ].join(';');
-
-  // ── Mute toggle icon ─────────────────────────────────────────────────────
-  const muteBtn = document.createElement('button');
-  muteBtn.style.cssText = [
-    'width:40px', 'height:40px', 'flex-shrink:0',
-    'display:flex', 'align-items:center', 'justify-content:center',
-    `background:${C_RECESSED}`, 'border:none', 'border-radius:9999px',
-    `color:${C_TEXT}`, 'cursor:pointer', 'padding:0',
-    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation', 'outline:none',
-    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
-  ].join(';');
-  muteBtn.setAttribute('aria-label', 'Mute toggle');
-  addPressFeedback(muteBtn);
-
-  const SPEAKER_ON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-    + '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
-    + '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
-    + '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
-  const SPEAKER_MUTED = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-    + '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
-    + '<line x1="23" y1="9" x2="17" y2="15"/>'
-    + '<line x1="17" y1="9" x2="23" y2="15"/></svg>';
-
-  function renderMuteIcon(): void {
-    muteBtn.innerHTML = getSavedMuted() ? SPEAKER_MUTED : SPEAKER_ON;
-  }
-  renderMuteIcon();
-
-  // ── Wiring ───────────────────────────────────────────────────────────────
-  function applyVolumeToTrack(): void {
-    const v = parseInt(slider.value, 10);
-    slider.style.background =
-      `linear-gradient(to right, ${C_PRIMARY} 0%, ${C_PRIMARY} ${v}%, ${C_RECESSED} ${v}%, ${C_RECESSED} 100%)`;
-  }
-  slider.addEventListener('input', () => {
-    const v = parseInt(slider.value, 10);
-    saveVolume(v);
-    applyVolumeToTrack();
-    applyAudioSettings();
-  });
-
-  muteBtn.addEventListener('click', () => {
-    playButtonTap();
-    saveMuted(!getSavedMuted());
-    renderMuteIcon();
-    applyAudioSettings();
-    if (getSavedMuted()) { stopBgMusic(); } else { playBgMusic(); }
-  });
-
-  row.appendChild(slider);
-  row.appendChild(muteBtn);
-  section.appendChild(label);
-  section.appendChild(row);
-  return section;
-}
-
-function buildAccessibilitySection(): HTMLElement {
-  const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
-
-  const label = document.createElement('p');
-  label.textContent = 'Accessibility';
-  label.style.cssText = SECTION_LABEL_STYLE;
-
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;';
-
-  const text = document.createElement('span');
-  text.textContent = 'Colorblind patterns';
-  text.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:14px', 'font-weight:500',
-    `font-family:${FONT}`, 'user-select:none',
-  ].join(';');
-
-  // ── Pill toggle ──────────────────────────────────────────────────────────
+/** Build a pill toggle matching the colorblind/vibration/sound style. */
+function createPillToggle(
+  ariaLabel: string,
+  initialOn: boolean,
+  onChange: (on: boolean) => void,
+): HTMLButtonElement {
   const toggle = document.createElement('button');
   toggle.setAttribute('role', 'switch');
-  toggle.setAttribute('aria-label', 'Colorblind patterns');
+  toggle.setAttribute('aria-label', ariaLabel);
   toggle.style.cssText = [
     'position:relative', 'width:44px', 'height:24px', 'flex-shrink:0',
     'border:none', 'border-radius:9999px', 'cursor:pointer', 'padding:0',
@@ -330,18 +248,144 @@ function buildAccessibilitySection(): HTMLElement {
   ].join(';');
   toggle.appendChild(knob);
 
-  function renderToggle(): void {
-    const on = getSavedColorblind();
+  let on = initialOn;
+  function render(): void {
     toggle.style.background = on ? C_PRIMARY : C_RECESSED;
     knob.style.transform    = on ? 'translateX(20px)' : 'translateX(0)';
     toggle.setAttribute('aria-checked', on ? 'true' : 'false');
   }
-  renderToggle();
+  render();
 
   toggle.addEventListener('click', () => {
     playButtonTap();
-    saveColorblind(!getSavedColorblind());
-    renderToggle();
+    on = !on;
+    render();
+    onChange(on);
+  });
+
+  return toggle;
+}
+
+const TOGGLE_LABEL_TEXT_STYLE = [
+  `color:${C_TEXT}`, 'font-size:14px', 'font-weight:500',
+  `font-family:${FONT}`, 'user-select:none',
+  'flex:1', 'min-width:0',
+].join(';');
+
+const TOGGLE_ROW_STYLE = [
+  'display:flex', 'align-items:center', 'justify-content:space-between',
+  'gap:12px', 'margin-bottom:12px',
+].join(';');
+
+function buildSoundSection(): HTMLElement {
+  const section = document.createElement('div');
+  section.style.cssText = 'margin:0 0 20px;';
+
+  const label = document.createElement('p');
+  label.textContent = 'Sound';
+  label.style.cssText = SECTION_LABEL_STYLE;
+  section.appendChild(label);
+
+  // ── Sound on/off toggle row ──────────────────────────────────────────────
+  const toggleRow = document.createElement('div');
+  toggleRow.style.cssText = TOGGLE_ROW_STYLE;
+
+  const toggleText = document.createElement('span');
+  toggleText.textContent = 'Sound';
+  toggleText.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
+
+  const soundToggle = createPillToggle('Sound', !getSavedMuted(), (on) => {
+    saveMuted(!on);
+    applyAudioSettings();
+    if (on) { playBgMusic(); } else { stopBgMusic(); }
+  });
+
+  toggleRow.appendChild(toggleText);
+  toggleRow.appendChild(soundToggle);
+  section.appendChild(toggleRow);
+
+  // ── Volume slider row ────────────────────────────────────────────────────
+  const sliderRow = document.createElement('div');
+  sliderRow.style.cssText = 'display:flex;align-items:center;padding:4px 0;';
+
+  const slider = document.createElement('input');
+  slider.type  = 'range';
+  slider.className = 'untrace-volume';
+  slider.min   = '0';
+  slider.max   = '100';
+  slider.step  = '20';
+  slider.value = String(getSavedVolume());
+  slider.style.cssText = [
+    'flex:1', 'appearance:none', '-webkit-appearance:none',
+    'height:10px', 'border-radius:9999px',
+    'outline:none', 'cursor:pointer',
+    'margin:0', 'padding:0', 'min-width:0',
+    'touch-action:manipulation',
+    `background:linear-gradient(to right, ${C_PRIMARY} 0%, ${C_PRIMARY} ${getSavedVolume()}%, ${C_RECESSED} ${getSavedVolume()}%, ${C_RECESSED} 100%)`,
+  ].join(';');
+
+  function applyVolumeToTrack(): void {
+    const v = parseInt(slider.value, 10);
+    slider.style.background =
+      `linear-gradient(to right, ${C_PRIMARY} 0%, ${C_PRIMARY} ${v}%, ${C_RECESSED} ${v}%, ${C_RECESSED} 100%)`;
+  }
+  slider.addEventListener('input', () => {
+    const v = snapVolume(parseInt(slider.value, 10));
+    slider.value = String(v);
+    saveVolume(v);
+    applyVolumeToTrack();
+    applyAudioSettings();
+  });
+
+  sliderRow.appendChild(slider);
+  section.appendChild(sliderRow);
+
+  return section;
+}
+
+function buildVibrationSection(): HTMLElement {
+  const section = document.createElement('div');
+  section.style.cssText = 'margin:0 0 20px;';
+
+  const label = document.createElement('p');
+  label.textContent = 'Vibration';
+  label.style.cssText = SECTION_LABEL_STYLE;
+
+  const row = document.createElement('div');
+  row.style.cssText = TOGGLE_ROW_STYLE + ';margin-bottom:0;';
+
+  const text = document.createElement('span');
+  text.textContent = 'Vibration';
+  text.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
+
+  const toggle = createPillToggle('Vibration', getSavedVibration(), (on) => {
+    saveVibration(on);
+  });
+
+  row.appendChild(text);
+  row.appendChild(toggle);
+  section.appendChild(label);
+  section.appendChild(row);
+  return section;
+}
+
+function buildAccessibilitySection(): HTMLElement {
+  const section = document.createElement('div');
+  section.style.cssText = 'margin:0 0 20px;';
+
+  const label = document.createElement('p');
+  label.textContent = 'Accessibility';
+  label.style.cssText = SECTION_LABEL_STYLE;
+
+  const row = document.createElement('div');
+  row.style.cssText = TOGGLE_ROW_STYLE + ';margin-bottom:0;';
+
+  const text = document.createElement('span');
+  text.textContent = 'Colorblind patterns';
+  text.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
+
+  const toggle = createPillToggle('Colorblind patterns', getSavedColorblind(), (on) => {
+    saveColorblind(on);
   });
 
   row.appendChild(text);
@@ -362,17 +406,16 @@ function buildProgressSection(): HTMLElement {
   const btn = document.createElement('button');
   btn.textContent = 'Reset all progress';
   btn.style.cssText = [
-    'background:none', 'border:none', 'padding:4px 0',
-    `color:${C_DANGER}`, `font-family:${FONT}`,
-    'font-size:14px', 'font-weight:500',
-    'cursor:pointer', 'text-align:left',
+    'display:block', 'width:100%', 'box-sizing:border-box',
+    `background:${C_RECESSED}`, `color:${C_TEXT}`,
+    'border:none', 'border-radius:9999px',
+    'padding:12px 24px',
+    `font-family:${FONT_HEADING}`, 'font-size:14px', 'font-weight:600',
+    'cursor:pointer', 'text-align:center',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation', 'outline:none',
-    'transition:opacity 0.15s ease-out',
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
   ].join(';');
-  btn.addEventListener('pointerdown',   () => { btn.style.opacity = '0.6'; });
-  btn.addEventListener('pointerup',     () => { btn.style.opacity = '1';   });
-  btn.addEventListener('pointercancel', () => { btn.style.opacity = '1';   });
-  btn.addEventListener('pointerleave',  () => { btn.style.opacity = '1';   });
+  addPressFeedback(btn);
 
   btn.addEventListener('click', () => {
     playButtonTap();
@@ -436,7 +479,7 @@ function buildAboutSection(): HTMLElement {
   });
 
   const studio = document.createElement('p');
-  studio.textContent = 'Made by [Studio Name]';
+  studio.textContent = 'Myntell Games';
   studio.style.cssText = aboutBase;
 
   const privacy = document.createElement('a');
@@ -522,6 +565,7 @@ function buildModal(ui: HTMLElement): void {
   cardEl.appendChild(closeBtn);
   cardEl.appendChild(title);
   cardEl.appendChild(buildSoundSection());
+  cardEl.appendChild(buildVibrationSection());
   cardEl.appendChild(buildAccessibilitySection());
   cardEl.appendChild(buildProgressSection());
   cardEl.appendChild(divider);
