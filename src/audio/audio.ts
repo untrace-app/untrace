@@ -213,6 +213,14 @@ export function playHintPurchase(): void {
   buttonSynth.triggerAttackRelease('E5', 0.08, now + 0.08);
 }
 
+export function playWorldUnlockChime(): void {
+  if (!Tone || !isReady) return;
+  const now = Tone.now();
+  buttonSynth.triggerAttackRelease('C5', 0.1, now);
+  buttonSynth.triggerAttackRelease('E5', 0.1, now + 0.1);
+  buttonSynth.triggerAttackRelease('G5', 0.1, now + 0.2);
+}
+
 export function playDotTouch(): void {
   if (!Tone || !isReady) return;
   dotSynth.triggerAttackRelease('C6', 0.05);

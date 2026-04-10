@@ -48,6 +48,33 @@ export function getWorldName(): string {
   return 'World 1';
 }
 
+/**
+ * If the level at `index` is the final level of its world AND a next world
+ * exists in the loaded data, return that next world's number. Otherwise null.
+ */
+export function getWorldUnlockedByLevel(index: number): number | null {
+  const total = _levels.length;
+  if (index < 0 || index >= total) return null;
+  const current = _levels[index]!;
+  const currentWorld = current.world;
+  for (let i = index + 1; i < total; i++) {
+    if (_levels[i]!.world === currentWorld) return null; // not last in world
+  }
+  const nextWorld = currentWorld + 1;
+  for (let i = 0; i < total; i++) {
+    if (_levels[i]!.world === nextWorld) return nextWorld;
+  }
+  return null;
+}
+
+/** Return the index of the first level in the given world, or null. */
+export function getFirstLevelIndexInWorld(world: number): number | null {
+  for (let i = 0; i < _levels.length; i++) {
+    if (_levels[i]!.world === world) return i;
+  }
+  return null;
+}
+
 /** Return the 1-based display number within the level's world. */
 export function getDisplayNumber(index: number): number {
   const level = _levels[index % _levels.length]!;

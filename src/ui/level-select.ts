@@ -91,9 +91,17 @@ function getSparkCount(): number {
 
 let overlayEl:      HTMLDivElement | null = null;
 let pathEl:         HTMLDivElement | null = null;
+let scrollEl:       HTMLDivElement | null = null;
 let starCountTextEl: HTMLSpanElement | null = null;
 let sparkCountTextEl: HTMLSpanElement | null = null;
 let onSelectCb: ((index: number) => void) | null = null;
+
+// Last rendered node y-coordinates (within pathEl), keyed by level index.
+let _nodeYs: (number | null)[] = [];
+// Most-recently rendered level count (so we know which indices are on-screen).
+let _renderedCount = 0;
+// External override target for the next showLevelSelect() — consumed after use.
+let _pendingScrollIdx: number | null = null;
 
 // ─── CSS injection ────────────────────────────────────────────────────────────
 
@@ -200,6 +208,13 @@ function renderPath(): void {
       y: TOP_PAD + nodeRadius + i * V_SPACING + worldOffset,
     });
   }
+
+  // Snapshot positions for external auto-scroll (showLevelSelect).
+  _nodeYs = [];
+  for (let i = 0; i < totalCount; i++) {
+    _nodeYs.push(i < positions.length ? positions[i]!.y : null);
+  }
+  _renderedCount = count;
 
   // Total height: last node + space for stars + World 2 chip + bottom padding
   const lastNodeY = positions.length > 0 ? positions[positions.length - 1]!.y : 0;
@@ -702,6 +717,7 @@ function buildOverlay(ui: HTMLElement): void {
   // flex:1 fills the full overlay (topBar is position:absolute, out of flow).
   // padding-top pushes initial content below the floating topBar.
   const scroll = document.createElement('div');
+  scrollEl = scroll;
   scroll.style.cssText = [
     'flex:1',
     'overflow-y:auto',
@@ -925,6 +941,35 @@ function _showDevPanel(): void {
   });
   card.appendChild(completeBtn);
 
+  // Unlock World 2 button: 3★ every W1 level, override total to 30, mark the
+  // last W1 level as completed. Enough to cross the W2 star-gate for testing.
+  const unlockW2Btn = document.createElement('button');
+  unlockW2Btn.textContent = 'Unlock World 2';
+  unlockW2Btn.style.cssText = btnStyle + ';background:#3a86ff;color:#ffffff;';
+  addPressFeedback(unlockW2Btn);
+  unlockW2Btn.addEventListener('click', () => {
+    playButtonTap();
+    const stars = loadStars();
+    const total = getLevelCount();
+    let w1LastIdx = -1;
+    for (let i = 0; i < total; i++) {
+      const lvl = getCurrentLevel(i);
+      if (lvl.world === 1) {
+        stars[lvl.id] = 3;
+        w1LastIdx = i;
+      }
+    }
+    localStorage.setItem(LS_STARS, JSON.stringify(stars));
+    localStorage.setItem(LS_STARS_OVERRIDE, '30');
+    if (w1LastIdx >= 0) saveUnlockedUpTo(w1LastIdx + 1);
+    if (starCountTextEl) starCountTextEl.textContent = `\u00D7\u00A0${getTotalStars()}`;
+    _devPanelEl?.remove();
+    _devPanelEl = null;
+    renderPath();
+    _renderDevButton();
+  });
+  card.appendChild(unlockW2Btn);
+
   // Set 2000 stars button
   const stars2000Btn = document.createElement('button');
   stars2000Btn.textContent = 'Set 2000 stars';
@@ -1005,6 +1050,39 @@ function _showDevPanel(): void {
 
 // ─── Show / hide ──────────────────────────────────────────────────────────────
 
+/**
+ * Set a scroll target for the NEXT showLevelSelect() call. Consumed once.
+ * Use this from the celebration screen after a world unlock so the player
+ * lands on the first level of the new world.
+ */
+export function setScrollTargetIndex(index: number | null): void {
+  _pendingScrollIdx = index;
+}
+
+function _computeAutoScrollTargetIndex(): number {
+  const starsMap = loadStars();
+  for (let i = 0; i < _renderedCount; i++) {
+    const lvl = getCurrentLevel(i);
+    if ((starsMap[lvl.id] ?? 0) === 0) return i;
+  }
+  // All rendered levels completed — scroll to the last one.
+  return Math.max(0, _renderedCount - 1);
+}
+
+function _applyAutoScroll(): void {
+  if (!scrollEl) return;
+  let targetIdx = _pendingScrollIdx;
+  _pendingScrollIdx = null;
+  if (targetIdx === null || targetIdx < 0 || targetIdx >= _renderedCount) {
+    targetIdx = _computeAutoScrollTargetIndex();
+  }
+  const y = _nodeYs[targetIdx];
+  if (y == null) return;
+  const viewH = scrollEl.clientHeight;
+  const top = Math.max(0, y - viewH / 2);
+  scrollEl.scrollTo({ top, behavior: 'instant' as ScrollBehavior });
+}
+
 export function showLevelSelect(): void {
   if (!overlayEl) return;
   // Refresh top-bar counters from localStorage so the latest stars earned
@@ -1016,6 +1094,7 @@ export function showLevelSelect(): void {
     sparkCountTextEl.textContent = `\u00D7\u00A0${getSparkCount()}`;
   }
   renderPath();
+  _applyAutoScroll();
   _renderDailyButton();
   _renderDevButton();
   overlayEl.style.pointerEvents = 'auto';
@@ -1027,6 +1106,16 @@ export function showLevelSelect(): void {
       }
     });
   });
+}
+
+/**
+ * Toggle the daily-puzzle floating button visibility without removing it.
+ * Called by shop and settings overlays so the button does not peek through
+ * during their slide-up / fade animations.
+ */
+export function setDailyButtonVisible(visible: boolean): void {
+  if (!_dailyBtnWrapEl) return;
+  _dailyBtnWrapEl.style.display = visible ? 'flex' : 'none';
 }
 
 export function hideLevelSelect(): void {

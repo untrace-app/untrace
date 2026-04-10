@@ -6,12 +6,12 @@ import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/l
 import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playBgMusic, stopBgMusic, resumeAudioContext } from './audio/audio.ts';
 import { initOverlay, updateOverlay, showOverlay, hideOverlay, addPressFeedback } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
-import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
-import { loadLevels, getCurrentLevel, getLevelCount, getDisplayNumber } from './levels/levels.ts';
+import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel, setScrollTargetIndex } from './ui/level-select.ts';
+import { loadLevels, getCurrentLevel, getLevelCount, getDisplayNumber, getWorldUnlockedByLevel, getFirstLevelIndexInWorld } from './levels/levels.ts';
 import { showLevelTransition, recoverLevelTransition } from './ui/level-transition.ts';
 import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
-import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from './constants.ts';
+import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY, WORLD_GATES } from './constants.ts';
 import { Haptics } from '@capacitor/haptics';
 import { ensureSparksInitialized, getLevelStars, checkSparkEarned } from './sparks.ts';
 import { setCurrentHintLevel, clearHintsForLevel, clearHintAnim } from './hints.ts';
@@ -736,6 +736,43 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       const prevStars = getLevelStars(level.id);
       completedLevel(currentLevelIndex, stars);
       const sparkEarned = checkSparkEarned(level.id, stars, prevStars);
+      // A world is only truly "unlocked" if the player finished the final
+      // level of their current world AND has enough total stars to cross the
+      // next world's star-gate. Otherwise fall back to the normal celebration.
+      let worldUnlocked = getWorldUnlockedByLevel(currentLevelIndex);
+      if (worldUnlocked !== null) {
+        const gate = WORLD_GATES[worldUnlocked];
+        if (gate !== undefined) {
+          const override = localStorage.getItem('untrace_stars_override');
+          let totalStars = 0;
+          if (override !== null) {
+            const n = parseInt(override, 10);
+            if (!isNaN(n)) totalStars = n;
+          } else {
+            try {
+              const raw = localStorage.getItem('untrace_stars');
+              if (raw) {
+                const map = JSON.parse(raw);
+                if (map && typeof map === 'object' && !Array.isArray(map)) {
+                  totalStars = Object.values(map as Record<string, unknown>)
+                    .reduce((sum: number, n) => sum + (typeof n === 'number' ? n : 0), 0);
+                }
+              }
+            } catch {}
+          }
+          if (totalStars < gate) worldUnlocked = null;
+        }
+      }
+      const goToLevelSelect = (): void => {
+        boardBgEl.style.display = 'none';
+        levelIndicatorEl.style.display = 'none';
+        hideOverlay();
+        if (worldUnlocked !== null) {
+          const firstIdx = getFirstLevelIndexInWorld(worldUnlocked);
+          if (firstIdx !== null) setScrollTargetIndex(firstIdx);
+        }
+        showLevelSelect();
+      };
       setTimeout(() => {
         playPuzzleComplete();
         showCelebration({
@@ -747,9 +784,10 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
           remainingLayers,
           targetLayers:   level.targetLayers,
           sparkEarned,
+          worldUnlocked,
           onNextLevel:    () => { nextLevelWithTransition(); },
           onReplay:       () => { resetGame();        },
-          onLevelSelect:  () => { boardBgEl.style.display = 'none'; levelIndicatorEl.style.display = 'none'; hideOverlay(); showLevelSelect(); },
+          onLevelSelect:  goToLevelSelect,
         });
       }, 150);
     },

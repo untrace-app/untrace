@@ -3,7 +3,7 @@
 
 import { playButtonTap, playBgMusic, stopBgMusic, getDestinationNode } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
-import { showShop } from './shop.ts';
+import { setDailyButtonVisible } from './level-select.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
@@ -397,33 +397,6 @@ function buildAccessibilitySection(): HTMLElement {
   return section;
 }
 
-function buildShopSection(): HTMLElement {
-  const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
-
-  const btn = document.createElement('button');
-  btn.textContent = 'Shop';
-  btn.style.cssText = [
-    'display:block', 'width:100%', 'box-sizing:border-box',
-    `background:${C_PRIMARY}`, 'color:#ffffff',
-    'border:none', 'border-radius:9999px',
-    'padding:12px 24px',
-    `font-family:${FONT_HEADING}`, 'font-size:14px', 'font-weight:700',
-    'cursor:pointer', 'text-align:center',
-    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation', 'outline:none',
-    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
-  ].join(';');
-  addPressFeedback(btn);
-  btn.addEventListener('click', () => {
-    playButtonTap();
-    hideSettings();
-    setTimeout(() => showShop(), 220);
-  });
-
-  section.appendChild(btn);
-  return section;
-}
-
 function buildProgressSection(): HTMLElement {
   const section = document.createElement('div');
   section.style.cssText = 'margin:0 0 20px;';
@@ -593,7 +566,6 @@ function buildModal(ui: HTMLElement): void {
 
   cardEl.appendChild(closeBtn);
   cardEl.appendChild(title);
-  cardEl.appendChild(buildShopSection());
   cardEl.appendChild(buildSoundSection());
   cardEl.appendChild(buildVibrationSection());
   cardEl.appendChild(buildAccessibilitySection());
@@ -627,6 +599,7 @@ export function initSettings(): void {
 /** Show the settings modal. */
 export function showSettings(): void {
   if (!backdropEl || !cardEl) return;
+  setDailyButtonVisible(false);
   backdropEl.style.display = 'flex';
   // Double rAF to let display:flex settle before the transition starts.
   requestAnimationFrame(() => {
@@ -648,5 +621,6 @@ export function hideSettings(): void {
   cardEl.style.transform   = 'translateY(12px)';
   setTimeout(() => {
     if (backdropEl) backdropEl.style.display = 'none';
+    setDailyButtonVisible(true);
   }, 220);
 }

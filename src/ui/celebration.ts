@@ -1,6 +1,6 @@
 // Win celebration screen (Phase 3)
 
-import { playButtonTap, playSparkChime } from '../audio/audio.ts';
+import { playButtonTap, playSparkChime, playWorldUnlockChime } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { WORLD_GATES, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
@@ -39,6 +39,12 @@ function injectCelStyles(): void {
     '@keyframes cel-trail-fade {',
     '  0%   { opacity: 0.8; transform: scale(1); }',
     '  100% { opacity: 0;   transform: scale(0.4); }',
+    '}',
+    '@keyframes cel-world-bounce {',
+    '  0%   { opacity: 0; transform: scale(0); }',
+    '  60%  { opacity: 1; transform: scale(1.1); }',
+    '  80%  { transform: scale(0.96); }',
+    '  100% { opacity: 1; transform: scale(1); }',
     '}',
   ].join('\n');
   document.head.appendChild(s);
@@ -130,6 +136,7 @@ export interface CelebrationParams {
   remainingLayers?: number;           // for reduce levels (targetLayers > 0)
   targetLayers?:    number;
   sparkEarned?:     number;           // 0 = no animation, 1 or 2 = animate
+  worldUnlocked?:   number | null;    // new world number, or null for normal win
   onNextLevel:      () => void;
   onReplay:         () => void;
   onLevelSelect:    () => void;
@@ -363,8 +370,46 @@ export function showCelebration(params: CelebrationParams): void {
     starEls.push(starWrap);
   }
 
-  // World unlock notification (shown only once per crossed star-gate)
-  const unlockedWorld = getNewlyUnlockedWorld();
+  // Big "World N Unlocked!" celebration (end-of-world): takes precedence over
+  // the small star-gate notification below. When this is active, the primary
+  // button becomes "Continue" and routes to onLevelSelect.
+  const bigWorldUnlock = params.worldUnlocked ?? null;
+  let bigUnlockEl: HTMLDivElement | null = null;
+  let sparkleBurstEl: HTMLDivElement | null = null;
+  if (bigWorldUnlock !== null) {
+    bigUnlockEl = document.createElement('div');
+    bigUnlockEl.style.cssText = [
+      'position:relative',
+      'margin:0 0 18px', 'user-select:none',
+      'opacity:0', 'transform:scale(0)',
+      'will-change:opacity,transform',
+    ].join(';');
+
+    const bigTitle = document.createElement('p');
+    bigTitle.textContent = `World ${bigWorldUnlock} Unlocked!`;
+    bigTitle.style.cssText = [
+      'color:#fb5607',
+      'font-size:24px', 'font-weight:800',
+      'margin:0', 'line-height:1.1',
+      'letter-spacing:-0.01em',
+      `font-family:${FONT_HEADING}`,
+    ].join(';');
+
+    // Sparkle burst container — sits directly under the text and hosts 10 dots
+    // that fly outward from the center over 800ms then fade out.
+    sparkleBurstEl = document.createElement('div');
+    sparkleBurstEl.style.cssText = [
+      'position:relative', 'width:100%', 'height:40px',
+      'pointer-events:none',
+    ].join(';');
+
+    bigUnlockEl.appendChild(bigTitle);
+    bigUnlockEl.appendChild(sparkleBurstEl);
+  }
+
+  // Small star-gate unlock notification (shown only when the big celebration
+  // is NOT active, to avoid duplicating the same message).
+  const unlockedWorld = bigWorldUnlock === null ? getNewlyUnlockedWorld() : null;
   let unlockEl: HTMLDivElement | null = null;
   if (unlockedWorld !== null) {
     unlockEl = document.createElement('div');
@@ -441,9 +486,17 @@ export function showCelebration(params: CelebrationParams): void {
   ].join(';');
 
   const nextBtn = document.createElement('button');
-  nextBtn.textContent = 'Next Level';
-  nextBtn.style.cssText = `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
-  nextBtn.addEventListener('click', () => { playButtonTap(); onNextLevel(); });
+  if (bigWorldUnlock !== null) {
+    nextBtn.textContent = 'Continue';
+    nextBtn.style.cssText =
+      `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;` +
+      `font-size:17px;font-weight:700;padding:14px 44px;`;
+    nextBtn.addEventListener('click', () => { playButtonTap(); dismiss(onLevelSelect); });
+  } else {
+    nextBtn.textContent = 'Next Level';
+    nextBtn.style.cssText = `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
+    nextBtn.addEventListener('click', () => { playButtonTap(); onNextLevel(); });
+  }
   addPressFeedback(nextBtn);
 
   const replayBtn = document.createElement('button');
@@ -463,6 +516,7 @@ export function showCelebration(params: CelebrationParams): void {
   cardEl.appendChild(variedEl);
   cardEl.appendChild(starsRow);
   if (sparkEarned > 0) cardEl.appendChild(sparkRow);
+  if (bigUnlockEl) cardEl.appendChild(bigUnlockEl);
   if (unlockEl) cardEl.appendChild(unlockEl);
   cardEl.appendChild(statsEl);
   cardEl.appendChild(nextBtn);
@@ -517,8 +571,61 @@ export function showCelebration(params: CelebrationParams): void {
           }
         }, lastStarFinish + 120);
       }
+
+      // Big end-of-world celebration: bounce-in text + sparkle burst + chime.
+      if (bigUnlockEl) {
+        const lastStarFinish = 220 + Math.max(0, params.stars - 1) * 200 + 280;
+        const bigStart = lastStarFinish + 120;
+        setTimeout(() => {
+          if (bigUnlockEl) {
+            bigUnlockEl.style.animation = 'cel-world-bounce 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards';
+          }
+          playWorldUnlockChime();
+          if (sparkleBurstEl) spawnSparkleBurst(sparkleBurstEl);
+        }, bigStart);
+      }
     });
   });
+}
+
+// ─── Sparkle burst helper ─────────────────────────────────────────────────────
+
+const SPARKLE_COLORS: readonly string[] = [
+  '#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff',
+];
+
+function spawnSparkleBurst(host: HTMLElement): void {
+  const count = 10;
+  const rect = host.getBoundingClientRect();
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const dist  = 44 + Math.random() * 14;
+    const dx    = Math.cos(angle) * dist;
+    const dy    = Math.sin(angle) * dist;
+    const color = SPARKLE_COLORS[i % SPARKLE_COLORS.length]!;
+
+    const dot = document.createElement('div');
+    dot.style.cssText = [
+      'position:absolute',
+      `left:${cx - 2}px`, `top:${cy - 2}px`,
+      'width:4px', 'height:4px', 'border-radius:50%',
+      `background:${color}`,
+      `box-shadow:0 0 6px ${color}`,
+      'opacity:1',
+      'will-change:transform,opacity',
+      'transition:transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.8s ease-out',
+      'pointer-events:none',
+    ].join(';');
+    host.appendChild(dot);
+
+    requestAnimationFrame(() => {
+      dot.style.transform = `translate(${dx}px, ${dy}px) scale(0.6)`;
+      dot.style.opacity   = '0';
+    });
+    setTimeout(() => dot.remove(), 900);
+  }
 }
 
 export function hideCelebration(): void {
