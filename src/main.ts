@@ -516,16 +516,16 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       const logo = splashSvg.cloneNode(true) as SVGElement;
       logo.querySelectorAll<Element>('*').forEach(el => el.removeAttribute('class'));
       logo.removeAttribute('class');
-      logo.style.cssText = 'position:absolute;top:35vh;left:50%;transform:translateX(-50%);max-width:80%;height:auto;display:block;';
+      logo.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:65%;height:auto;display:block;';
       menuEl.appendChild(logo);
     }
 
     const btnWrap = document.createElement('div');
     btnWrap.style.cssText = [
       'position:absolute',
-      'top:calc(35vh + 70px)',
-      'left:0', 'right:0',
-      'display:flex', 'justify-content:center',
+      'top:calc(50% + 60px)',
+      'left:50%',
+      'transform:translateX(-50%)',
       'pointer-events:none',
     ].join(';');
 

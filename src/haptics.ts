@@ -8,7 +8,7 @@ export function hapticSnap(): void {
       Haptics.vibrate().catch(() => {});
     });
   } else {
-    Haptics.vibrate({ duration: 5 }).catch(() => {});
+    Haptics.vibrate({ duration: 3 }).catch(() => {});
   }
 }
 
