@@ -47,6 +47,26 @@ const NOTE_INDEX_MAX = WHITE_KEYS.length - 1; // 20
 
 // ─── Initialization ───────────────────────────────────────────────────────────
 
+/**
+ * Load an audio file as an ArrayBuffer, decode it, and wrap it in a Tone.Player.
+ *
+ * This bypasses Tone.js's internal XHR loader, which cannot handle the
+ * `capacitor://localhost` scheme used by Capacitor native builds. fetch()
+ * *can* load from capacitor:// URLs, so we fetch + decode manually and hand
+ * the decoded AudioBuffer to the Player.
+ */
+async function loadPlayer(path: string, onReady: () => void): Promise<any> {
+  if (!Tone) throw new Error('Tone not initialized');
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`);
+  const arrayBuffer = await response.arrayBuffer();
+  const audioBuffer = await Tone.getContext().decodeAudioData(arrayBuffer);
+  const buffer = new Tone.ToneAudioBuffer(audioBuffer);
+  const player = new Tone.Player(buffer).toDestination();
+  onReady();
+  return player;
+}
+
 async function _doInit(): Promise<void> {
   if (_initStarted) return;
   _initStarted = true;
@@ -104,61 +124,37 @@ async function _doInit(): Promise<void> {
       },
     }).toDestination();
 
-    // Resolve an audio asset path for both web and Capacitor. On Capacitor,
-    // static files live inside the native bundle and must be accessed via
-    // Capacitor.convertFileSrc() (which returns a capacitor://... or
-    // https://localhost/... URL the WebView can actually load). On the web,
-    // a plain root-relative path works.
-    const assetUrl = (path: string): string => {
-      const cap = (window as unknown as { Capacitor?: { convertFileSrc?: (p: string) => string } }).Capacitor;
-      if (cap && typeof cap.convertFileSrc === 'function') {
-        return cap.convertFileSrc('public/' + path);
-      }
-      return '/' + path;
-    };
-
-    const popUrl   = assetUrl('pop.mp3');
-    const boardUrl = assetUrl('board.mp3');
-    const bgUrl    = assetUrl('bg-music.mp3');
+    // ── mp3 players: fetch → decode → Tone.Player ───────────────────────────
+    // Uses relative paths. fetch() works with capacitor:// URLs even though
+    // Tone.Player's built-in loader does not. Each loader is wrapped in its
+    // own try/catch so one failure doesn't block the other audio.
 
     // ── Pop sound for intro animation ────────────────────────────────────────
-    popPlayer = new Tone.Player({
-      url: popUrl,
-      onload: () => {
-        isPopLoaded = true;
-        console.log('[audio] pop.mp3 loaded:', popUrl);
-      },
-      onerror: (err: unknown) => {
-        console.error('[audio] pop.mp3 FAILED to load:', popUrl, err);
-      },
-    }).toDestination();
+    try {
+      popPlayer = await loadPlayer('/pop.mp3', () => { isPopLoaded = true; });
+      console.log('[audio] pop.mp3 loaded');
+    } catch (err) {
+      console.error('[audio] pop.mp3 FAILED to load:', err);
+    }
 
     // ── Board appear sound for intro animation ───────────────────────────────
-    boardPlayer = new Tone.Player({
-      url: boardUrl,
-      onload: () => {
-        isBoardLoaded = true;
-        console.log('[audio] board.mp3 loaded:', boardUrl);
-      },
-      onerror: (err: unknown) => {
-        console.error('[audio] board.mp3 FAILED to load:', boardUrl, err);
-      },
-    }).toDestination();
+    try {
+      boardPlayer = await loadPlayer('/board.mp3', () => { isBoardLoaded = true; });
+      console.log('[audio] board.mp3 loaded');
+    } catch (err) {
+      console.error('[audio] board.mp3 FAILED to load:', err);
+    }
 
     // ── Background music (looping ambient track) ─────────────────────────────
-    bgPlayer = new Tone.Player({
-      url: bgUrl,
-      loop: true,
-      volume: -18,
-      onload: () => {
-        isBgLoaded = true;
-        console.log('[audio] bg-music.mp3 loaded:', bgUrl);
-        if (_bgShouldPlay) bgPlayer.start();
-      },
-      onerror: (err: unknown) => {
-        console.error('[audio] bg-music.mp3 FAILED to load:', bgUrl, err);
-      },
-    }).toDestination();
+    try {
+      bgPlayer = await loadPlayer('/bg-music.mp3', () => { isBgLoaded = true; });
+      bgPlayer.loop        = true;
+      bgPlayer.volume.value = -18;
+      console.log('[audio] bg-music.mp3 loaded');
+      if (_bgShouldPlay) bgPlayer.start();
+    } catch (err) {
+      console.error('[audio] bg-music.mp3 FAILED to load:', err);
+    }
 
     // Set master volume after all nodes are connected to the destination.
     try { Tone.getDestination().volume.value = -6; } catch { /* destination not ready */ }
