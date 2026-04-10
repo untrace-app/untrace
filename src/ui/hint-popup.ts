@@ -14,6 +14,7 @@ import {
 import { addPressFeedback } from './overlay.ts';
 import { playButtonTap, playHintPurchase } from '../audio/audio.ts';
 import { hapticSnap } from '../haptics.ts';
+import { showShop } from './shop.ts';
 
 // ─── Ad (rewarded video) state ─────────────────────────────────────────────
 const LS_ADS_DAILY = 'untrace_hint_ads_daily';
@@ -230,10 +231,16 @@ export function showHintPopup(level: LevelData): void {
         addPressFeedback(actionBtn);
       }
     } else if (!canAfford) {
-      actionBtn.textContent = `${cost} spark${cost > 1 ? 's' : ''}`;
-      actionBtn.style.background = '#d4c8b0';
-      actionBtn.style.color      = '#ffffff';
-      actionBtn.disabled = true;
+      actionBtn.textContent = 'Get more';
+      actionBtn.style.background = 'transparent';
+      actionBtn.style.color      = C_PRIMARY;
+      actionBtn.style.border     = `2px solid ${C_PRIMARY}`;
+      actionBtn.addEventListener('click', () => {
+        playButtonTap();
+        closePopup();
+        showShop('sparks');
+      });
+      addPressFeedback(actionBtn);
     } else {
       actionBtn.textContent = `${cost} spark${cost > 1 ? 's' : ''}`;
       actionBtn.style.background = C_PRIMARY;
