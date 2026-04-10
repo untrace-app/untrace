@@ -1,6 +1,6 @@
 // Win celebration screen (Phase 3)
 
-import { playButtonTap } from '../audio/audio.ts';
+import { playButtonTap, playSparkChime } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { WORLD_GATES, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
@@ -22,6 +22,23 @@ function injectCelStyles(): void {
     '  0%   { transform: scale(0); }',
     '  75%  { transform: scale(1.05); }',
     '  100% { transform: scale(1.0); }',
+    '}',
+    '@keyframes cel-spark-in {',
+    '  0%   { transform: scale(0); }',
+    '  60%  { transform: scale(1.3); }',
+    '  100% { transform: scale(1.0); }',
+    '}',
+    '@keyframes cel-plus-float {',
+    '  0%   { opacity: 0; transform: translateY(0); }',
+    '  100% { opacity: 1; transform: translateY(-20px); }',
+    '}',
+    '@keyframes cel-plus-out {',
+    '  0%   { opacity: 1; }',
+    '  100% { opacity: 0; }',
+    '}',
+    '@keyframes cel-trail-fade {',
+    '  0%   { opacity: 0.8; transform: scale(1); }',
+    '  100% { opacity: 0;   transform: scale(0.4); }',
     '}',
   ].join('\n');
   document.head.appendChild(s);
@@ -112,9 +129,86 @@ export interface CelebrationParams {
   stars:            number;           // 1 | 2 | 3
   remainingLayers?: number;           // for reduce levels (targetLayers > 0)
   targetLayers?:    number;
+  sparkEarned?:     number;           // 0 = no animation, 1 or 2 = animate
   onNextLevel:      () => void;
   onReplay:         () => void;
   onLevelSelect:    () => void;
+}
+
+// ─── Spark SVG (matches level-select lightning-bolt) ──────────────────────────
+
+const SPARK_BLUE_GRAD_ID = 'cel-spark-grad';
+function sparkSVG(size: number): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" overflow="visible">`
+    + `<defs><linearGradient id="${SPARK_BLUE_GRAD_ID}" x1="0%" y1="0%" x2="100%" y2="100%">`
+    + `<stop offset="0%" stop-color="#3a86ff"/>`
+    + `<stop offset="100%" stop-color="#00d4ff"/>`
+    + `</linearGradient></defs>`
+    + `<path d="M13 2 L3 14 L11 14 L11 22 L21 10 L13 10 Z" `
+    + `fill="url(#${SPARK_BLUE_GRAD_ID})" stroke="#1e4fb8" stroke-width="1.2" stroke-linejoin="round"/>`
+    + `</svg>`;
+}
+
+/**
+ * Animate the spark icon flying from its current position to the top of the
+ * screen (where the level-select spark counter will be), shrinking as it goes
+ * and leaving a small trail of fading circles. The "+1" text fades out at the
+ * same time.
+ */
+function flySparkUpward(iconEl: HTMLElement, plusEl: HTMLElement): void {
+  const rect = iconEl.getBoundingClientRect();
+  if (rect.width === 0) return;
+
+  // Fade out the "+N" text.
+  plusEl.style.animation = 'cel-plus-out 0.4s ease-out forwards';
+
+  // Clone the icon into a fixed-position overlay so it can travel freely.
+  const flyer = document.createElement('div');
+  const startX = rect.left + rect.width / 2;
+  const startY = rect.top + rect.height / 2;
+  const targetX = window.innerWidth - 40; // near top-right spark counter
+  const targetY = 32;
+  flyer.style.cssText = [
+    'position:fixed',
+    `left:${startX - 16}px`, `top:${startY - 16}px`,
+    'width:32px', 'height:32px',
+    'pointer-events:none',
+    'z-index:100',
+    'will-change:transform,opacity',
+    'transition:transform 0.5s cubic-bezier(0.55,0.085,0.68,0.53), width 0.5s ease-in, height 0.5s ease-in, opacity 0.5s ease-in',
+  ].join(';');
+  flyer.innerHTML = sparkSVG(32);
+  document.body.appendChild(flyer);
+
+  // Hide the original in place.
+  iconEl.style.opacity = '0';
+
+  // Drop trail circles along a few points on the path.
+  const steps = 4;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / (steps + 1);
+    const tx = startX + (targetX - startX) * t;
+    const ty = startY + (targetY - startY) * t;
+    setTimeout(() => {
+      const dot = document.createElement('div');
+      dot.style.cssText = [
+        'position:fixed',
+        `left:${tx - 4}px`, `top:${ty - 4}px`,
+        'width:8px', 'height:8px', 'border-radius:50%',
+        'background:radial-gradient(circle,#3a86ff,#00d4ff)',
+        'pointer-events:none', 'z-index:99',
+        'animation:cel-trail-fade 0.5s ease-out forwards',
+      ].join(';');
+      document.body.appendChild(dot);
+      setTimeout(() => dot.remove(), 520);
+    }, i * 60);
+  }
+
+  requestAnimationFrame(() => {
+    flyer.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(0.375)`;
+    flyer.style.opacity   = '0';
+  });
+  setTimeout(() => flyer.remove(), 560);
 }
 
 // ─── Module state ─────────────────────────────────────────────────────────────
@@ -223,7 +317,43 @@ export function showCelebration(params: CelebrationParams): void {
 
   // Stars row — always 3 slots, all start gray at scale(0)
   const starsRow = document.createElement('div');
-  starsRow.style.cssText = 'display:flex;gap:10px;justify-content:center;margin:0 0 18px;';
+  starsRow.style.cssText = 'display:flex;gap:10px;justify-content:center;margin:0 0 14px;';
+
+  // Spark reward row (may stay empty if no spark earned)
+  const sparkEarned = Math.max(0, params.sparkEarned ?? 0);
+  const sparkRow = document.createElement('div');
+  sparkRow.style.cssText = [
+    'position:relative',
+    'height:44px',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'gap:8px',
+    'margin:0 0 4px',
+    'user-select:none', 'pointer-events:none',
+  ].join(';');
+  const sparkIcon = document.createElement('div');
+  sparkIcon.style.cssText = [
+    'display:inline-flex', 'align-items:center', 'justify-content:center',
+    'width:32px', 'height:32px',
+    'transform:scale(0)',
+    'will-change:transform',
+  ].join(';');
+  sparkIcon.innerHTML = sparkEarned > 0 ? sparkSVG(32) : '';
+  const plusText = document.createElement('span');
+  plusText.textContent = sparkEarned > 0 ? `+${sparkEarned}` : '';
+  plusText.style.cssText = [
+    'display:inline-block',
+    `font-family:${FONT_HEADING}`,
+    'font-size:18px', 'font-weight:700',
+    'background:linear-gradient(135deg,#3a86ff,#00d4ff)',
+    '-webkit-background-clip:text', 'background-clip:text',
+    'color:transparent',
+    '-webkit-text-fill-color:transparent',
+    'opacity:0',
+    'transform:translateY(0)',
+    'will-change:opacity,transform',
+  ].join(';');
+  sparkRow.appendChild(sparkIcon);
+  sparkRow.appendChild(plusText);
   const starEls: HTMLElement[] = [];
   for (let i = 0; i < 3; i++) {
     const starWrap = document.createElement('div');
@@ -332,6 +462,7 @@ export function showCelebration(params: CelebrationParams): void {
   cardEl.appendChild(titleEl);
   cardEl.appendChild(variedEl);
   cardEl.appendChild(starsRow);
+  if (sparkEarned > 0) cardEl.appendChild(sparkRow);
   if (unlockEl) cardEl.appendChild(unlockEl);
   cardEl.appendChild(statsEl);
   cardEl.appendChild(nextBtn);
@@ -360,6 +491,22 @@ export function showCelebration(params: CelebrationParams): void {
           }
         }, 220 + i * 200);
       }
+      // Spark reward animation — plays ~800ms after the card opens so it
+      // lands after the last star finishes its bounce.
+      if (sparkEarned > 0) {
+        const sparkStart = 800;
+        setTimeout(() => {
+          sparkIcon.style.animation = 'cel-spark-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards';
+          plusText.style.animation  = 'cel-plus-float 0.3s ease-out forwards';
+          playSparkChime();
+        }, sparkStart);
+
+        // After 600ms visible, fly upward with a shrinking trail.
+        setTimeout(() => {
+          flySparkUpward(sparkIcon, plusText);
+        }, sparkStart + 400 + 600);
+      }
+
       // World unlock popup: animate in after the last star finishes.
       if (unlockEl) {
         const lastStarFinish = 220 + Math.max(0, params.stars - 1) * 200 + 280;

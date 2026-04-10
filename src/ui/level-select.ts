@@ -3,6 +3,7 @@
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
+import { getSparkCount as sparksGetSparkCount } from '../sparks.ts';
 import { initSettings, showSettings } from './settings.ts';
 import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
 
@@ -82,10 +83,7 @@ function getTotalStars(): number {
 }
 
 function getSparkCount(): number {
-  const raw = localStorage.getItem(LS_SPARKS);
-  if (raw === null) return 5;
-  const n = parseInt(raw, 10);
-  return isNaN(n) ? 5 : n;
+  return sparksGetSparkCount();
 }
 
 // ─── Module state ─────────────────────────────────────────────────────────────

@@ -13,6 +13,9 @@ import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutoria
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from './constants.ts';
 import { Haptics } from '@capacitor/haptics';
+import { ensureSparksInitialized, getLevelStars, checkSparkEarned } from './sparks.ts';
+
+ensureSparksInitialized();
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;
@@ -721,7 +724,9 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       }
       const remainingLayers = Array.from(gameState.connections.values())
         .reduce((sum, c) => sum + c.layers, 0);
+      const prevStars = getLevelStars(level.id);
       completedLevel(currentLevelIndex, stars);
+      const sparkEarned = checkSparkEarned(level.id, stars, prevStars);
       setTimeout(() => {
         playPuzzleComplete();
         showCelebration({
@@ -732,6 +737,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
           stars,
           remainingLayers,
           targetLayers:   level.targetLayers,
+          sparkEarned,
           onNextLevel:    () => { nextLevelWithTransition(); },
           onReplay:       () => { resetGame();        },
           onLevelSelect:  () => { boardBgEl.style.display = 'none'; levelIndicatorEl.style.display = 'none'; hideOverlay(); showLevelSelect(); },

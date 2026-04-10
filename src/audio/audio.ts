@@ -201,6 +201,11 @@ export function playButtonTap(): void {
   buttonSynth.triggerAttackRelease('A5', 0.05);
 }
 
+export function playSparkChime(): void {
+  if (!Tone || !isReady) return;
+  buttonSynth.triggerAttackRelease('E6', 0.1);
+}
+
 export function playDotTouch(): void {
   if (!Tone || !isReady) return;
   dotSynth.triggerAttackRelease('C6', 0.05);
