@@ -10,18 +10,29 @@ let _levels: LevelData[] = [];
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Fetch and parse world1.json at app startup.
- * Falls back to the hardcoded TEST_LEVELS if the fetch fails
- * (e.g. running without a dev server, or the file is missing).
+ * Fetch and parse world JSON files at app startup.
+ * Concatenates World 1 and World 2 into a single array.
+ * Falls back to hardcoded TEST_LEVELS if world1.json fails.
+ * World 2 is silently skipped if its file is missing.
  */
 export async function loadLevels(): Promise<void> {
   try {
     const res = await fetch('/levels/world1.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as LevelData[];
-    _levels = data;
+    const w1 = await res.json() as LevelData[];
+    _levels = w1;
   } catch {
     _levels = [...TEST_LEVELS];
+  }
+
+  try {
+    const res = await fetch('/levels/world2.json');
+    if (res.ok) {
+      const w2 = await res.json() as LevelData[];
+      _levels = [..._levels, ...w2];
+    }
+  } catch {
+    // World 2 not available — use World 1 only
   }
 }
 
@@ -35,4 +46,13 @@ export function getCurrentLevel(index: number): LevelData {
 
 export function getWorldName(): string {
   return 'World 1';
+}
+
+/** Return the 1-based display number within the level's world. */
+export function getDisplayNumber(index: number): number {
+  const level = _levels[index % _levels.length]!;
+  for (let i = 0; i < _levels.length; i++) {
+    if (_levels[i]!.world === level.world) return index - i + 1;
+  }
+  return index + 1;
 }

@@ -16,13 +16,12 @@ Main Menu (logo + "Tap to Begin" button)
 Audio unlocks, bg music starts
     │
     ▼
-Tutorial (5 steps, separate from levels)
+Tutorial (4 steps, separate from levels)
     │
     Step 1: Single line - hand shows swipe to erase
     Step 2: L-shape - teaches continuous tracing
-    Step 3: Accidental draw - player discovers on their own
-    Step 4: 2-layer connection - hand shows double pass
-    Step 5: Mini puzzle - no hints, player solves alone
+    Step 3: Lift and continue from last dot
+    Step 4: Mini puzzle - no hints, player solves alone
     │
     ▼ tutorial complete
     │
@@ -178,8 +177,11 @@ Sparks are the in-game currency. Used ONLY for hints. Nothing else.
 | 40 Sparks | $3.99 | Consumable | Adds 40 sparks |
 | Hacker Theme | $0.99 | One-time | Dark/green visual theme |
 | Neon Theme | $0.99 | One-time | Dark/bright visual theme |
-| Paper Theme | $0.99 | One-time | Sketch/pencil visual theme |
 | Ocean Theme | $0.99 | One-time | Blue/teal visual theme |
+| Sunset Theme | $0.99 | One-time | Orange/purple visual theme |
+| Paper Theme | Free | Achievement | Unlock by completing World 1 |
+| Midnight Theme | Free | Achievement | Earn 50 total stars |
+| Secret Theme | Free | Achievement | 3-star every level in World 1 |
 
 ### Where to buy
 - **Settings screen:** "Shop" section with all three categories
@@ -193,6 +195,46 @@ Sparks are the in-game currency. Used ONLY for hints. Nothing else.
 - No fake urgency or countdown timers
 - Store is always optional
 - Cosmetic themes are separate from sparks (cannot buy themes with sparks)
+- Free themes unlock through gameplay achievements (completing worlds, earning stars)
+- All themes (including locked) are visible with previews in the shop
+
+---
+
+## Themes
+
+### What are themes?
+Themes change the entire visual look of the game: background, dots, lines, UI, level select, popups. Everything except layout, fonts, and mechanics.
+
+### Theme unlock tiers
+
+| Theme | How to unlock |
+|-------|--------------|
+| Default (warm beige) | Free, ships with game |
+| Paper (sketch/pencil) | Free, complete World 1 |
+| Midnight (dark blue) | Free, earn 50 total stars |
+| Secret | Free, 3-star every level in World 1 |
+| Hacker (dark/green) | $0.99 |
+| Neon (dark/bright) | $0.99 |
+| Ocean (blue/teal) | $0.99 |
+| Sunset (orange/purple) | $0.99 |
+
+### Theme preview
+- ALL themes are visible in the shop (including locked ones)
+- Each shows a mini game board preview in that theme's colors
+- Tapping shows a full-screen preview of game board, level select, and celebration
+- Locked themes show the unlock requirement and a dimmed preview
+- Players can see what they're working toward (creates desire)
+
+### Where themes appear
+- Shop screen: browse and preview all themes
+- Settings: "Active Theme" shows currently equipped theme
+- Celebration popup: occasional "Customize your look" prompt
+
+### Theme rules
+- Themes are purely cosmetic, no gameplay advantage
+- Cannot buy themes with sparks (separate purchase)
+- Active theme persists across sessions (localStorage)
+- Colorblind patterns work on top of any theme
 
 ---
 

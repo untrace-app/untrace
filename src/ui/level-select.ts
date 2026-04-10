@@ -145,11 +145,25 @@ function getNodeX(index: number, pathWidth: number, radius: number): number {
 function renderPath(): void {
   if (!pathEl) return;
 
-  const count    = getLevelCount();
-  const starsMap = loadStars();
+  const totalCount = getLevelCount();
+  const starsMap   = loadStars();
+
+  // Find where World 1 ends (first level with world !== 1)
+  let w1Count = totalCount;
+  for (let i = 0; i < totalCount; i++) {
+    if (getCurrentLevel(i).world !== 1) { w1Count = i; break; }
+  }
+
+  // World 2 is only visible once the last World 1 level is completed
+  const w1LastCompleted = w1Count > 0 && (starsMap[getCurrentLevel(w1Count - 1).id] ?? 0) > 0;
+  const count = w1LastCompleted ? totalCount : w1Count;
 
   function isUnlocked(i: number): boolean {
     if (i === 0) return true;
+    // World boundary: first World 2 level requires star-gate
+    if (i === w1Count) {
+      return w1LastCompleted && getTotalStars() >= 30;
+    }
     return (starsMap[getCurrentLevel(i - 1).id] ?? 0) > 0;
   }
 
@@ -167,14 +181,16 @@ function renderPath(): void {
   const pathWidth  = pathEl.offsetWidth || 320;
   const nodeRadius = NODE_SIZE / 2;
 
-  // Compute center positions for every node
+  // Compute center positions for every node (add vertical gap for world chips)
+  const W_CHIP_GAP = 142; // extra vertical space for a world divider chip
   const positions: { x: number; y: number }[] = [];
   for (let i = 0; i < count; i++) {
     const isCurrent = i === currentIdx;
     const radius    = (isCurrent ? NODE_CURRENT : NODE_SIZE) / 2;
+    const worldOffset = i >= w1Count ? W_CHIP_GAP : 0;
     positions.push({
       x: getNodeX(i, pathWidth, radius),
-      y: TOP_PAD + nodeRadius + i * V_SPACING,
+      y: TOP_PAD + nodeRadius + i * V_SPACING + worldOffset,
     });
   }
 
@@ -216,6 +232,9 @@ function renderPath(): void {
   svg.appendChild(defs);
 
   for (let i = 0; i < count - 1; i++) {
+    // No line between the last World 1 level and the first World 2 level
+    if (i === w1Count - 1 && i + 1 === w1Count) continue;
+
     const a         = positions[i]!;
     const b         = positions[i + 1]!;
     const aStars    = starsMap[getCurrentLevel(i).id] ?? 0;
@@ -342,7 +361,7 @@ function renderPath(): void {
         + '<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     } else {
       const num = document.createElement('span');
-      num.textContent = String(i + 1);
+      num.textContent = String(i >= w1Count ? i - w1Count + 1 : i + 1);
       num.style.cssText = [
         `color:${textColor}`,
         `font-size:${isCurrent ? '31px' : '29px'}`, 'font-weight:700',
@@ -406,61 +425,114 @@ function renderPath(): void {
   const w1Text = document.createElement('span');
   w1Text.textContent = `World ${worldNum}`;
   w1Text.style.cssText = [
-    `font-family:${FONT_HEADING}`, 'font-size:28px', 'font-weight:700',
+    `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
     `color:${C_TEXT}`, 'line-height:1',
   ].join(';');
   w1Chip.appendChild(w1Text);
   pathEl.appendChild(w1Chip);
 
-  // ── World 2 chip (locked/unlocked, below last level) ───────────────────────
-  const STAR_GATE = 30;
-  const lastCompleted = count > 0 && (starsMap[getCurrentLevel(count - 1).id] ?? 0) > 0;
-  const hasEnoughStars = getTotalStars() >= STAR_GATE;
-  const w2Unlocked = lastCompleted && hasEnoughStars;
+  // ── World 2 chip (between World 1 and World 2 levels) ──────────────────────
+  if (w1Count < totalCount) {
+    const w2StarGateOk = w1LastCompleted && getTotalStars() >= 30;
+    const w1LastY = positions.length > 0 && w1Count > 0 ? positions[w1Count - 1]!.y : lastNodeY;
+    const w2FirstY = w1Count < count ? positions[w1Count]!.y : w1LastY + V_SPACING + W_CHIP_GAP;
+    // Match the W1 chip-to-first-level gap: W1 chip top is 30px, first W1 level center is
+    // TOP_PAD + nodeRadius = 172px, so the gap is 142px. Place W2 chip 142px above first W2 level.
+    const w2ChipY = w2FirstY - (TOP_PAD + nodeRadius - 30);
 
-  const w2Chip = document.createElement('div');
-  w2Chip.style.cssText = [
-    'position:absolute',
-    `top:${lastNodeY + 80}px`,
-    'left:50%', 'transform:translateX(-50%)',
-    `background:${w2Unlocked ? 'rgba(255,255,255,0.5)' : 'rgba(180,165,212,0.3)'}`,
-    ...(w2Unlocked ? ['-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)'] : []),
-    'border-radius:16px', 'padding:10px 18px',
-    `border:1px solid ${w2Unlocked ? 'rgba(255,255,255,0.3)' : 'rgba(180,165,212,0.2)'}`,
-    'box-shadow:0 4px 12px rgba(0,0,0,0.06)',
-    'z-index:4', 'user-select:none',
-    'display:flex', 'align-items:center', 'gap:8px',
-    'white-space:nowrap', 'max-width:calc(100% - 48px)',
-    `cursor:${w2Unlocked ? 'pointer' : 'default'}`,
-    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
-  ].join(';');
-
-  if (!w2Unlocked) {
-    const lockIcon = document.createElement('span');
-    lockIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
-      + '<rect x="3" y="11" width="18" height="11" rx="2"/>'
-      + '<path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-    lockIcon.style.cssText = 'display:inline-flex;color:#b8a5d4;flex-shrink:0;';
-    w2Chip.appendChild(lockIcon);
+    const w2Chip = document.createElement('div');
+    w2Chip.style.cssText = [
+      'position:absolute',
+      `top:${w2ChipY}px`,
+      'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(255,255,255,0.25)',
+      '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+      'border-radius:20px', 'padding:12px 32px',
+      'border:2.5px solid rgba(255,255,255,0.7)',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.08)',
+      'z-index:4', 'pointer-events:none', 'user-select:none',
+      'white-space:nowrap',
+      `opacity:${w2StarGateOk ? '1' : '0.4'}`,
+    ].join(';');
+    const w2Text = document.createElement('span');
+    w2Text.textContent = 'World 2';
+    w2Text.style.cssText = [
+      `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
+      `color:${C_TEXT}`, 'line-height:1',
+    ].join(';');
+    w2Chip.appendChild(w2Text);
+    pathEl.appendChild(w2Chip);
   }
 
-  const w2Label = document.createElement('span');
-  w2Label.textContent = `Go to World ${worldNum + 1}`;
-  w2Label.style.cssText = [
-    `font-family:${FONT_HEADING}`, 'font-size:15px', 'font-weight:600',
-    `color:${w2Unlocked ? C_TEXT : '#b8a5d4'}`, 'line-height:1',
-  ].join(';');
-  w2Chip.appendChild(w2Label);
-
-  if (w2Unlocked) {
-    addPressFeedback(w2Chip);
-    w2Chip.addEventListener('click', () => {
-      playButtonTap();
-      console.log('Navigate to World 2');
-    });
+  // ── World 3 chip (always locked, after last visible level) ────────────────
+  if (w1LastCompleted && count > w1Count) {
+    const w3ChipY = lastNodeY + 80;
+    const w3Chip = document.createElement('div');
+    w3Chip.style.cssText = [
+      'position:absolute',
+      `top:${w3ChipY}px`,
+      'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(255,255,255,0.25)',
+      '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+      'border-radius:20px', 'padding:12px 32px',
+      'border:2.5px solid rgba(255,255,255,0.7)',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.08)',
+      'z-index:4', 'pointer-events:none', 'user-select:none',
+      'white-space:nowrap',
+      'opacity:0.4',
+    ].join(';');
+    const w3Text = document.createElement('span');
+    w3Text.textContent = 'World 3';
+    w3Text.style.cssText = [
+      `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
+      `color:${C_TEXT}`, 'line-height:1',
+    ].join(';');
+    w3Chip.appendChild(w3Text);
+    pathEl.appendChild(w3Chip);
   }
 
-  pathEl.appendChild(w2Chip);
+  // ── "More worlds coming soon!" chip ────────────────────────────────────────
+  // Only show when the last world in the path has its level nodes actually
+  // rendered in the DOM. If a placeholder world chip (e.g. W3, which has no
+  // level data) is sitting below the final level as the last thing on the
+  // path, do not render this chip — the last world is effectively "locked"
+  // from the player's perspective because no level nodes exist below it.
+  const w3PlaceholderShown = w1LastCompleted && count > w1Count;
+  if (count === totalCount && !w3PlaceholderShown) {
+    // Position directly below the final level
+    const mwChipY = lastNodeY + 80;
+    const mwChip = document.createElement('div');
+    mwChip.style.cssText = [
+      'position:absolute',
+      `top:${mwChipY}px`,
+      'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(255,255,255,0.25)',
+      '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
+      'border-radius:20px', 'padding:10px 24px',
+      'border:2.5px solid rgba(255,255,255,0.7)',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.08)',
+      'z-index:4', 'pointer-events:none', 'user-select:none',
+      'white-space:nowrap', 'opacity:0.4',
+      'display:flex', 'align-items:center', 'gap:6px',
+    ].join(';');
+    const mwStar = document.createElement('div');
+    mwStar.style.cssText = 'display:inline-flex;flex-shrink:0;';
+    mwStar.innerHTML = starSVG(14, 2, '#b17025', 'ls-mw-star');
+    const mwText = document.createElement('span');
+    mwText.textContent = 'More worlds coming soon!';
+    mwText.style.cssText = [
+      `font-family:${FONT_HEADING}`, 'font-size:15px', 'font-weight:600',
+      `color:${C_TEXT}`, 'line-height:1',
+    ].join(';');
+    mwChip.appendChild(mwStar);
+    mwChip.appendChild(mwText);
+    pathEl.appendChild(mwChip);
+
+    // Extend the scrollable area if needed so the chip is fully visible
+    if (mwChipY + 60 > totalHeight) {
+      pathEl.style.minHeight = `${mwChipY + 60}px`;
+    }
+  }
 }
 
 // ─── Build overlay ────────────────────────────────────────────────────────────
@@ -647,11 +719,148 @@ function buildOverlay(ui: HTMLElement): void {
   ui.appendChild(overlayEl);
 }
 
+// ─── Dev mode ─────────────────────────────────────────────────────────────────
+
+function _isDevMode(): boolean {
+  return localStorage.getItem('untrace_dev_mode') === '1';
+}
+
+let _devBtnEl: HTMLButtonElement | null = null;
+let _devPanelEl: HTMLDivElement | null = null;
+
+function _renderDevButton(): void {
+  // Clean up previous
+  if (_devBtnEl) { _devBtnEl.remove(); _devBtnEl = null; }
+  if (_devPanelEl) { _devPanelEl.remove(); _devPanelEl = null; }
+  console.log('DEV MODE: ' + localStorage.getItem('untrace_dev_mode'));
+  if (!_isDevMode()) return;
+
+  _devBtnEl = document.createElement('button');
+  _devBtnEl.setAttribute('aria-label', 'Developer tools');
+  _devBtnEl.style.cssText = [
+    'position:fixed', 'bottom:24px', 'right:24px',
+    'width:36px', 'height:36px', 'border-radius:50%',
+    'background:#8338ec', 'border:none',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'cursor:pointer', 'z-index:55',
+    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
+    'box-shadow:0 2px 8px rgba(131,56,236,0.4)',
+    'transition:transform 0.15s ease-out',
+  ].join(';');
+  _devBtnEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 512 512" fill="#ffffff">'
+    + '<path d="M352 320c88.4 0 160-71.6 160-160c0-15.3-2.2-30.1-6.2-44.2c-3.1-10.8-16.4-13.2-24.3-5.3l-76.8 76.8c-3 3-7.1 4.7-11.3 4.7L336 192c-8.8 0-16-7.2-16-16l0-57.4c0-4.2 1.7-8.3 4.7-11.3l76.8-76.8c7.9-7.9 5.4-21.2-5.3-24.3C382.1 2.2 367.3 0 352 0C263.6 0 192 71.6 192 160c0 19.1 3.4 37.5 9.5 54.5L19.9 396.1C7.2 408.8 0 426.1 0 444.1C0 481.6 30.4 512 67.9 512c18 0 35.3-7.2 48-19.9l181.6-181.6c17 6.2 35.4 9.5 54.5 9.5zM80 456a24 24 0 1 1 -48 0 24 24 0 1 1 48 0z"/>'
+    + '</svg>';
+  addPressFeedback(_devBtnEl);
+  _devBtnEl.addEventListener('click', () => { playButtonTap(); _showDevPanel(); });
+  // Append to document.body (not overlayEl) because overlayEl has transform +
+  // overflow:hidden which clips position:fixed children.
+  document.body.appendChild(_devBtnEl);
+}
+
+function _showDevPanel(): void {
+  if (_devPanelEl) { _devPanelEl.remove(); _devPanelEl = null; }
+  if (!overlayEl) return;
+
+  _devPanelEl = document.createElement('div');
+  _devPanelEl.style.cssText = [
+    'position:fixed', 'inset:0',
+    'background:rgba(255,237,205,0.85)',
+    'backdrop-filter:blur(20px)', '-webkit-backdrop-filter:blur(20px)',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'z-index:200',
+  ].join(';');
+
+  const card = document.createElement('div');
+  card.style.cssText = [
+    'background:#feffe5', 'border-radius:24px',
+    'padding:28px 24px 24px', 'max-width:300px', 'width:calc(100% - 48px)',
+    `font-family:${FONT}`,
+    'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
+  ].join(';');
+
+  const title = document.createElement('p');
+  title.textContent = 'Developer Tools';
+  title.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:18px', 'font-weight:700',
+    `color:${C_TEXT}`, 'margin:0 0 20px', 'text-align:center',
+  ].join(';');
+  card.appendChild(title);
+
+  const btnStyle = [
+    'width:100%', 'padding:12px 0', 'border:none', 'border-radius:9999px',
+    'font-size:14px', 'font-weight:600', 'cursor:pointer',
+    `font-family:${FONT}`,
+    'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
+    'margin-bottom:10px',
+  ].join(';');
+
+  // Complete W1 button
+  const completeBtn = document.createElement('button');
+  completeBtn.textContent = 'Complete W1 Levels 1–29 (3★)';
+  completeBtn.style.cssText = btnStyle + ';background:#8338ec;color:#ffffff;';
+  addPressFeedback(completeBtn);
+  completeBtn.addEventListener('click', () => {
+    playButtonTap();
+    const stars = loadStars();
+    for (let i = 0; i < 29; i++) {
+      const lvl = getCurrentLevel(i);
+      stars[lvl.id] = 3;
+    }
+    localStorage.setItem(LS_STARS, JSON.stringify(stars));
+    saveUnlockedUpTo(28);
+    _devPanelEl?.remove();
+    _devPanelEl = null;
+    renderPath();
+    _renderDevButton();
+  });
+  card.appendChild(completeBtn);
+
+  // Reset all button
+  const resetBtn = document.createElement('button');
+  resetBtn.textContent = 'Reset all dev data';
+  resetBtn.style.cssText = btnStyle + ';background:#d4726a;color:#ffffff;';
+  addPressFeedback(resetBtn);
+  resetBtn.addEventListener('click', () => {
+    playButtonTap();
+    localStorage.clear();
+    window.location.reload();
+  });
+  card.appendChild(resetBtn);
+
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = btnStyle + `;background:${C_TEXT};color:#ffffff;margin-bottom:0;`;
+  addPressFeedback(closeBtn);
+  closeBtn.addEventListener('click', () => {
+    playButtonTap();
+    _devPanelEl?.remove();
+    _devPanelEl = null;
+  });
+  card.appendChild(closeBtn);
+
+  _devPanelEl.appendChild(card);
+
+  // Tap backdrop to close
+  _devPanelEl.addEventListener('click', (e) => {
+    if (e.target === _devPanelEl) {
+      _devPanelEl?.remove();
+      _devPanelEl = null;
+    }
+  });
+
+  // Append to document.body (not overlayEl) because overlayEl has transform +
+  // overflow:hidden which clips position:fixed children.
+  document.body.appendChild(_devPanelEl);
+}
+
 // ─── Show / hide ──────────────────────────────────────────────────────────────
 
 export function showLevelSelect(): void {
   if (!overlayEl) return;
   renderPath();
+  _renderDevButton();
   overlayEl.style.pointerEvents = 'auto';
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -668,6 +877,9 @@ export function hideLevelSelect(): void {
   overlayEl.style.opacity       = '0';
   overlayEl.style.transform     = 'translateY(8px)';
   overlayEl.style.pointerEvents = 'none';
+  // Clean up dev elements from document.body
+  if (_devBtnEl) { _devBtnEl.remove(); _devBtnEl = null; }
+  if (_devPanelEl) { _devPanelEl.remove(); _devPanelEl = null; }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, pl
 import { initOverlay, updateOverlay, showOverlay, hideOverlay, addPressFeedback } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
 import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel } from './ui/level-select.ts';
-import { loadLevels, getCurrentLevel, getLevelCount } from './levels/levels.ts';
+import { loadLevels, getCurrentLevel, getLevelCount, getDisplayNumber } from './levels/levels.ts';
 import { showLevelTransition, recoverLevelTransition } from './ui/level-transition.ts';
 import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
@@ -422,7 +422,7 @@ function nextLevelWithTransition(): void {
   transitionActive = true;
 
   showLevelTransition(
-    nextIndex + 1,
+    getDisplayNumber(nextIndex),
     next.name,
     // onCovered: splash is fully opaque — safe to tear down behind it.
     () => {
@@ -720,7 +720,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
         playPuzzleComplete();
         showCelebration({
           levelName:      level.name,
-          levelNumber:    currentLevelIndex + 1,
+          levelNumber:    getDisplayNumber(currentLevelIndex),
           moveCount,
           minMoves,
           stars,

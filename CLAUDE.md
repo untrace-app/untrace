@@ -43,7 +43,7 @@ untrace/
       level-select.ts    # Level select screen with star display and unlock progression
       celebration.ts     # Win celebration with stars, varied messages, world unlock
       level-transition.ts # Splash between levels ("Level 7 / Corner")
-      tutorial.ts        # 5-step guided tutorial with hand animation and forced starts
+      tutorial.ts        # 4-step World 1 tutorial + per-world mini-tutorials
     solver/
       solver.ts          # BFS puzzle solver with Euler parity analysis
       worker.ts          # Web Worker wrapper for solver
@@ -237,12 +237,14 @@ The checkWin function sums all connection layers and returns true when total <= 
 
 ## Current Phase
 
-**Phase 3: Full Game (in progress).** Phases 1 (core prototype) and 2 (solver/designer) are complete. Phase 3 is mostly complete: splash screen with animated SVG logo, tutorial system (5 guided levels with hand animation and forced starts), level select with star display and save state, celebration screen with varied messages and world unlock notification, level intro animation (board fade, dot pop, line draw), level transition splash between levels, settings screen (volume, colorblind toggle, reset progress), marimba progress audio, iOS Safari audio fix. Remaining: design 20+ real levels, hint system, daily puzzle, colorblind patterns in renderer, dead-end detection.
+**Phase 3: Full Game (in progress).** Phases 1 (core prototype) and 2 (solver/designer) are complete. Phase 3 is mostly complete: splash screen with animated SVG logo, main menu with "Tap to Begin", tutorial system (4 guided levels with hand animation and forced starts, multi-layer removed and saved for World 2 mini-tutorial), level select with winding path layout, star display and save state, celebration screen with varied messages and world unlock notification, level intro animation (board fade, dot pop, line draw), level transition splash between levels, settings screen (volume, colorblind toggle, reset progress), marimba progress audio, background music, iOS Safari audio fix. Remaining: design 20+ real levels, hint system with sparks, daily puzzle, colorblind patterns in renderer, dead-end detection, per-world mini-tutorials, How to Play mechanic cards, shop/store UI, theme system.
 
 ## What NOT to Build Yet
 
 - Hint system with Sparks currency (Phase 3, remaining). Sparks are the in-game currency for hints ONLY. Start with 5 sparks, earn 1 per 3 levels completed, earn 1 per rewarded ad (max 3 ads/day). Hints: show starting dot (1 spark), show first 3 moves (1 spark), show full solution (2 sparks). Hints are per-level and sequential (must buy 1 before 2, 2 before 3). Once purchased, Hint 1 persists until level solved/reset. Hints 2 and 3 are replayable for free after purchase. Hints reset on level solve or reset. Store purchased hints in localStorage key 'untrace_hints_used'. Spark counter on level select top bar (next to star counter, lightning bolt icon with blue/cyan gradient). Lightbulb icon in game overlay opens hint popup. Spark packs purchasable: 5/$0.99, 15/$1.99, 40/$3.99. Sparks do NOT buy cosmetics or ad removal. Sparks never expire. Store in localStorage key 'untrace_sparks'.
 - Daily puzzle (Phase 3, remaining)
+- Per-world mini-tutorials (Phase 3, remaining). Each new world gets a 1-2 step mini-tutorial on first entry: World 2 teaches multi-layer, World 3 teaches planning, World 4 teaches reduce levels. Same tutorial UI, skippable, localStorage flag per world.
+- How to Play mechanic cards (Phase 3, remaining). Swipeable card reference in settings + hint popup "?" icon. Cards unlock as player encounters mechanics. Each card has animated demo, title, one-line description. Storage: 'untrace_mechanics_seen'.
 - Colorblind patterns in renderer (Phase 3, remaining)
 - Dead-end detection (Phase 3, remaining)
 - Capacitor / native wrap (Phase 4). Includes:
@@ -256,10 +258,10 @@ The checkWin function sums all connection layers and returns true when total <= 
   - Plugin initialization order: never call plugins in DOMContentLoaded, wait for Capacitor ready
   - Disable text selection: -webkit-tap-highlight-color transparent, user-select none
 - Cloud save via Google Play Games + Apple Game Center (Phase 4, alongside Capacitor wrap)
-- Monetization, ads, IAP (Phase 5) -- interstitial ads every 3-4 levels (free tier, removed with premium) + rewarded video for sparks (all tiers, max 3/day). No banners. Shop accessible from settings screen: Remove Ads $3.99, Cosmetic Themes $0.99 each (Hacker, Neon, Paper, Ocean), Spark Packs (5/$0.99, 15/$1.99, 40/$3.99). Contextual purchase prompts: hint popup when out of sparks, post-interstitial "Remove ads" banner, occasional celebration popup theme prompt. Never popup on launch, never blocking, never forced. WARNING: use purchases-capacitor ONLY (not purchases-js). Load ads after first user interaction, not on launch.
+- Monetization, ads, IAP (Phase 5) -- interstitial ads every 3-4 levels (free tier, removed with premium) + rewarded video for sparks (all tiers, max 3/day). No banners. Shop accessible from settings screen and shop icon on level select top bar: Remove Ads $3.99, Spark Packs (5/$0.99, 15/$1.99, 40/$3.99). Themes: 3 free (Paper at World 1, Midnight at 50 stars, Secret at 3-star all W1), 4 paid $0.99 each (Hacker, Neon, Ocean, Sunset). All themes shown with preview, locked ones show requirements. Theme = full UI color override, not just game board. Theme JSON overrides constants.ts colors. Store active theme in 'untrace_active_theme', owned in 'untrace_owned_themes'. Never popup on launch, never blocking, never forced. WARNING: use purchases-capacitor ONLY (not purchases-js). Load ads after first user interaction, not on launch.
 - Analytics via Firebase Analytics + `@capacitor-firebase/analytics` (Phase 5). WARNING: use ONLY the Capacitor plugin, NOT the Firebase web SDK. Web SDK fails silently inside iOS WebView.
 - "Rate Us" prompt after high moments (Phase 5)
-- Level select uses a single continuous scrollable path for all worlds (no tabs, no world switcher). World divider chips separate worlds visually. Scroll up for earlier worlds, scroll down for later. World JSONs concatenated into one path.
+- Level select uses a single continuous scrollable path for all worlds (no tabs, no world switcher). World divider chips separate worlds visually. Scroll up for earlier worlds, scroll down for later. World JSONs concatenated into one path. After the last world, a "More worlds coming soon!" chip appears at low opacity.
 - Optional account creation after World 1 (Phase 5). NO accounts at launch. Google Sign-In + Apple Sign-In only, no email/password. Prompted softly after completing World 1 on celebration popup: "Save your progress across devices?" Never on first launch, never blocking, never required. Enables cloud save sync, daily leaderboards, cross-device progress. Settings screen shows "Account" section. Privacy: no personal data collected by developer.
 - Power-ups: Shatter, Phase, Freeze (Phase 5, World 6+)
 - Walls, missing dots, disabled dots (Phase 5, World 5+)

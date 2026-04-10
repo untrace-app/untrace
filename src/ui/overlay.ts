@@ -3,7 +3,7 @@
 import type { GameState } from '../types.ts';
 import { playUndo, playButtonTap } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
-import { getCurrentLevel } from '../levels/levels.ts';
+import { getCurrentLevel, getDisplayNumber } from '../levels/levels.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
 
 export interface OverlayCallbacks {
@@ -437,7 +437,7 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
   _levelTotal      = levelTotal;
 
   if (levelIndicatorEl !== null) {
-    levelIndicatorEl.textContent = `Level ${levelIndex + 1}`;
+    levelIndicatorEl.textContent = `Level ${getDisplayNumber(levelIndex)}`;
   }
 
   if (levelNameEl !== null) {

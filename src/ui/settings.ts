@@ -399,7 +399,41 @@ function buildAboutSection(): HTMLElement {
 
   const version = document.createElement('p');
   version.textContent = 'v1.0.0';
-  version.style.cssText = aboutBase;
+  version.style.cssText = aboutBase + ';cursor:default;-webkit-tap-highlight-color:transparent;';
+
+  // Hidden dev mode trigger: 7 taps within 3 seconds
+  let _devTaps = 0;
+  let _devTimer = 0;
+  version.addEventListener('click', () => {
+    _devTaps++;
+    clearTimeout(_devTimer);
+    _devTimer = window.setTimeout(() => { _devTaps = 0; }, 3000);
+    if (_devTaps >= 7) {
+      _devTaps = 0;
+      clearTimeout(_devTimer);
+      const key = 'untrace_dev_mode';
+      const isOn = localStorage.getItem(key) === '1';
+      if (isOn) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, '1');
+      }
+      // Toast
+      const toast = document.createElement('div');
+      toast.textContent = isOn ? 'Dev mode OFF' : 'Dev mode ON';
+      toast.style.cssText = [
+        'position:fixed', 'bottom:80px', 'left:50%', 'transform:translateX(-50%)',
+        `font-family:${FONT}`, 'font-size:13px', 'font-weight:600',
+        'color:#ffffff', 'background:#8338ec',
+        'border-radius:20px', 'padding:6px 16px',
+        'pointer-events:none', 'z-index:300',
+        'transition:opacity 0.4s ease',
+      ].join(';');
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; }, 1500);
+      setTimeout(() => { toast.remove(); }, 1900);
+    }
+  });
 
   const studio = document.createElement('p');
   studio.textContent = 'Made by [Studio Name]';

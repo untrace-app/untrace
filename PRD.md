@@ -407,6 +407,8 @@ Using the designer and solver, create the first 30 levels.
 
 **Returning players:** Auto-scroll to center the current/next uncompleted level on screen.
 
+**End of content chip:** After the last level of the last available world, show a "More worlds coming soon!" chip. Same frosted style as world divider chips, low opacity (0.4). Add a small sparkle or star icon next to the text. This tells the player the game is actively being developed and they should keep the app installed. In the future, this chip can also include "Turn on notifications to be the first to know" with an opt-in button.
+
 ### 3.3 World 3: "The Knot" (Levels 31-45) and World 4: "Remnants" (Levels 46-60)
 
 **World 3:**
@@ -516,7 +518,7 @@ Design and verify using the Phase 2 toolchain.
 - After 3 watches, button grays out with "Come back tomorrow"
 
 **Sparks are NOT used for:**
-- Cosmetic themes (those are direct IAP $0.99 each)
+- Cosmetic themes (those are direct IAP or gameplay achievements, never purchasable with sparks)
 - Ad removal (that's the $3.99 premium unlock)
 - Level skipping or progression (sparks only buy hints)
 
@@ -534,11 +536,9 @@ The shop is accessible from multiple contextual entry points but is never forced
 **Primary store (in settings screen):**
 Add a "Shop" section in the settings modal with three categories:
 - "Remove Ads" - $3.99 one-time purchase. Shows "Purchased" checkmark if already bought.
-- "Themes" - available cosmetic themes, $0.99 each. Shows preview swatch and "Purchased" if owned.
-  - Hacker theme (dark/green)
-  - Neon theme (dark/bright)
-  - Paper theme (sketch/pencil)
-  - Ocean theme (blue/teal)
+- "Themes" - cosmetic themes. Shows preview swatch and status for each. See Section 3.6.2 for full theme list, unlock tiers, and preview screen design.
+  - Free: Default (ships with game), Paper (unlock at World 1), Midnight (earn 50 stars), Secret (3-star all World 1)
+  - Paid ($0.99 each): Hacker, Neon, Ocean, Sunset
 - "Sparks" - spark packs:
   - 5 sparks: $0.99
   - 15 sparks: $1.99
@@ -557,6 +557,95 @@ Add a "Shop" section in the settings modal with three categories:
 - No full-screen store takeover
 - Store is always optional, always one tap away in settings, never forced
 - The player finds the store when they want it, not when it's pushed
+
+### 3.6.2 Theme System
+
+Themes change the entire visual experience of the game, not just the game board. A theme is a complete color palette override.
+
+**What each theme changes:**
+- Page background color
+- Board background color
+- Dot colors (inactive and active)
+- Line/layer colors (all 5 layers)
+- Level select background gradient
+- Level select node colors and borders
+- Level select connecting line colors
+- Top bar styling
+- Celebration popup colors
+- Settings card colors
+- Splash screen and main menu background
+- Main menu button color
+- Font colors (primary and secondary)
+- Star colors
+
+**What stays the same across all themes:**
+- Font families (Lexend, Chewy)
+- Layout and positioning
+- Button shapes and sizes
+- Game mechanics and level data
+- Sound effects and music
+- SVG icons and star shapes
+
+**Theme data structure:**
+A theme is a JSON object that overrides color constants:
+```
+{
+  "id": "hacker",
+  "name": "Hacker",
+  "background": "#0a0a0f",
+  "boardBg": "#141420",
+  "dotInactive": "#2a2a35",
+  "dotActive": "#00ff88",
+  "layers": ["", "#00ff88", "#00ccff", "#ff00aa", "#ffcc00", "#ffffff"],
+  "textPrimary": "#00ff88",
+  "textSecondary": "#447744",
+  "cardBg": "#1a1a2e",
+  "recessedBg": "#1a1a2e",
+  "primaryAccent": "#00ff88",
+  "starEarned": "#00ff88",
+  "levelSelectGradient": ["#0a0a0f", "#141428", "#1a1a3e"],
+  "nodeCompleted": "#1a2a1a",
+  "nodeLocked": "#1a1a20",
+  "lineCompleted": "#00ff88",
+  "lineLocked": "#2a2a35"
+}
+```
+
+**Theme unlock tiers:**
+
+| Theme | How to unlock | Price |
+|-------|--------------|-------|
+| Default (warm beige) | Free, ships with game | Free |
+| Paper (sketch/pencil) | Free, unlock by completing World 1 | Free |
+| Midnight (dark blue) | Free, earn 50 total stars | Free |
+| Hacker (dark/green) | Purchase | $0.99 |
+| Neon (dark/bright) | Purchase | $0.99 |
+| Ocean (blue/teal) | Purchase | $0.99 |
+| Sunset (orange/purple) | Purchase | $0.99 |
+| Secret theme | 3-star every level in World 1 | Free (achievement) |
+
+**Theme preview screen:**
+- Accessible from the shop "Themes" section
+- Grid of theme cards, each showing a mini game board mockup (3x3 grid with dots and lines in that theme's colors)
+- Below each card: theme name and status ("Equipped", "Owned", "Unlock at World 1", "$0.99", or lock icon with requirement)
+- Tapping any theme (including locked ones) shows a full-screen preview of the game board, level select, and celebration popup in that theme's colors
+- "Buy" or "Equip" button at the bottom of the preview
+- Locked themes show the unlock requirement and a slightly dimmed preview
+- Players can see ALL themes (creates desire), but can only equip unlocked ones
+
+**Implementation approach:**
+- All current color constants in constants.ts become the "Default" theme
+- On theme change, swap the active color values and re-render all visible UI
+- Active theme stored in localStorage key 'untrace_active_theme' (theme id string, default "default")
+- Owned themes stored in localStorage key 'untrace_owned_themes' (array of theme id strings)
+- Theme changes apply instantly without page reload
+- Migrate to Capacitor Preferences in Phase 4
+
+**Theme design principles:**
+- Every theme must maintain sufficient contrast for readability
+- Layer colors within a theme must be distinguishable from each other
+- Colorblind patterns still work on top of any theme
+- The game should feel polished and intentional in every theme, not just a color swap
 
 ### 3.7 Dead End Detection (Real-Time)
 
@@ -593,20 +682,65 @@ For 3x3 grids, the full solver can optionally run as well (<100ms) for a precise
 
 ### 3.9 Tutorial System
 
-**IMPLEMENTED.** A separate 5-step guided tutorial that plays on first launch, before the level select. Not part of the numbered levels. Stored in src/ui/tutorial.ts.
+**IMPLEMENTED (updated to 4 steps).** A separate guided tutorial that plays on first launch, before the level select. Not part of the numbered levels. Stored in src/ui/tutorial.ts.
 
+**World 1 tutorial (first launch only, 4 steps):**
 - Welcome popup: "Welcome to Untrace" with "Let's go" button
-- 5 hardcoded tutorial levels with forced start dots, hand animation, instructional text
 - Step 1: Single line, hand shows swipe to erase
 - Step 2: L-shape, teaches continuous tracing
-- Step 3: Accidental draw discovery (no hand)
-- Step 4: 2-layer connection, hand shows double pass
-- Step 5: Real mini puzzle, no hints
+- Step 3: Lift and continue from last dot (hand lifts, pauses, returns to same dot)
+- Step 4: Real mini puzzle, no hints
 - Tutorial UI matches game layout: undo/redo buttons, reset (no confirmation), moves counter
-- "TUTORIAL / Step N of 5" header replaces level indicator
+- "TUTORIAL / Step N of 4" header replaces level indicator
 - Completion messages in cards: "Nice!", "Watch your path!", "You got it!", "You're ready!"
 - Tutorial skip: if player has ANY completed levels in localStorage, skip tutorial entirely
 - localStorage 'tutorial-complete' flag set on completion
+
+**Per-world mini-tutorials (triggered on first entry to each new world):**
+Each world introduces new mechanics. A short mini-tutorial plays automatically the first time the player enters that world. Same tutorial UI but shorter (1-2 steps). Stored with localStorage flag per world: 'untrace_tutorial_w2', 'untrace_tutorial_w3', etc.
+
+| World | Mini-tutorial | Steps |
+|-------|--------------|-------|
+| World 2 | Multiple layers | Step 1: "Some lines have multiple layers. Trace them again!" Hand shows double pass on 2-layer connection. Step 2: Mini puzzle with 2-layer connections. |
+| World 3 | Complex planning | Step 1: "Plan your path carefully. Some puzzles have only one solution." Hand pauses, considers, then traces the correct path. |
+| World 4 | Reduce levels | Step 1: "Not all lines can be erased. Reach the target!" Shows target indicator, demonstrates intentional drawing to bridge gaps. |
+| World 5+ | New mechanics | 1-2 steps per new mechanic (walls, missing dots, etc.) designed when those worlds are built. |
+
+**Mini-tutorial design principles:**
+- Maximum 2 steps per world. Keep it fast.
+- Skip button available (unlike World 1 tutorial which cannot be skipped on first launch)
+- Never replays once completed for that world
+- Uses the same hand animation, tip text, and UI as the main tutorial
+
+### 3.9.1 How to Play (Mechanic Cards)
+
+A swipeable card reference accessible from settings and the hint popup. Shows animated demos of all mechanics the player has encountered.
+
+**Location:**
+- Settings screen: "How to Play" button near the top (above Sound section)
+- Hint popup: small "?" icon in the corner (free help before spending sparks)
+
+**Format:** Full-screen overlay with swipeable cards. Left/right arrows to navigate. Dot indicators showing current card position. "Close" X button in top-right.
+
+**Cards unlock progressively (no spoilers for future mechanics):**
+
+| Card | Title | Unlocks when | Animation |
+|------|-------|-------------|-----------|
+| 1 | Trace to Erase | Tutorial complete | Hand swiping a line, line disappears |
+| 2 | Continue from Last Dot | Tutorial complete | Hand lifting, dot pulses, hand returns |
+| 3 | Accidental Draw | Tutorial complete | Hand crosses empty space, new line appears with flash |
+| 4 | Multiple Layers | World 2 started | Hand double-passes a 2-layer line |
+| 5 | Reduce Levels | World 4 started | Target indicator shown, intentional draw bridges a gap |
+| 6 | Forced Start | First forced-start level encountered | Pulsing start dot, hand begins from it |
+| 7+ | Future mechanics | When encountered | Designed with each new world |
+
+**Card layout:**
+- Mini animated game board (3x3) showing the mechanic in action (looping, 3-4 second animation)
+- Title below in Lexend 20px weight 700 color C_TEXT
+- One-line description in Lexend 14px weight 400 color C_TEXT_SEC
+- Example: Title "Accidental Draw" / Description "Crossing empty spaces creates new lines. Be careful!"
+
+**Storage:** localStorage key 'untrace_mechanics_seen' (array of mechanic IDs). New mechanics added when the player first encounters them. The How to Play screen only shows cards for mechanics in this array.
 
 ### 3.10 Splash Screen
 
@@ -615,16 +749,28 @@ For 3x3 grids, the full solver can optionally run as well (<100ms) for a precise
 - Full screen, background #ffedcd
 - Inline SVG of the UNTRACE dot-and-line logo with stroke-dashoffset animation (lines draw in, dots fade in)
 - Animation CSS loaded from public/splash-animation.css
-- Subtitle "a line puzzle" in Manrope 14px color #7f7c6c below the logo
+- Logo only, no subtitle
 - Stays visible until BOTH: minimum 2 seconds elapsed AND all assets loaded (levels JSON, fonts via document.fonts.ready, audio samples)
 - If assets take longer than 2 seconds, subtle pulsing dot loading indicator appears
 - No tap to skip
-- Fade out 300ms transition to tutorial (first launch) or level select (returning player)
+- Fade out 300ms transition to main menu ("Tap to Begin" screen)
+
+### 3.10.1 Main Menu Screen
+
+**IMPLEMENTED.** Appears after splash screen fades out. Logo stays at exact same position/size as splash.
+
+- Background: #ffedcd (same as splash, seamless transition)
+- Logo: same SVG, same position as splash (position: absolute, top: 35vh, centered)
+- "Tap to Begin" button: Lexend 17px weight 700, background #fb5607, color white, border-radius 9999px, padding 14px 44px. Pulsing animation (scale 1.0 to 1.1 over 1.2s). Subtle shadow.
+- Tapping the button: unlocks iOS audio (initAudio), starts background music, then shows tutorial (first launch) or level select (returning player)
+- Footer: "© 2026 Myntell Games" in Lexend 11px weight 400 at 40% opacity, "v1.0" below. Positioned at bottom center.
+- Main menu stays visible until player taps. No auto-dismiss.
 
 ### 3.11 Settings Screen
 
 **IMPLEMENTED.** Accessible via gear icon on level select screen (top-right). Modal card style matching other dialogs (background #feffe5).
 
+- **How to Play:** Button at top of settings. Opens swipeable mechanic cards (see Section 3.9.1). Shows only mechanics the player has encountered.
 - **Sound:** Volume slider (styled with #fb5607 accent) + mute toggle. Persisted in localStorage.
 - **Accessibility:** Colorblind patterns toggle (solid/dashed/dotted/double/pulsing per layer). Persisted in localStorage.
 - **Progress:** "Reset all progress" with two-step confirmation ("Are you sure?" then "This cannot be undone").
@@ -736,7 +882,7 @@ Not fully specced. Key items for future PRDs:
 - **World 7+ "Hard Mode":** Time limits, move limits, lift penalties, all mechanics combined
 - **Power-up details:** Shatter removes a connection without traversing (changes dot degree, can fix parity). Phase teleports to any dot without traversing (skip bridge cost on reduce levels). Freeze protects a connection from accidental draw for 5 moves. All earned through gameplay, never purchased, never trivialize a level.
 - **Grid modifiers:** Walls (connection can't exist or be drawn), missing dots (irregular topology), disabled dots (visible but unvisitable)
-- Cosmetic themes (Hacker, Neon, Paper, Ocean) as in-app purchases
+- Cosmetic themes: 4 paid ($0.99 each: Hacker, Neon, Ocean, Sunset), 3 free via achievements (Paper at World 1, Midnight at 50 stars, Secret at 3-star all W1). See Section 3.6.2 for full spec.
 - **Monetization implementation:**
   - **IAP:** RevenueCat SDK via `@capgo/capacitor-purchases` Capacitor plugin. Handles both App Store and Google Play billing with one codebase. Products: premium unlock ($3.99), cosmetic themes ($0.99 each). Configure in App Store Connect + Google Play Console. RevenueCat handles receipt validation and cross-platform sync. **WARNING:** Use ONLY `purchases-capacitor`, NOT `purchases-js` (the web SDK). Mixing them causes purchase sheet failures and silent conflicts.
   - **Ads:** Google AdMob via `@capacitor-community/admob` Capacitor plugin. Two formats: (1) Interstitial ads between levels for free tier only, shown every 3-4 levels (not every level, not during gameplay). Premium users never see interstitials. (2) Rewarded video ads for sparks (1 spark per ad, max 3 per day), available in both free and premium tiers. Player chooses to watch, never forced. No banner ads. **WARNING:** Do NOT load ads on app launch. Load ads only after first user interaction (after audio unlock). Otherwise ads block audio initialization and cause startup jank.

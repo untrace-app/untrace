@@ -1,0 +1,88 @@
+[
+  {
+    "id": "w2-01",
+    "name": "Dawn",
+    "world": 2,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 15, "minMoves": 4, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "w2-02",
+    "name": "Ember",
+    "world": 2,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 18, "minMoves": 5, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "w2-03",
+    "name": "Ripple",
+    "world": 2,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 20, "minMoves": 6, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "w2-04",
+    "name": "Drift",
+    "world": 2,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 22, "minMoves": 5, "solutionCount": 2, "requiresDraw": false }
+  },
+  {
+    "id": "w2-05",
+    "name": "Echo",
+    "world": 2,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 25, "minMoves": 6, "solutionCount": 2, "requiresDraw": false }
+  }
+]
