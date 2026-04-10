@@ -574,17 +574,18 @@ function buildOverlay(ui: HTMLElement): void {
   const starChip = document.createElement('div');
   starChip.style.cssText = [
     'display:flex', 'align-items:center', 'gap:5px',
+    'height:40px', 'box-sizing:border-box',
     'background:rgba(255,255,255,0.55)',
     '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
-    'border-radius:20px', 'padding:4px 10px',
+    'border-radius:20px', 'padding:0 14px',
     'border:1px solid rgba(255,255,255,0.3)',
   ].join(';');
   const starIconEl = document.createElement('div');
   starIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
-  starIconEl.innerHTML = starSVG(18, 2, '#b17025', 'ls-topstar');
+  starIconEl.innerHTML = starSVG(20, 2, '#b17025', 'ls-topstar');
   const starCountText = document.createElement('span');
   starCountText.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:14px', 'font-weight:600',
+    `color:${C_TEXT}`, 'font-size:15px', 'font-weight:600',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
   starCountText.textContent = `\u00D7\u00A0${getTotalStars()}`;
@@ -596,18 +597,19 @@ function buildOverlay(ui: HTMLElement): void {
   const sparkChip = document.createElement('div');
   sparkChip.style.cssText = [
     'display:flex', 'align-items:center', 'gap:5px',
+    'height:40px', 'box-sizing:border-box',
     'background:rgba(255,255,255,0.55)',
     '-webkit-backdrop-filter:blur(8px)', 'backdrop-filter:blur(8px)',
-    'border-radius:20px', 'padding:4px 10px',
+    'border-radius:20px', 'padding:0 14px',
     'border:1px solid rgba(255,255,255,0.3)',
     'margin-left:12px',
   ].join(';');
   const sparkIconEl = document.createElement('div');
   sparkIconEl.style.cssText = 'display:inline-flex;flex-shrink:0;';
-  sparkIconEl.innerHTML = sparkSVG(18, 2, '#b17025', 'ls-topspark');
+  sparkIconEl.innerHTML = sparkSVG(20, 2, '#b17025', 'ls-topspark');
   const sparkCountText = document.createElement('span');
   sparkCountText.style.cssText = [
-    `color:${C_TEXT}`, 'font-size:14px', 'font-weight:600',
+    `color:${C_TEXT}`, 'font-size:15px', 'font-weight:600',
     `font-family:${FONT}`, 'user-select:none', 'line-height:1',
   ].join(';');
   sparkCountText.textContent = `\u00D7\u00A0${getSparkCount()}`;
@@ -624,12 +626,12 @@ function buildOverlay(ui: HTMLElement): void {
   plusBtn.textContent = '+';
   plusBtn.style.cssText = [
     'position:absolute', 'right:-6px', 'bottom:-6px',
-    'width:18px', 'height:18px',
+    'width:22px', 'height:22px',
     'border-radius:50%',
     'background:linear-gradient(180deg, #00bcd4, #2196f3)',
     'border:1.5px solid #1976d2',
     'color:#ffffff',
-    `font-family:${FONT}`, 'font-size:13px', 'font-weight:700',
+    `font-family:${FONT}`, 'font-size:15px', 'font-weight:700',
     'line-height:1',
     'display:flex', 'align-items:center', 'justify-content:center',
     'padding:0', 'cursor:pointer', 'outline:none',

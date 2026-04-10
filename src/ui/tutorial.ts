@@ -92,19 +92,7 @@ const TUTORIAL_LEVELS: TutorialLevel[] = [
     completionDelay: 1000,
     handPath: null,
   },
-  // Level 5: Multi-layer (2 layers = amber), hand lifts and re-traces
-  {
-    grid: { cols: 3, rows: 3 },
-    connections: [{ from: [0, 0], to: [1, 0], layers: 2 }],
-    targetLayers: 0,
-    forcedStart: [0, 0],
-    hint: 'Some lines need multiple passes',
-    completionText: 'You got it!',
-    completionDelay: 1000,
-    handPath: [[0, 0], [1, 0]],
-    handLift: 1, // lift after reaching [1,0], then reverse
-  },
-  // Level 6: Real mini puzzle — no hints
+  // Level 5: Real mini puzzle — no hints
   {
     grid: { cols: 3, rows: 3 },
     connections: [
@@ -179,7 +167,7 @@ export function isTutorialComplete(): boolean {
 }
 
 /**
- * Run the full 6-level tutorial sequence.
+ * Run the full 5-level tutorial sequence.
  * Resolves when the tutorial is done.
  */
 export async function startTutorial(
@@ -458,7 +446,7 @@ function _buildBars(): void {
   const leftCol = document.createElement('div');
   leftCol.style.cssText = 'flex:1;display:flex;align-items:center;';
 
-  // Center column — "TUTORIAL" + "Step N of 6" (mirrors game's level indicator).
+  // Center column — "TUTORIAL" + "Step N of 5" (mirrors game's level indicator).
   const centerCol = document.createElement('div');
   centerCol.style.cssText = 'flex:0;display:flex;align-items:center;';
 
