@@ -9,6 +9,26 @@ import {
   LINE_WIDTH_BASE,
   GRID_FILL_RATIO,
 } from '../constants.ts';
+import {
+  getCurrentHintLevel,
+  hasHint,
+  getStartingDot,
+  getActiveHintAnim,
+  updateHintAnim,
+} from '../hints.ts';
+
+// ─── Ghost hand image (lazy-loaded) ───────────────────────────────────────
+
+let _handImg: HTMLImageElement | null = null;
+let _handImgLoaded = false;
+function getHandImg(): HTMLImageElement | null {
+  if (_handImg === null) {
+    _handImg = new Image();
+    _handImg.onload = () => { _handImgLoaded = true; };
+    _handImg.src = '/hand.svg';
+  }
+  return _handImgLoaded ? _handImg : null;
+}
 
 // ─── Grid layout helper ───────────────────────────────────────────────────────
 
@@ -187,4 +207,130 @@ export function render(
   }
 
   drawDots(ctx, state, layout);
+
+  // Hint overlays (glow on starting dot, ghost trail for replayed solutions).
+  drawHintOverlays(ctx, layout);
+}
+
+// ─── Hint overlays ────────────────────────────────────────────────────────
+
+function drawHintOverlays(
+  ctx: CanvasRenderingContext2D,
+  layout: GridLayout,
+): void {
+  const level = getCurrentHintLevel();
+  if (!level) return;
+
+  // Hint 1: bright pulsing blue glow on the optimal starting dot.
+  if (hasHint(level.id, 1)) {
+    const start = getStartingDot(level);
+    if (start) {
+      const { x, y } = gridToPixel(start[0], start[1], layout);
+      const t = performance.now() / 1000;
+      const pulse = (Math.sin(t * Math.PI * 2) + 1) / 2; // 0..1
+      const scale   = 1.0 + 0.4 * pulse;
+      const opacity = 0.6 + 0.4 * pulse;
+      const baseR   = DOT_RADIUS * 1.6;
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, baseR * scale);
+      grad.addColorStop(0,    'rgba(58,134,255,0.85)');
+      grad.addColorStop(0.5,  'rgba(58,134,255,0.35)');
+      grad.addColorStop(1,    'rgba(58,134,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, baseR * scale, 0, Math.PI * 2);
+      ctx.fill();
+      // Solid core ring
+      ctx.globalAlpha = 0.9 * opacity;
+      ctx.strokeStyle = '#3a86ff';
+      ctx.lineWidth   = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, DOT_RADIUS * 1.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Hint 2 / Hint 3: ghost-trace animation.
+  const now = performance.now();
+  updateHintAnim(now);
+  const anim = getActiveHintAnim();
+  if (!anim || anim.levelId !== level.id) return;
+
+  // Overall fade (applied to all ghost drawing).
+  let fade = 1;
+  if (anim.fadeOutStart !== 0) {
+    fade = Math.max(0, 1 - (now - anim.fadeOutStart) / 500);
+  }
+
+  const elapsed = now - anim.startTime;
+  const rawIdx  = elapsed / anim.stepMs;
+  const clampedIdx = Math.min(rawIdx, anim.moves.length);
+  const fullIdx    = Math.floor(clampedIdx);
+  const partial    = clampedIdx - fullIdx;
+
+  ctx.save();
+  ctx.globalAlpha = 0.5 * fade;
+  ctx.lineCap = 'round';
+
+  // Completed ghost segments.
+  for (let i = 0; i < Math.min(fullIdx, anim.moves.length); i++) {
+    const m = anim.moves[i]!;
+    const a = gridToPixel(m.from[0], m.from[1], layout);
+    const b = gridToPixel(m.to[0],   m.to[1],   layout);
+    const layerIdx = Math.max(1, Math.min(5, m.layerBefore || 1));
+    ctx.strokeStyle = LAYER_COLORS[layerIdx] || '#3a86ff';
+    ctx.lineWidth   = LINE_WIDTH_BASE * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // Partial current segment + hand.
+  let handX = 0, handY = 0, haveHand = false;
+  if (fullIdx < anim.moves.length) {
+    const m = anim.moves[fullIdx]!;
+    const a = gridToPixel(m.from[0], m.from[1], layout);
+    const b = gridToPixel(m.to[0],   m.to[1],   layout);
+    const cx = a.x + (b.x - a.x) * partial;
+    const cy = a.y + (b.y - a.y) * partial;
+    const layerIdx = Math.max(1, Math.min(5, m.layerBefore || 1));
+    ctx.strokeStyle = LAYER_COLORS[layerIdx] || '#3a86ff';
+    ctx.lineWidth   = LINE_WIDTH_BASE * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(cx, cy);
+    ctx.stroke();
+    handX = cx;
+    handY = cy;
+    haveHand = true;
+  } else if (anim.moves.length > 0) {
+    const last = anim.moves[anim.moves.length - 1]!;
+    const p = gridToPixel(last.to[0], last.to[1], layout);
+    handX = p.x;
+    handY = p.y;
+    haveHand = true;
+  }
+
+  ctx.restore();
+
+  // Draw hand pointer on top of the trail (not faded as far).
+  if (haveHand) {
+    ctx.save();
+    ctx.globalAlpha = 0.85 * fade;
+    const hand = getHandImg();
+    if (hand) {
+      const size = 36;
+      ctx.drawImage(hand, handX - size * 0.25, handY, size, size);
+    } else {
+      ctx.fillStyle = '#b17025';
+      ctx.beginPath();
+      ctx.arc(handX, handY, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 }

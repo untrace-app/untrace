@@ -206,6 +206,13 @@ export function playSparkChime(): void {
   buttonSynth.triggerAttackRelease('E6', 0.1);
 }
 
+export function playHintPurchase(): void {
+  if (!Tone || !isReady) return;
+  const now = Tone.now();
+  buttonSynth.triggerAttackRelease('C5', 0.08, now);
+  buttonSynth.triggerAttackRelease('E5', 0.08, now + 0.08);
+}
+
 export function playDotTouch(): void {
   if (!Tone || !isReady) return;
   dotSynth.triggerAttackRelease('C6', 0.05);

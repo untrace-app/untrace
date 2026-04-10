@@ -359,6 +359,20 @@ const DRAW_OVERHEAD_RATIO = 3.0; // abandon if total layers exceed start * this
 
 // ─── Main solver ──────────────────────────────────────────────────────────────
 
+/**
+ * Returns the optimal solution path as an array of [col, row] grid positions.
+ * Length = moves.length + 1 (starting dot plus each destination).
+ * Returns an empty array when the level cannot be solved.
+ */
+export function solvePath(level: LevelData): [number, number][] {
+  const result = solve(level);
+  const sol = result.sampleSolution;
+  if (!sol || sol.length === 0) return [];
+  const path: [number, number][] = [sol[0]!.from];
+  for (const m of sol) path.push(m.to);
+  return path;
+}
+
 export function solve(level: LevelData): SolverResult {
   const { cols, rows } = level.grid;
   const target = level.targetLayers;

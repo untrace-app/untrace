@@ -5,6 +5,8 @@ import { playUndo, playButtonTap } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
 import { getCurrentLevel, getDisplayNumber } from '../levels/levels.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
+import { getSparkCount } from '../sparks.ts';
+import { showHintPopup } from './hint-popup.ts';
 
 export interface OverlayCallbacks {
   onUndo:        () => void;
@@ -21,6 +23,7 @@ export interface OverlayCallbacks {
 
 let undoBtnEl:            HTMLButtonElement | null = null;
 let redoBtnEl:            HTMLButtonElement | null = null;
+let hintBadgeEl:          HTMLElement | null = null;
 let moveCounterEl:        HTMLElement | null = null;
 let remainingIndicatorEl: HTMLElement | null = null;
 let _reduceNumEl:         HTMLElement | null = null;
@@ -54,6 +57,10 @@ const RESET_ICON = '<svg width="18" height="18" viewBox="0 0 512 512" fill="curr
 const LEVELS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">'
   + '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'
   + '<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
+  + '</svg>';
+
+const LIGHTBULB_ICON = '<svg viewBox="0 0 384 512" width="22" height="22" fill="#b17025">'
+  + '<path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l-160 0c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/>'
   + '</svg>';
 
 // Inline button for use inside the top/bottom bar (no position:fixed).
@@ -350,12 +357,37 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   levelLabelWrap.appendChild(levelNameEl);
   centerCol.appendChild(levelLabelWrap);
 
-  // Right column — reset button, right-aligned inside its flex:1 container.
+  // Right column — hint + reset buttons, right-aligned inside its flex:1 container.
   const rightCol = document.createElement('div');
-  rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;';
+  rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;gap:8px;';
+
+  // Hint (lightbulb) button — wrapped so we can position a badge over it.
+  const hintWrap = document.createElement('div');
+  hintWrap.style.cssText = 'position:relative;display:flex;align-items:center;';
+  const hintBtn = makeInlineBtn(LIGHTBULB_ICON, 'Hints');
+  hintBtn.addEventListener('click', () => {
+    playButtonTap();
+    const level = getCurrentLevel(_levelIndex);
+    if (level) showHintPopup(level);
+  });
+  hintBadgeEl = document.createElement('div');
+  hintBadgeEl.style.cssText = [
+    'position:absolute', 'top:-4px', 'right:-4px',
+    'min-width:18px', 'height:18px', 'box-sizing:border-box',
+    'padding:0 5px', 'border-radius:9px',
+    'background:#3a86ff', 'color:#ffffff',
+    `font-family:${FONT}`, 'font-size:10px', 'font-weight:700',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'pointer-events:none', 'line-height:1',
+  ].join(';');
+  hintBadgeEl.textContent = String(getSparkCount());
+  hintWrap.appendChild(hintBtn);
+  hintWrap.appendChild(hintBadgeEl);
+
   const showResetDialog = buildResetDialog(ui, callbacks.onReset);
   const resetBtn = makeInlineBtn(RESET_ICON, 'Reset puzzle');
   resetBtn.addEventListener('click', () => { playButtonTap(); showResetDialog(); });
+  rightCol.appendChild(hintWrap);
   rightCol.appendChild(resetBtn);
 
   topBar.appendChild(leftCol);
@@ -448,6 +480,10 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
 
   if (moveCounterEl !== null) {
     moveCounterEl.textContent = `Moves: ${state.moveCount}`;
+  }
+
+  if (hintBadgeEl !== null) {
+    hintBadgeEl.textContent = String(getSparkCount());
   }
 
   const t = state.targetLayers;

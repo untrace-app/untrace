@@ -137,6 +137,7 @@ function resetAllProgress(): void {
     }
   }
   for (const key of toRemove) localStorage.removeItem(key);
+  localStorage.setItem('untrace_sparks', '5');
   window.location.reload();
 }
 

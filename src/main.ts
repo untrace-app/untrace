@@ -14,6 +14,7 @@ import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from './constants.ts';
 import { Haptics } from '@capacitor/haptics';
 import { ensureSparksInitialized, getLevelStars, checkSparkEarned } from './sparks.ts';
+import { setCurrentHintLevel, clearHintsForLevel, clearHintAnim } from './hints.ts';
 
 ensureSparksInitialized();
 
@@ -365,6 +366,9 @@ function loadLevel(index: number, skipIntro = false): void {
   gameState.redoStack                 = [];
   gameState.currentStrokeConnections  = new Set();
 
+  setCurrentHintLevel(level);
+  clearHintAnim();
+
   updateLevelIndicator();
 
   // skipIntro: caller will start the intro animation separately (e.g. after transition splash).
@@ -401,7 +405,10 @@ function runIntro(): void {
 }
 
 function resetGame(): void {
-  clearSave(getCurrentLevel(currentLevelIndex).id, 'reset');
+  const lvl = getCurrentLevel(currentLevelIndex);
+  clearSave(lvl.id, 'reset');
+  clearHintsForLevel(lvl.id);
+  clearHintAnim();
   gameState.connections = new Map<ConnectionKey, ConnectionState>(
     Array.from(initialConnections, ([k, v]): [ConnectionKey, ConnectionState] => [k, { ...v }])
   );
@@ -715,6 +722,8 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     onWin: (moveCount: number) => {
       const level    = getCurrentLevel(currentLevelIndex);
       clearSave(level.id, 'win');
+      clearHintsForLevel(level.id);
+      clearHintAnim();
       const minMoves = level.meta.minMoves;
       let stars = 1;
       if (minMoves !== null && minMoves > 0) {
