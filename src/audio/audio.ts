@@ -104,11 +104,22 @@ async function _doInit(): Promise<void> {
       },
     }).toDestination();
 
-    // Build absolute URLs so audio files resolve correctly in Capacitor
-    // (where the base URL is capacitor://localhost, not https://...).
-    const popUrl   = window.location.origin + '/pop.mp3';
-    const boardUrl = window.location.origin + '/board.mp3';
-    const bgUrl    = window.location.origin + '/bg-music.mp3';
+    // Resolve an audio asset path for both web and Capacitor. On Capacitor,
+    // static files live inside the native bundle and must be accessed via
+    // Capacitor.convertFileSrc() (which returns a capacitor://... or
+    // https://localhost/... URL the WebView can actually load). On the web,
+    // a plain root-relative path works.
+    const assetUrl = (path: string): string => {
+      const cap = (window as unknown as { Capacitor?: { convertFileSrc?: (p: string) => string } }).Capacitor;
+      if (cap && typeof cap.convertFileSrc === 'function') {
+        return cap.convertFileSrc('public/' + path);
+      }
+      return '/' + path;
+    };
+
+    const popUrl   = assetUrl('pop.mp3');
+    const boardUrl = assetUrl('board.mp3');
+    const bgUrl    = assetUrl('bg-music.mp3');
 
     // ── Pop sound for intro animation ────────────────────────────────────────
     popPlayer = new Tone.Player({
