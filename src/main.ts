@@ -494,7 +494,8 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
   return new Promise<void>((resolve) => {
     // Combined scale + opacity pulse.
     const pulseStyle = document.createElement('style');
-    pulseStyle.textContent = '@keyframes mm-pulse { from { transform:scale(1.0); opacity:0.85; } to { transform:scale(1.1); opacity:1.0; } }';
+    pulseStyle.textContent = '@keyframes mm-pulse { from { transform:scale(1.0); opacity:0.85; } to { transform:scale(1.1); opacity:1.0; } }'
+      + ' @media (max-width: 375px) { .mm-tap-btn { font-size:15px !important; padding:12px 36px !important; } }';
     document.head.appendChild(pulseStyle);
 
     // Container: same layout as splash (full-screen flex center, no column direction).
@@ -531,6 +532,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
 
     const btn = document.createElement('button');
     btn.textContent = 'Tap to Begin';
+    btn.className = 'mm-tap-btn';
     btn.style.cssText = [
       `font-family:${FONT}`,
       'font-size:17px', 'font-weight:700',
@@ -544,6 +546,8 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
       '-webkit-tap-highlight-color:transparent',
       'touch-action:manipulation',
       'pointer-events:auto',
+      'white-space:nowrap',
+      'max-width:calc(100vw - 48px)',
     ].join(';');
     btnWrap.appendChild(btn);
     menuEl.appendChild(btnWrap);

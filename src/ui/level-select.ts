@@ -11,6 +11,7 @@ import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
 const LS_UNLOCKED = 'untrace_unlocked';
 const LS_STARS    = 'untrace_stars';
 const LS_SPARKS   = 'untrace_sparks';
+const LS_STARS_OVERRIDE = 'untrace_stars_override';
 
 // Node dimensions
 const NODE_SIZE    = 64;  // px diameter, standard
@@ -71,6 +72,11 @@ function persistStars(levelIndex: number, stars: number): void {
 }
 
 function getTotalStars(): number {
+  const override = localStorage.getItem(LS_STARS_OVERRIDE);
+  if (override !== null) {
+    const n = parseInt(override, 10);
+    if (!isNaN(n)) return n;
+  }
   const map = loadStars();
   return Object.values(map).reduce((sum, n) => sum + (typeof n === 'number' ? n : 0), 0);
 }
@@ -819,6 +825,45 @@ function _showDevPanel(): void {
     _renderDevButton();
   });
   card.appendChild(completeBtn);
+
+  // Set 2000 stars button
+  const stars2000Btn = document.createElement('button');
+  stars2000Btn.textContent = 'Set 2000 stars';
+  stars2000Btn.style.cssText = btnStyle + ';background:#ffbe0b;color:#ffffff;';
+  addPressFeedback(stars2000Btn);
+  stars2000Btn.addEventListener('click', () => {
+    playButtonTap();
+    const stars = loadStars();
+    const total = getLevelCount();
+    for (let i = 0; i < total; i++) {
+      const lvl = getCurrentLevel(i);
+      stars[lvl.id] = 3;
+    }
+    localStorage.setItem(LS_STARS, JSON.stringify(stars));
+    localStorage.setItem(LS_STARS_OVERRIDE, '2000');
+    if (starCountTextEl) starCountTextEl.textContent = `\u00D7\u00A0${getTotalStars()}`;
+    _devPanelEl?.remove();
+    _devPanelEl = null;
+    renderPath();
+    _renderDevButton();
+  });
+  card.appendChild(stars2000Btn);
+
+  // Set 2000 sparks button
+  const sparks2000Btn = document.createElement('button');
+  sparks2000Btn.textContent = 'Set 2000 sparks';
+  sparks2000Btn.style.cssText = btnStyle + ';background:#3a86ff;color:#ffffff;';
+  addPressFeedback(sparks2000Btn);
+  sparks2000Btn.addEventListener('click', () => {
+    playButtonTap();
+    localStorage.setItem(LS_SPARKS, '2000');
+    if (sparkCountTextEl) sparkCountTextEl.textContent = `\u00D7\u00A0${getSparkCount()}`;
+    _devPanelEl?.remove();
+    _devPanelEl = null;
+    renderPath();
+    _renderDevButton();
+  });
+  card.appendChild(sparks2000Btn);
 
   // Reset all button
   const resetBtn = document.createElement('button');
