@@ -12,7 +12,6 @@ import { showLevelTransition, recoverLevelTransition } from './ui/level-transiti
 import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from './constants.ts';
-import { hapticLight } from './haptics.ts';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;
@@ -302,13 +301,13 @@ function showResumeDialog(levelId: string, save: SavedState): void {
   const restartBtn = document.createElement('button');
   restartBtn.textContent = 'Restart';
   restartBtn.style.cssText = `${DIALOG_BTN};background:${C_RECESSED};color:${C_TEXT};`;
-  restartBtn.addEventListener('click', () => { hapticLight(); clearSave(levelId, 'restart'); dismiss(); resetGame(); });
+  restartBtn.addEventListener('click', () => { clearSave(levelId, 'restart'); dismiss(); resetGame(); });
   addPressFeedback(restartBtn);
 
   const resumeBtn = document.createElement('button');
   resumeBtn.textContent = 'Resume';
   resumeBtn.style.cssText = `${DIALOG_BTN};background:${GRAD_PRIMARY};color:#ffffff;font-size:16px;padding:14px 0;`;
-  resumeBtn.addEventListener('click', () => { hapticLight(); dismiss(); });
+  resumeBtn.addEventListener('click', () => { dismiss(); });
   addPressFeedback(resumeBtn);
 
   btnRow.appendChild(restartBtn);
@@ -580,7 +579,6 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     btn.addEventListener('pointerup', async () => {
       if (dismissed) return;
       dismissed = true;
-      hapticLight();
       pressUp();
       await initAudio();
       playBgMusic();

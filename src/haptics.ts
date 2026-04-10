@@ -1,9 +1,5 @@
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
-
-export function hapticLight(): void {
-  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-}
+import { Haptics } from '@capacitor/haptics';
 
 export function hapticMedium(): void {
-  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+  Haptics.selectionChanged().catch(() => {});
 }

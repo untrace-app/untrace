@@ -3,7 +3,6 @@
 
 import { playButtonTap, playBgMusic, stopBgMusic, getDestinationNode } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
-import { hapticLight } from '../haptics.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY, COLOR_ACCIDENTAL_FLASH } from '../constants.ts';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
@@ -195,8 +194,8 @@ function showConfirmDialog(
   addPressFeedback(confirmBtn);
 
   function dismiss(): void { backdrop.remove(); }
-  cancelBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); dismiss(); });
-  confirmBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); dismiss(); onConfirm(); });
+  cancelBtn.addEventListener('click', () => { playButtonTap(); dismiss(); });
+  confirmBtn.addEventListener('click', () => { playButtonTap(); dismiss(); onConfirm(); });
 
   row.appendChild(cancelBtn);
   row.appendChild(confirmBtn);
@@ -278,7 +277,6 @@ function buildSoundSection(): HTMLElement {
   });
 
   muteBtn.addEventListener('click', () => {
-    hapticLight();
     playButtonTap();
     saveMuted(!getSavedMuted());
     renderMuteIcon();
@@ -341,7 +339,6 @@ function buildAccessibilitySection(): HTMLElement {
   renderToggle();
 
   toggle.addEventListener('click', () => {
-    hapticLight();
     playButtonTap();
     saveColorblind(!getSavedColorblind());
     renderToggle();
@@ -378,7 +375,6 @@ function buildProgressSection(): HTMLElement {
   btn.addEventListener('pointerleave',  () => { btn.style.opacity = '1';   });
 
   btn.addEventListener('click', () => {
-    hapticLight();
     playButtonTap();
     showConfirmDialog('Reset all progress?', 'Cancel', 'Reset', () => {
       showConfirmDialog('This cannot be undone. Are you sure?', 'Cancel', 'Yes, reset', () => {
@@ -507,7 +503,7 @@ function buildModal(ui: HTMLElement): void {
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
   ].join(';');
   addPressFeedback(closeBtn);
-  closeBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); hideSettings(); });
+  closeBtn.addEventListener('click', () => { playButtonTap(); hideSettings(); });
 
   // ── Title ─────────────────────────────────────────────────────────────────
   const title = document.createElement('h2');

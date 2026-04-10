@@ -3,7 +3,6 @@
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
-import { hapticLight } from '../haptics.ts';
 import { initSettings, showSettings } from './settings.ts';
 import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
 
@@ -405,7 +404,7 @@ function renderPath(): void {
     if (!locked) {
       addPressFeedback(node);
       wrapper.addEventListener('click', () => {
-        if (onSelectCb) { hapticLight(); playButtonTap(); hideLevelSelect(); onSelectCb(i); }
+        if (onSelectCb) { playButtonTap(); hideLevelSelect(); onSelectCb(i); }
       });
     }
 
@@ -665,7 +664,7 @@ function buildOverlay(ui: HTMLElement): void {
     + '<path fill="#b17025" d="M195.1 9.5C198.1-5.3 211.2-16 226.4-16l59.8 0c15.2 0 28.3 10.7 31.3 25.5L332 79.5c14.1 6 27.3 13.7 39.3 22.8l67.8-22.5c14.4-4.8 30.2 1.2 37.8 14.4l29.9 51.8c7.6 13.2 4.9 29.8-6.5 39.9L447 233.3c.9 7.4 1.3 15 1.3 22.7s-.5 15.3-1.3 22.7l53.4 47.5c11.4 10.1 14 26.8 6.5 39.9l-29.9 51.8c-7.6 13.1-23.4 19.2-37.8 14.4l-67.8-22.5c-12.1 9.1-25.3 16.7-39.3 22.8l-14.4 69.9c-3.1 14.9-16.2 25.5-31.3 25.5l-59.8 0c-15.2 0-28.3-10.7-31.3-25.5l-14.4-69.9c-14.1-6-27.2-13.7-39.3-22.8L73.5 432.3c-14.4 4.8-30.2-1.2-37.8-14.4L5.8 366.1c-7.6-13.2-4.9-29.8 6.5-39.9l53.4-47.5c-.9-7.4-1.3-15-1.3-22.7s.5-15.3 1.3-22.7L12.3 185.8c-11.4-10.1-14-26.8-6.5-39.9L35.7 94.1c7.6-13.2 23.4-19.2 37.8-14.4l67.8 22.5c12.1-9.1 25.3-16.7 39.3-22.8L195.1 9.5zM256.3 336a80 80 0 1 0 -.6-160 80 80 0 1 0 .6 160z"/>'
     + '</svg>';
   addPressFeedback(gearBtn);
-  gearBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); showSettings(); });
+  gearBtn.addEventListener('click', () => { playButtonTap(); showSettings(); });
 
   const shopBtn = document.createElement('button');
   shopBtn.setAttribute('aria-label', 'Open shop');
@@ -682,7 +681,7 @@ function buildOverlay(ui: HTMLElement): void {
     + '<path fill="#ffffff" d="M547.6 103.8L490.3 13.1C485.2 5 476.1 0 466.4 0L109.6 0C99.9 0 90.8 5 85.7 13.1L28.3 103.8c-29.6 46.8-3.4 111.9 51.9 119.4c4 .5 8.1 .8 12.1 .8c26.1 0 49.3-11.4 65.2-29c15.9 17.6 39.1 29 65.2 29c26.1 0 49.3-11.4 65.2-29c15.9 17.6 39.1 29 65.2 29c26.2 0 49.3-11.4 65.2-29c16 17.6 39.1 29 65.2 29c4.1 0 8.1-.3 12.1-.8c55.5-7.4 81.8-72.5 52.1-119.4zM499.7 254.9c0 0 0 0-.1 0c-5.3 .7-10.7 1.1-16.2 1.1c-12.4 0-24.3-1.9-35.4-5.3L448 384l-320 0 0-133.4c-11.2 3.5-23.2 5.4-35.6 5.4c-5.5 0-11-.4-16.3-1.1l-.1 0c-4.1-.6-8.1-1.3-12-2.3L64 384l0 64c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-64 0-131.4c-4 1-8 1.8-12.3 2.3z"/>'
     + '</svg>';
   addPressFeedback(shopBtn);
-  shopBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); console.log('SHOP: tapped'); });
+  shopBtn.addEventListener('click', () => { playButtonTap(); console.log('SHOP: tapped'); });
   rightCol.appendChild(shopBtn);
   rightCol.appendChild(gearBtn);
 
