@@ -12,6 +12,7 @@ import { showLevelTransition, recoverLevelTransition } from './ui/level-transiti
 import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
 import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
 import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from './constants.ts';
+import { Haptics } from '@capacitor/haptics';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;
@@ -579,6 +580,7 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     btn.addEventListener('pointerup', async () => {
       if (dismissed) return;
       dismissed = true;
+      Haptics.selectionStart().catch(() => {});
       pressUp();
       await initAudio();
       playBgMusic();
