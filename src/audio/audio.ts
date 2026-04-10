@@ -54,15 +54,18 @@ const NOTE_INDEX_MAX = WHITE_KEYS.length - 1; // 20
  * `capacitor://localhost` scheme used by Capacitor native builds. fetch()
  * *can* load from capacitor:// URLs, so we fetch + decode manually and hand
  * the decoded AudioBuffer to the Player.
+ *
+ * NOTE: On Capacitor iOS, fetch() of local assets returns response.status === 0
+ * even though the body is present. Do NOT check response.ok or status — just
+ * read the body directly.
  */
 async function loadPlayer(path: string, onReady: () => void): Promise<any> {
   if (!Tone) throw new Error('Tone not initialized');
   const response = await fetch(path);
-  if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`);
   const arrayBuffer = await response.arrayBuffer();
-  const audioBuffer = await Tone.getContext().decodeAudioData(arrayBuffer);
-  const buffer = new Tone.ToneAudioBuffer(audioBuffer);
-  const player = new Tone.Player(buffer).toDestination();
+  console.log(`[audio] ${path} fetched: ${arrayBuffer.byteLength} bytes`);
+  const audioBuffer = await Tone.context.decodeAudioData(arrayBuffer);
+  const player = new Tone.Player(audioBuffer).toDestination();
   onReady();
   return player;
 }
