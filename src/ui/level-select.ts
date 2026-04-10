@@ -737,6 +737,99 @@ function _isDevMode(): boolean {
 
 let _devBtnEl: HTMLButtonElement | null = null;
 let _devPanelEl: HTMLDivElement | null = null;
+let _dailyBtnWrapEl: HTMLDivElement | null = null;
+let _dailyStyleEl: HTMLStyleElement | null = null;
+
+const LS_DAILY_LAST_PLAYED = 'untrace_daily_last_played';
+
+function _todayKey(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function _dailyPlayedToday(): boolean {
+  return localStorage.getItem(LS_DAILY_LAST_PLAYED) === _todayKey();
+}
+
+function _renderDailyButton(): void {
+  if (_dailyBtnWrapEl) { _dailyBtnWrapEl.remove(); _dailyBtnWrapEl = null; }
+
+  if (!_dailyStyleEl) {
+    _dailyStyleEl = document.createElement('style');
+    _dailyStyleEl.textContent =
+      '@keyframes daily-float { from { transform:translateY(0); } to { transform:translateY(-4px); } }';
+    document.head.appendChild(_dailyStyleEl);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = [
+    'position:fixed',
+    'bottom:calc(env(safe-area-inset-bottom, 0px) + 24px)',
+    'right:20px',
+    'display:flex', 'flex-direction:column', 'align-items:center', 'gap:4px',
+    'z-index:55',
+    'pointer-events:none',
+  ].join(';');
+
+  const btn = document.createElement('button');
+  btn.setAttribute('aria-label', 'Daily puzzle');
+  btn.style.cssText = [
+    'position:relative',
+    'width:52px', 'height:52px', 'border-radius:50%',
+    'background:linear-gradient(135deg, #fb5607, #e04e05)',
+    'border:2px solid rgba(255,255,255,0.3)',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'cursor:pointer', 'padding:0',
+    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation', 'outline:none',
+    'box-shadow:0 4px 12px rgba(0,0,0,0.15)',
+    'animation:daily-float 2s ease-in-out infinite alternate',
+    'transition:transform 0.15s ease-out',
+    'pointer-events:auto',
+  ].join(';');
+
+  btn.innerHTML =
+    '<svg width="24" height="24" viewBox="0 0 512 512" fill="#ffffff">'
+    + '<path d="M192 104.8c0-9.2-5.8-17.3-13.2-22.8C167.2 73.3 160 61.3 160 48c0-26.5 28.7-48 64-48s64 21.5 64 48c0 13.3-7.2 25.3-18.8 34c-7.4 5.5-13.2 13.6-13.2 22.8c0 12.8 10.4 23.2 23.2 23.2l56.8 0c26.5 0 48 21.5 48 48l0 56.8c0 12.8 10.4 23.2 23.2 23.2c9.2 0 17.3-5.8 22.8-13.2c8.7-11.6 20.7-18.8 34-18.8c26.5 0 48 28.7 48 64s-21.5 64-48 64c-13.3 0-25.3-7.2-34-18.8c-5.5-7.4-13.6-13.2-22.8-13.2c-12.8 0-23.2 10.4-23.2 23.2L384 464c0 26.5-21.5 48-48 48l-56.8 0c-12.8 0-23.2-10.4-23.2-23.2c0-9.2 5.8-17.3 13.2-22.8c11.6-8.7 18.8-20.7 18.8-34c0-26.5-28.7-48-64-48s-64 21.5-64 48c0 13.3 7.2 25.3 18.8 34c7.4 5.5 13.2 13.6 13.2 22.8c0 12.8-10.4 23.2-23.2 23.2L48 512c-26.5 0-48-21.5-48-48L0 343.2C0 330.4 10.4 320 23.2 320c9.2 0 17.3 5.8 22.8 13.2C54.7 344.8 66.7 352 80 352c26.5 0 48-28.7 48-64s-21.5-64-48-64c-13.3 0-25.3 7.2-34 18.8C40.5 250.2 32.4 256 23.2 256C10.4 256 0 245.6 0 232.8L0 176c0-26.5 21.5-48 48-48l120.8 0c12.8 0 23.2-10.4 23.2-23.2z"/>'
+    + '</svg>';
+
+  if (!_dailyPlayedToday()) {
+    const badge = document.createElement('div');
+    badge.style.cssText = [
+      'position:absolute', 'top:2px', 'right:2px',
+      'width:10px', 'height:10px', 'border-radius:50%',
+      'background:#ff006e',
+      'box-shadow:0 0 0 2px #ffedcd',
+      'pointer-events:none',
+    ].join(';');
+    btn.appendChild(badge);
+  }
+
+  btn.addEventListener('pointerdown', () => { btn.style.transform = 'scale(0.92)'; });
+  btn.addEventListener('pointerup',     () => { btn.style.transform = ''; });
+  btn.addEventListener('pointercancel', () => { btn.style.transform = ''; });
+  btn.addEventListener('pointerleave',  () => { btn.style.transform = ''; });
+  btn.addEventListener('click', () => {
+    playButtonTap();
+    console.log('DAILY PUZZLE: tapped');
+  });
+
+  const label = document.createElement('div');
+  label.textContent = 'Daily';
+  label.style.cssText = [
+    `font-family:${FONT_HEADING}`,
+    'font-size:10px', 'font-weight:600',
+    `color:${C_TEXT}`,
+    'user-select:none', 'pointer-events:none',
+  ].join(';');
+
+  wrap.appendChild(btn);
+  wrap.appendChild(label);
+  document.body.appendChild(wrap);
+  _dailyBtnWrapEl = wrap;
+}
 
 function _renderDevButton(): void {
   // Clean up previous
@@ -748,7 +841,9 @@ function _renderDevButton(): void {
   _devBtnEl = document.createElement('button');
   _devBtnEl.setAttribute('aria-label', 'Developer tools');
   _devBtnEl.style.cssText = [
-    'position:fixed', 'bottom:24px', 'right:24px',
+    'position:fixed',
+    'bottom:calc(env(safe-area-inset-bottom, 0px) + 24px)',
+    'left:24px',
     'width:36px', 'height:36px', 'border-radius:50%',
     'background:#8338ec', 'border:none',
     'display:flex', 'align-items:center', 'justify-content:center',
@@ -917,6 +1012,7 @@ export function showLevelSelect(): void {
     sparkCountTextEl.textContent = `\u00D7\u00A0${getSparkCount()}`;
   }
   renderPath();
+  _renderDailyButton();
   _renderDevButton();
   overlayEl.style.pointerEvents = 'auto';
   requestAnimationFrame(() => {
@@ -937,6 +1033,7 @@ export function hideLevelSelect(): void {
   // Clean up dev elements from document.body
   if (_devBtnEl) { _devBtnEl.remove(); _devBtnEl = null; }
   if (_devPanelEl) { _devPanelEl.remove(); _devPanelEl = null; }
+  if (_dailyBtnWrapEl) { _dailyBtnWrapEl.remove(); _dailyBtnWrapEl = null; }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
