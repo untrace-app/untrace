@@ -4,6 +4,7 @@ import type { GameState } from '../types.ts';
 import { SNAP_RADIUS, INPUT_DEBOUNCE_MS, FONT, C_TEXT } from '../constants.ts';
 import { checkWin } from './logic.ts';
 import { triggerWrongDotFlash } from './animations.ts';
+import { hapticMedium } from '../haptics.ts';
 
 type GridToPixel = (col: number, row: number) => { x: number; y: number };
 type OnMove = (from: [number, number], to: [number, number]) => void;
@@ -154,6 +155,7 @@ export function initInput(
 
     for (const next of intermediates) {
       state.playerDot = currentDot;
+      hapticMedium();
       onMove(currentDot, next);
       currentDot = next;
       state.playerDot = next;
@@ -161,6 +163,7 @@ export function initInput(
 
     // Final move: last intermediate (or original dot) → snap target.
     state.playerDot = currentDot;
+    hapticMedium();
     onMove(currentDot, snapped);
     currentDot = snapped;
     state.playerDot = snapped;

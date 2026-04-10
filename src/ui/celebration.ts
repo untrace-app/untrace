@@ -2,6 +2,7 @@
 
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
+import { hapticLight } from '../haptics.ts';
 import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
 import { WORLD_GATES, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
 
@@ -313,19 +314,19 @@ export function showCelebration(params: CelebrationParams): void {
   const nextBtn = document.createElement('button');
   nextBtn.textContent = 'Next Level';
   nextBtn.style.cssText = `${BTN_BASE};background:${GRAD_PRIMARY};color:#ffffff;margin-bottom:10px;`;
-  nextBtn.addEventListener('click', () => { playButtonTap(); onNextLevel(); });
+  nextBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); onNextLevel(); });
   addPressFeedback(nextBtn);
 
   const replayBtn = document.createElement('button');
   replayBtn.textContent = 'Replay';
   replayBtn.style.cssText = `${BTN_BASE};background:${C_RECESSED};color:${C_TEXT};margin-bottom:10px;font-size:15px;padding:13px 0;`;
-  replayBtn.addEventListener('click', () => { playButtonTap(); dismiss(onReplay); });
+  replayBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); dismiss(onReplay); });
   addPressFeedback(replayBtn);
 
   const selectBtn = document.createElement('button');
   selectBtn.textContent = 'Back to Levels';
   selectBtn.style.cssText = `${BTN_BASE};background:transparent;color:${C_TEXT};margin-bottom:0;text-decoration:underline;font-size:15px;padding:13px 0;`;
-  selectBtn.addEventListener('click', () => { playButtonTap(); dismiss(onLevelSelect); });
+  selectBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); dismiss(onLevelSelect); });
   addPressFeedback(selectBtn);
 
   cardEl.appendChild(checkEl);

@@ -8,6 +8,7 @@ import { animationManager, triggerErase, triggerAccidentalDraw, triggerDotActiva
 import { startIntroAnimation, isIntroActive, updateIntro, renderIntro } from '../engine/intro-animation.ts';
 import { playProgressNote, resetProgressAudio, playPuzzleComplete, playButtonTap, playUndo } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
+import { hapticLight } from '../haptics.ts';
 import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -480,6 +481,7 @@ function _buildBars(): void {
 
   const resetBtn = _makeBtn(RESET_ICON, 'Reset puzzle');
   resetBtn.addEventListener('click', () => {
+    hapticLight();
     playButtonTap();
     _startLevel(_currentIndex);
   });
@@ -505,6 +507,7 @@ function _buildBars(): void {
 
   _undoBtnEl = _makeBtn(UNDO_ICON, 'Undo');
   _undoBtnEl.addEventListener('click', () => {
+    hapticLight();
     playButtonTap();
     undo(_state);
     playUndo();
@@ -512,6 +515,7 @@ function _buildBars(): void {
 
   _redoBtnEl = _makeBtn(REDO_ICON, 'Redo');
   _redoBtnEl.addEventListener('click', () => {
+    hapticLight();
     playButtonTap();
     redo(_state);
     playUndo();
@@ -875,6 +879,7 @@ function _showWelcome(): Promise<void> {
     ].join(';');
     addPressFeedback(btn);
     btn.addEventListener('click', () => {
+      hapticLight();
       playButtonTap();
       backdrop.style.opacity = '0';
       setTimeout(() => { backdrop.remove(); resolve(); }, 300);

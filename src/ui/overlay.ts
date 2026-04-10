@@ -2,6 +2,7 @@
 
 import type { GameState } from '../types.ts';
 import { playUndo, playButtonTap } from '../audio/audio.ts';
+import { hapticLight } from '../haptics.ts';
 import { checkWin } from '../engine/logic.ts';
 import { getCurrentLevel, getDisplayNumber } from '../levels/levels.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
@@ -162,8 +163,8 @@ function buildResetDialog(ui: HTMLElement, onConfirm: () => void): () => void {
   function hide(): void { backdrop.style.display = 'none'; }
   backdrop.addEventListener('click', hide);
   card.addEventListener('click', (e) => e.stopPropagation());
-  cancelBtn.addEventListener('click', hide);
-  confirmBtn.addEventListener('click', () => { hide(); onConfirm(); });
+  cancelBtn.addEventListener('click', () => { hapticLight(); hide(); });
+  confirmBtn.addEventListener('click', () => { hapticLight(); hide(); onConfirm(); });
   addPressFeedback(cancelBtn);
   addPressFeedback(confirmBtn);
 
@@ -231,8 +232,8 @@ function buildWinOverlay(
   replayBtn.textContent = 'Replay';
   replayBtn.style.cssText = `${WIN_BTN};background:${C_RECESSED};color:${C_TEXT};font-size:15px;padding:13px 0;`;
 
-  nextBtn.addEventListener('click',   () => { hide(); onNextLevel(); });
-  replayBtn.addEventListener('click', () => { hide(); onReplay();    });
+  nextBtn.addEventListener('click',   () => { hapticLight(); hide(); onNextLevel(); });
+  replayBtn.addEventListener('click', () => { hapticLight(); hide(); onReplay();    });
   addPressFeedback(nextBtn);
   addPressFeedback(replayBtn);
 
@@ -323,6 +324,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
 
   const backBtn = makeInlineBtn(LEVELS_ICON, 'Level select');
   backBtn.addEventListener('click', () => {
+    hapticLight();
     playButtonTap();
     _onLevelSelect?.();
   });
@@ -355,7 +357,7 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   rightCol.style.cssText = 'flex:1;display:flex;justify-content:flex-end;align-items:center;';
   const showResetDialog = buildResetDialog(ui, callbacks.onReset);
   const resetBtn = makeInlineBtn(RESET_ICON, 'Reset puzzle');
-  resetBtn.addEventListener('click', () => { playButtonTap(); showResetDialog(); });
+  resetBtn.addEventListener('click', () => { hapticLight(); playButtonTap(); showResetDialog(); });
   rightCol.appendChild(resetBtn);
 
   topBar.appendChild(leftCol);
@@ -378,10 +380,10 @@ export function initOverlay(state: GameState, callbacks: OverlayCallbacks): void
   _bottomBarEl = bottomBar;
 
   undoBtnEl = makeInlineBtn(UNDO_ICON, 'Undo');
-  undoBtnEl.addEventListener('click', () => { playButtonTap(); callbacks.onUndo(); });
+  undoBtnEl.addEventListener('click', () => { hapticLight(); playButtonTap(); callbacks.onUndo(); });
 
   redoBtnEl = makeInlineBtn(REDO_ICON, 'Redo');
-  redoBtnEl.addEventListener('click', () => { playButtonTap(); callbacks.onRedo(); playUndo(); });
+  redoBtnEl.addEventListener('click', () => { hapticLight(); playButtonTap(); callbacks.onRedo(); playUndo(); });
 
   // Center cluster: moves counter is the in-flow anchor, always vertically centered.
   // The reduce indicator floats above it via absolute positioning — never shifts the row.
