@@ -6,11 +6,13 @@ import { processMove, checkWin, makeConnectionKey, undo, redo } from './engine/l
 import { initAudio, playProgressNote, resetProgressAudio, playPuzzleComplete, playUndo, playBgMusic, stopBgMusic, resumeAudioContext } from './audio/audio.ts';
 import { initOverlay, updateOverlay, showOverlay, hideOverlay, addPressFeedback } from './ui/overlay.ts';
 import { initCelebration, showCelebration, hideCelebration, recoverCelebration } from './ui/celebration.ts';
-import { initLevelSelect, showLevelSelect, setCurrentLevel, completedLevel, setScrollTargetIndex } from './ui/level-select.ts';
-import { loadLevels, getCurrentLevel, getLevelCount, getDisplayNumber, getWorldUnlockedByLevel, getFirstLevelIndexInWorld } from './levels/levels.ts';
+import { initLevelSelect, showLevelSelect, hideLevelSelect, setCurrentLevel, completedLevel, setScrollTargetIndex } from './ui/level-select.ts';
+import { loadLevels, getCurrentLevel, getLevelCount, getDisplayNumber, getWorldUnlockedByLevel, getFirstLevelIndexInWorld, injectTestLevel } from './levels/levels.ts';
+import { loadDailyLevels, getCachedDailyNumber } from './levels/daily-levels.ts';
+import { initDailyPuzzle, handleDailyWin } from './ui/daily-puzzle.ts';
 import { showLevelTransition, recoverLevelTransition } from './ui/level-transition.ts';
 import { isTutorialComplete, startTutorial, recoverTutorial } from './ui/tutorial.ts';
-import type { GameState, ConnectionKey, ConnectionState } from './types.ts';
+import type { GameState, ConnectionKey, ConnectionState, LevelData } from './types.ts';
 import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY, WORLD_GATES } from './constants.ts';
 import { Haptics } from '@capacitor/haptics';
 import { ensureSparksInitialized, getLevelStars, checkSparkEarned } from './sparks.ts';
@@ -145,7 +147,13 @@ levelIndicatorEl.style.cssText = [
 ].join(';');
 document.getElementById('ui')!.appendChild(levelIndicatorEl);
 
+let _isDailyMode = false;
+
 function updateLevelIndicator(): void {
+  if (_isDailyMode) {
+    levelIndicatorEl.textContent = `Daily #${getCachedDailyNumber()}`;
+    return;
+  }
   const total = getLevelCount();
   const level = getCurrentLevel(currentLevelIndex);
   levelIndicatorEl.textContent = `Level ${currentLevelIndex + 1}/${total} — ${level.name}`;
@@ -490,7 +498,9 @@ function loop(time: number): void {
     updateIntro(dt);
     renderIntro(ctx, gameState, canvas);
   } else {
-    render(ctx, gameState, canvas, inputState.rawPointer);
+    if (inputState) {
+      render(ctx, gameState, canvas, inputState.rawPointer);
+    }
     animationManager.update(dt);
     animationManager.draw(ctx, gridToPixel, gameState);
   }
@@ -652,11 +662,34 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
   initCelebration();
 
   initLevelSelect((index) => {
+    _isDailyMode = false;
     canvas.style.opacity    = '1';
     levelIndicatorEl.style.display = '';
     showOverlay();
     // Board-bg display is handled by runIntro / applySave — not set here.
     loadLevel(index);
+  });
+
+  // Kick off daily pool loading and register the game-start / exit callbacks.
+  loadDailyLevels().catch(() => {});
+  const exitToLevelSelect = (): void => {
+    _isDailyMode = false;
+    boardBgEl.style.display = 'none';
+    levelIndicatorEl.style.display = 'none';
+    hideOverlay();
+    showLevelSelect();
+  };
+  initDailyPuzzle({
+    startDaily: (level: LevelData) => {
+      _isDailyMode = true;
+      hideLevelSelect();
+      const idx = injectTestLevel(level);
+      canvas.style.opacity = '1';
+      levelIndicatorEl.style.display = '';
+      showOverlay();
+      loadLevel(idx);
+    },
+    exitToLevelSelect,
   });
 
   // Fade out splash, then remove it.
@@ -720,12 +753,23 @@ function showMainMenu(splash: HTMLElement): Promise<void> {
     onReset: resetGame,
     // onNextLevel is unused when onWin is provided, but required by the interface.
     onNextLevel: nextLevel,
-    onLevelSelect: () => { boardBgEl.style.display = 'none'; levelIndicatorEl.style.display = 'none'; hideOverlay(); showLevelSelect(); },
+    onLevelSelect: () => { _isDailyMode = false; boardBgEl.style.display = 'none'; levelIndicatorEl.style.display = 'none'; hideOverlay(); showLevelSelect(); },
     onWin: (moveCount: number) => {
       const level    = getCurrentLevel(currentLevelIndex);
       clearSave(level.id, 'win');
       clearHintsForLevel(level.id);
       clearHintAnim();
+
+      // Daily puzzle: record streak/result, show daily celebration, skip the
+      // normal world/celebration flow.
+      if (_isDailyMode) {
+        const par = level.meta.minMoves ?? moveCount;
+        setTimeout(() => {
+          playPuzzleComplete();
+          handleDailyWin(moveCount, par);
+        }, 150);
+        return;
+      }
       const minMoves = level.meta.minMoves;
       let stars = 1;
       if (minMoves !== null && minMoves > 0) {

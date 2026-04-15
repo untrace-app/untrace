@@ -7,6 +7,7 @@ import { addPressFeedback } from './overlay.ts';
 import { getSparkCount as sparksGetSparkCount } from '../sparks.ts';
 import { initSettings, showSettings } from './settings.ts';
 import { showShop } from './shop.ts';
+import { handleDailyTap } from './daily-puzzle.ts';
 import { FONT, FONT_HEADING, C_TEXT } from '../constants.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -833,8 +834,9 @@ function _renderDailyButton(): void {
   btn.addEventListener('pointercancel', () => { btn.style.transform = ''; });
   btn.addEventListener('pointerleave',  () => { btn.style.transform = ''; });
   btn.addEventListener('click', () => {
+    console.log('DAILY: button tapped');
     playButtonTap();
-    console.log('DAILY PUZZLE: tapped');
+    handleDailyTap();
   });
 
   const label = document.createElement('div');

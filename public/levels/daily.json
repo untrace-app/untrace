@@ -1,0 +1,584 @@
+[
+  {
+    "id": "daily-001",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 4, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-002",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 4, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-003",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 5, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-004",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 5, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-005",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [0, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 5, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-006",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 6, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-007",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 6, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-008",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 6, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-009",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 6, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-010",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 1, "minMoves": 6, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-011",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 6, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-012",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 7, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-013",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 7, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-014",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 7, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-015",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 7, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-016",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-017",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-018",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-019",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-020",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [1, 1], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 2, "minMoves": 8, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-021",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 9, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-022",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 9, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-023",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 9, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-024",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 9, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-025",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 9, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-026",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [1, 1], "to": [1, 0], "layers": 1 },
+      { "from": [1, 1], "to": [1, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 10, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-027",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 10, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-028",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [0, 0], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 0], "layers": 1 },
+      { "from": [1, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 10, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-029",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [2, 2], "layers": 1 },
+      { "from": [2, 2], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 },
+      { "from": [0, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 2], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 10, "solutionCount": null, "requiresDraw": false }
+  },
+  {
+    "id": "daily-030",
+    "name": "",
+    "world": 1,
+    "grid": { "cols": 3, "rows": 3 },
+    "connections": [
+      { "from": [0, 0], "to": [1, 0], "layers": 1 },
+      { "from": [1, 0], "to": [2, 0], "layers": 1 },
+      { "from": [2, 0], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 0], "layers": 1 },
+      { "from": [0, 1], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [2, 1], "layers": 1 },
+      { "from": [2, 1], "to": [1, 2], "layers": 1 },
+      { "from": [1, 2], "to": [1, 1], "layers": 1 },
+      { "from": [1, 1], "to": [0, 2], "layers": 1 },
+      { "from": [0, 2], "to": [0, 1], "layers": 1 }
+    ],
+    "targetLayers": 0,
+    "special": { "forcedStart": null, "forcedEnd": null, "buttons": [], "doors": [] },
+    "constraints": { "moveLimit": null, "timeLimit": null, "liftPenalty": false },
+    "meta": { "difficulty": 3, "minMoves": 10, "solutionCount": null, "requiresDraw": false }
+  }
+]

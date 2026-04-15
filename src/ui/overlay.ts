@@ -4,6 +4,7 @@ import type { GameState } from '../types.ts';
 import { playUndo, playButtonTap } from '../audio/audio.ts';
 import { checkWin } from '../engine/logic.ts';
 import { getCurrentLevel, getDisplayNumber } from '../levels/levels.ts';
+import { getCachedDailyNumber } from '../levels/daily-levels.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GRAD_PRIMARY } from '../constants.ts';
 import { getSparkCount } from '../sparks.ts';
 import { showHintPopup } from './hint-popup.ts';
@@ -468,14 +469,24 @@ export function updateOverlay(state: GameState, levelIndex: number, levelTotal: 
   _levelIndex      = levelIndex;
   _levelTotal      = levelTotal;
 
+  const _current  = getCurrentLevel(levelIndex);
+  const _isDaily  = _current?.id === 'daily-current' || (_current?.id?.startsWith('daily-') ?? false);
+
   if (levelIndicatorEl !== null) {
-    levelIndicatorEl.textContent = `Level ${getDisplayNumber(levelIndex)}`;
+    levelIndicatorEl.textContent = _isDaily
+      ? `Daily #${getCachedDailyNumber()}`
+      : `Level ${getDisplayNumber(levelIndex)}`;
   }
 
   if (levelNameEl !== null) {
-    const name = getCurrentLevel(levelIndex)?.name ?? '';
-    levelNameEl.textContent = name || '';
-    levelNameEl.style.display = name ? 'block' : 'none';
+    if (_isDaily) {
+      levelNameEl.textContent = '';
+      levelNameEl.style.display = 'none';
+    } else {
+      const name = _current?.name ?? '';
+      levelNameEl.textContent = name || '';
+      levelNameEl.style.display = name ? 'block' : 'none';
+    }
   }
 
   if (moveCounterEl !== null) {
