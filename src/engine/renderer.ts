@@ -16,6 +16,7 @@ import {
   getActiveHintAnim,
   updateHintAnim,
 } from '../hints.ts';
+import { drawPatternedLine } from '../colorblind.ts';
 
 // ─── Ghost hand image (lazy-loaded) ───────────────────────────────────────
 
@@ -78,24 +79,6 @@ export function gridToPixel(
 }
 
 // ─── Draw helpers ─────────────────────────────────────────────────────────────
-
-function drawLine(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
-  color: string,
-  width: number,
-): void {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = width;
-  ctx.lineCap     = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.restore();
-}
 
 function drawDots(
   ctx: CanvasRenderingContext2D,
@@ -188,7 +171,7 @@ export function render(
     const b = gridToPixel(coords[1][0], coords[1][1], layout);
     const width = LINE_WIDTH_BASE + (conn.layers - 1) * 2;
 
-    drawLine(ctx, a.x, a.y, b.x, b.y, color, width);
+    drawPatternedLine(ctx, a.x, a.y, b.x, b.y, color, width, conn.layers);
   }
 
   // Ghost trail: line from the snapped dot to the raw pointer position.
@@ -271,9 +254,7 @@ function drawHintOverlays(
   const fullIdx    = Math.floor(clampedIdx);
   const partial    = clampedIdx - fullIdx;
 
-  ctx.save();
-  ctx.globalAlpha = 0.5 * fade;
-  ctx.lineCap = 'round';
+  const ghostAlpha = 0.5 * fade;
 
   // Completed ghost segments.
   for (let i = 0; i < Math.min(fullIdx, anim.moves.length); i++) {
@@ -281,12 +262,11 @@ function drawHintOverlays(
     const a = gridToPixel(m.from[0], m.from[1], layout);
     const b = gridToPixel(m.to[0],   m.to[1],   layout);
     const layerIdx = Math.max(1, Math.min(5, m.layerBefore || 1));
-    ctx.strokeStyle = LAYER_COLORS[layerIdx] || '#3a86ff';
-    ctx.lineWidth   = LINE_WIDTH_BASE * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
+    const color = LAYER_COLORS[layerIdx] || '#3a86ff';
+    drawPatternedLine(
+      ctx, a.x, a.y, b.x, b.y, color,
+      LINE_WIDTH_BASE * 0.7, layerIdx, ghostAlpha,
+    );
   }
 
   // Partial current segment + hand.
@@ -298,12 +278,11 @@ function drawHintOverlays(
     const cx = a.x + (b.x - a.x) * partial;
     const cy = a.y + (b.y - a.y) * partial;
     const layerIdx = Math.max(1, Math.min(5, m.layerBefore || 1));
-    ctx.strokeStyle = LAYER_COLORS[layerIdx] || '#3a86ff';
-    ctx.lineWidth   = LINE_WIDTH_BASE * 0.7;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(cx, cy);
-    ctx.stroke();
+    const color = LAYER_COLORS[layerIdx] || '#3a86ff';
+    drawPatternedLine(
+      ctx, a.x, a.y, cx, cy, color,
+      LINE_WIDTH_BASE * 0.7, layerIdx, ghostAlpha,
+    );
     handX = cx;
     handY = cy;
     haveHand = true;
@@ -314,8 +293,6 @@ function drawHintOverlays(
     handY = p.y;
     haveHand = true;
   }
-
-  ctx.restore();
 
   // Draw hand pointer on top of the trail (not faded as far).
   if (haveHand) {

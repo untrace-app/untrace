@@ -75,6 +75,22 @@ export function getFirstLevelIndexInWorld(world: number): number | null {
   return null;
 }
 
+/**
+ * Dev helper: append a custom level to the in-memory level list and return
+ * its index. If a level with the same id already exists, its entry is updated
+ * in place and the existing index returned (idempotent across repeated taps).
+ * Not persisted — lost on reload.
+ */
+export function injectTestLevel(level: LevelData): number {
+  const existing = _levels.findIndex(l => l.id === level.id);
+  if (existing >= 0) {
+    _levels[existing] = level;
+    return existing;
+  }
+  _levels.push(level);
+  return _levels.length - 1;
+}
+
 /** Return the 1-based display number within the level's world. */
 export function getDisplayNumber(index: number): number {
   const level = _levels[index % _levels.length]!;

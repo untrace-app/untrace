@@ -351,13 +351,18 @@ function buildOverlay(): void {
     'will-change:transform',
   ].join(';');
 
-  // Top bar
+  // Top bar — single flex row that contains title (centered) and close button
+  // (absolute). Same pattern as the in-game top bar: env+12 top padding,
+  // 44px content height, padding-left/right:16. Because both children live in
+  // this one relative flex container, vertical alignment is guaranteed.
   const topBar = document.createElement('div');
   topBar.style.cssText = [
     'position:relative',
-    'padding-top:calc(env(safe-area-inset-top, 0px) + 16px)',
-    'padding-left:20px', 'padding-right:20px', 'padding-bottom:12px',
     'display:flex', 'align-items:center', 'justify-content:center',
+    'height:44px',
+    'padding-top:calc(env(safe-area-inset-top, 0px) + 12px)',
+    'padding-left:16px', 'padding-right:16px',
+    'box-sizing:content-box',
     'flex-shrink:0',
   ].join(';');
 
@@ -366,16 +371,18 @@ function buildOverlay(): void {
   title.style.cssText = [
     `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
     `color:${C_TEXT}`, 'letter-spacing:-0.01em',
-    'margin-bottom:28px',
   ].join(';');
 
-  // Close button — matches the in-game Reset button: 40x40 circle, recessed bg.
+  // Close button — matches the in-game Reset button: 40x40 recessed circle.
+  // Absolute inside the row; top/bottom + margin:auto vertically centers it
+  // in the 44px content area so no independent top offset is needed.
   const closeBtn = document.createElement('button');
   closeBtn.setAttribute('aria-label', 'Close shop');
   closeBtn.innerHTML = CLOSE_X_SVG;
   closeBtn.style.cssText = [
     'position:absolute',
-    'top:calc(env(safe-area-inset-top, 0px) + 18px)', 'right:16px',
+    'top:calc(env(safe-area-inset-top, 0px) + 12px)', 'bottom:0',
+    'right:16px', 'margin:auto 0',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
     `background:${C_RECESSED}`, 'border:none', 'padding:0',
@@ -391,12 +398,13 @@ function buildOverlay(): void {
   topBar.appendChild(title);
   topBar.appendChild(closeBtn);
 
-  // Scroll area
+  // Scroll area — 28px top padding preserves the spacing under the title that
+  // previously lived on the title's margin-bottom.
   scrollEl = document.createElement('div');
   scrollEl.style.cssText = [
     'flex:1', 'overflow-y:auto', '-webkit-overflow-scrolling:touch',
     'overscroll-behavior:contain',
-    'padding:4px 20px calc(env(safe-area-inset-bottom, 0px) + 32px)',
+    'padding:28px 20px calc(env(safe-area-inset-bottom, 0px) + 32px)',
   ].join(';');
 
   // Sections + dividers

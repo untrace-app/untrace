@@ -10,6 +10,7 @@ import {
 import { playButtonTap } from '../audio/audio.ts';
 import { hapticSnap } from '../haptics.ts';
 import { addPressFeedback } from './overlay.ts';
+import { drawPatternedLine, isColorblindEnabled } from '../colorblind.ts';
 
 // ─── Theme model ───────────────────────────────────────────────────────────
 
@@ -204,6 +205,8 @@ let actionBtnEl: HTMLButtonElement | null = null;
 let actionWrapEl: HTMLDivElement | null = null;
 let selectedIdx = 0;
 let cardRefs: HTMLElement[] = [];
+let previewRafId: number | null = null;
+let previewTheme: ThemeCfg | null = null;
 
 // ─── Board preview drawing ─────────────────────────────────────────────────
 
@@ -284,12 +287,7 @@ function drawBoardPreview(t: ThemeCfg): void {
     const [x2, y2] = px(ln.to[0],   ln.to[1]);
     const color = p.layers[ln.layers - 1]!;
     const width = LINE_WIDTH_BASE + (ln.layers - 1) * 2;
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = width;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
+    drawPatternedLine(ctx, x1, y1, x2, y2, color, width, ln.layers);
   }
 
   // Dots — same radius constant as the real game.
@@ -301,6 +299,27 @@ function drawBoardPreview(t: ThemeCfg): void {
       ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+}
+
+// Layer 5 uses a pulsing opacity that must keep redrawing. Only spins a rAF
+// loop while the preview is visible AND colorblind mode is on AND a layer 5
+// sample is present. Otherwise the preview is drawn once statically.
+const HAS_LAYER_5 = SAMPLE_LINES.some(l => l.layers === 5);
+function startPreviewAnimLoop(): void {
+  stopPreviewAnimLoop();
+  if (!isColorblindEnabled() || !HAS_LAYER_5) return;
+  const tick = (): void => {
+    if (!previewTheme) { previewRafId = null; return; }
+    drawBoardPreview(previewTheme);
+    previewRafId = requestAnimationFrame(tick);
+  };
+  previewRafId = requestAnimationFrame(tick);
+}
+function stopPreviewAnimLoop(): void {
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
   }
 }
 
@@ -425,7 +444,9 @@ function selectTheme(idx: number): void {
     backBtnEl.style.background = t.palette.recessed;
     backBtnEl.style.color      = t.palette.text;
   }
+  previewTheme = t;
   drawBoardPreview(t);
+  startPreviewAnimLoop();
   updateActionButton();
   // Scroll card into view
   if (carouselEl && cardRefs[idx]) {
@@ -543,13 +564,17 @@ function buildOverlay(): void {
     'will-change:transform',
   ].join(';');
 
-  // Top bar
+  // Top bar — single flex row containing title (centered) and back button
+  // (absolute). Matches the in-game top bar: env+12 padding-top, 44px content
+  // height, 16px side padding. Shared flex container guarantees alignment.
   const topBar = document.createElement('div');
   topBar.style.cssText = [
     'position:relative',
-    'padding-top:calc(env(safe-area-inset-top, 0px) + 16px)',
-    'padding-left:20px', 'padding-right:20px', 'padding-bottom:12px',
     'display:flex', 'align-items:center', 'justify-content:center',
+    'height:44px',
+    'padding-top:calc(env(safe-area-inset-top, 0px) + 12px)',
+    'padding-left:16px', 'padding-right:16px',
+    'box-sizing:content-box',
     'flex-shrink:0',
   ].join(';');
 
@@ -561,14 +586,17 @@ function buildOverlay(): void {
     'transition:color 0.25s ease-out',
   ].join(';');
 
-  // Back button — matches the "Back to Levels" button from the game top bar:
-  // 40x40 circle, recessed bg, 18px stroke icon. Theme-colored via selectTheme.
+  // Back button — matches the "Back to Levels" button from the in-game top
+  // bar: 40x40 recessed circle, 18px stroke icon. Theme-colored via
+  // selectTheme. Absolute inside the row; top/bottom + margin:auto vertically
+  // centers it in the 44px content area without a hand-tuned top offset.
   backBtnEl = document.createElement('button');
   backBtnEl.setAttribute('aria-label', 'Back');
   backBtnEl.innerHTML = BACK_SVG;
   backBtnEl.style.cssText = [
     'position:absolute',
-    'top:calc(env(safe-area-inset-top, 0px) + 18px)', 'left:16px',
+    'top:calc(env(safe-area-inset-top, 0px) + 12px)', 'bottom:0',
+    'left:16px', 'margin:auto 0',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
     'background:#f0d2a8', 'border:none', 'padding:0',
@@ -712,6 +740,8 @@ export function showThemePreview(): void {
 
 export function hideThemePreview(): void {
   if (!overlayEl || !panelEl) return;
+  stopPreviewAnimLoop();
+  previewTheme = null;
   panelEl.style.transition = 'transform 0.3s ease-out';
   panelEl.style.transform  = 'translateY(100%)';
   setTimeout(() => {

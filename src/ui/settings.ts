@@ -15,7 +15,6 @@ const PRIVACY_URL  = 'https://untrace.game/privacy';
 
 const LS_VOLUME     = 'untrace_volume';     // 0–100 (integer, snapped to 20)
 const LS_MUTED      = 'untrace_muted';      // '1' muted | '0' unmuted
-const LS_COLORBLIND = 'untrace_colorblind'; // 'true' | 'false'
 const LS_VIBRATION  = 'untrace_vibration';  // '1' on | '0' off
 
 // Keys (exact or prefixes) that represent game progress to clear on reset.
@@ -90,14 +89,6 @@ function getSavedMuted(): boolean {
 
 function saveMuted(m: boolean): void {
   localStorage.setItem(LS_MUTED, m ? '1' : '0');
-}
-
-function getSavedColorblind(): boolean {
-  return localStorage.getItem(LS_COLORBLIND) === 'true';
-}
-
-function saveColorblind(c: boolean): void {
-  localStorage.setItem(LS_COLORBLIND, c ? 'true' : 'false');
 }
 
 function getSavedVibration(): boolean {
@@ -399,32 +390,6 @@ function applySliderEnabledState(on: boolean): void {
   applyVolumeToTrack();
 }
 
-function buildAccessibilitySection(): HTMLElement {
-  const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 16px;';
-
-  const label = document.createElement('p');
-  label.textContent = 'Accessibility';
-  label.style.cssText = SECTION_LABEL_STYLE;
-
-  const row = document.createElement('div');
-  row.style.cssText = TOGGLE_ROW_STYLE + ';margin-bottom:0;';
-
-  const text = document.createElement('span');
-  text.textContent = 'Colorblind patterns';
-  text.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
-
-  const toggle = createPillToggle('Colorblind patterns', getSavedColorblind(), (on) => {
-    saveColorblind(on);
-  });
-
-  row.appendChild(text);
-  row.appendChild(toggle);
-  section.appendChild(label);
-  section.appendChild(row);
-  return section;
-}
-
 function buildProgressSection(): HTMLElement {
   const section = document.createElement('div');
   section.style.cssText = 'margin:0 0 16px;';
@@ -557,13 +522,17 @@ function buildOverlay(ui: HTMLElement): void {
     'will-change:transform',
   ].join(';');
 
-  // ── Top bar ───────────────────────────────────────────────────────────────
+  // ── Top bar — single flex row containing title (centered) and close button
+  // (absolute). Matches the in-game top bar: env+12 padding-top, 44px content
+  // height, 16px side padding. Shared flex container guarantees alignment.
   const topBar = document.createElement('div');
   topBar.style.cssText = [
     'position:relative',
-    'padding-top:calc(env(safe-area-inset-top, 0px) + 16px)',
-    'padding-left:20px', 'padding-right:20px', 'padding-bottom:12px',
     'display:flex', 'align-items:center', 'justify-content:center',
+    'height:44px',
+    'padding-top:calc(env(safe-area-inset-top, 0px) + 12px)',
+    'padding-left:16px', 'padding-right:16px',
+    'box-sizing:content-box',
     'flex-shrink:0',
   ].join(';');
 
@@ -572,16 +541,18 @@ function buildOverlay(ui: HTMLElement): void {
   title.style.cssText = [
     `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
     `color:${C_TEXT}`, 'letter-spacing:-0.01em',
-    'margin-bottom:28px',
   ].join(';');
 
-  // Close button — matches the in-game Reset button: 40x40 circle, recessed bg.
+  // Close button — 40x40 recessed circle, absolute inside the row. top/bottom
+  // + margin:auto vertically centers the button in the 44px content area
+  // without a hand-tuned top offset.
   const closeBtn = document.createElement('button');
   closeBtn.setAttribute('aria-label', 'Close settings');
   closeBtn.innerHTML = CLOSE_X_SVG;
   closeBtn.style.cssText = [
     'position:absolute',
-    'top:calc(env(safe-area-inset-top, 0px) + 18px)', 'right:16px',
+    'top:calc(env(safe-area-inset-top, 0px) + 12px)', 'bottom:0',
+    'right:16px', 'margin:auto 0',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
     `background:${C_RECESSED}`, 'border:none', 'padding:0',
@@ -605,7 +576,7 @@ function buildOverlay(ui: HTMLElement): void {
   scrollEl.style.cssText = [
     'flex:1', 'overflow-y:auto', '-webkit-overflow-scrolling:touch',
     'overscroll-behavior:contain',
-    'padding:4px 20px calc(env(safe-area-inset-bottom, 0px) + 32px)',
+    'padding:28px 20px calc(env(safe-area-inset-bottom, 0px) + 32px)',
     'display:flex', 'flex-direction:column',
   ].join(';');
 
@@ -616,7 +587,6 @@ function buildOverlay(ui: HTMLElement): void {
   spacer.style.cssText = 'flex:1 1 auto;min-height:16px;';
 
   scrollEl.appendChild(buildSoundAndVibrationSection());
-  scrollEl.appendChild(buildAccessibilitySection());
   scrollEl.appendChild(buildProgressSection());
   scrollEl.appendChild(spacer);
   scrollEl.appendChild(divider);

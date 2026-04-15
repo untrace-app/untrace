@@ -15,8 +15,10 @@ import { GRID_FILL_RATIO, FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, GR
 import { Haptics } from '@capacitor/haptics';
 import { ensureSparksInitialized, getLevelStars, checkSparkEarned } from './sparks.ts';
 import { setCurrentHintLevel, clearHintsForLevel, clearHintAnim } from './hints.ts';
+import { updateColorblindCache } from './colorblind.ts';
 
 ensureSparksInitialized();
+updateColorblindCache();
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
 const ctx = canvas.getContext('2d')!;

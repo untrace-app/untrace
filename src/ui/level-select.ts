@@ -1,6 +1,7 @@
 // Level select screen — winding path map layout
 
-import { getLevelCount, getCurrentLevel } from '../levels/levels.ts';
+import { getLevelCount, getCurrentLevel, injectTestLevel } from '../levels/levels.ts';
+import type { LevelData } from '../types.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { addPressFeedback } from './overlay.ts';
 import { getSparkCount as sparksGetSparkCount } from '../sparks.ts';
@@ -1008,6 +1009,53 @@ function _showDevPanel(): void {
     _renderDevButton();
   });
   card.appendChild(sparks2000Btn);
+
+  // Load Pattern Test button — loads a special 5-connection level with one
+  // line at each layer count so every colorblind pattern is visible at once.
+  const patternTestBtn = document.createElement('button');
+  patternTestBtn.textContent = 'Load Pattern Test';
+  patternTestBtn.style.cssText = btnStyle + ';background:#fb5607;color:#ffffff;';
+  addPressFeedback(patternTestBtn);
+  patternTestBtn.addEventListener('click', () => {
+    playButtonTap();
+    const testLevel: LevelData = {
+      id: 'test-patterns',
+      name: 'Pattern Test',
+      world: 1,
+      grid: { cols: 4, rows: 4 },
+      connections: [
+        { from: [0, 0], to: [1, 0], layers: 1 },
+        { from: [0, 1], to: [1, 1], layers: 2 },
+        { from: [0, 2], to: [1, 2], layers: 3 },
+        { from: [0, 3], to: [1, 3], layers: 4 },
+        { from: [2, 0], to: [3, 0], layers: 5 },
+      ],
+      targetLayers: 0,
+      special: {
+        forcedStart: null,
+        forcedEnd: null,
+        buttons: [],
+        doors: [],
+      },
+      constraints: {
+        moveLimit: null,
+        timeLimit: null,
+        liftPenalty: false,
+      },
+      meta: {
+        difficulty: 1,
+        minMoves: 15,
+        solutionCount: null,
+        requiresDraw: false,
+      },
+    };
+    const idx = injectTestLevel(testLevel);
+    _devPanelEl?.remove();
+    _devPanelEl = null;
+    hideLevelSelect();
+    if (onSelectCb) onSelectCb(idx);
+  });
+  card.appendChild(patternTestBtn);
 
   // Reset all button
   const resetBtn = document.createElement('button');
