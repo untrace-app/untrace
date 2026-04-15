@@ -5,9 +5,8 @@
 // "SHOP: …" to console. No real store calls.
 
 import {
-  FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_PRIMARY,
+  FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_PRIMARY, C_RECESSED,
 } from '../constants.ts';
-import { getSparkCount } from '../sparks.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { hapticSnap } from '../haptics.ts';
 import { addPressFeedback } from './overlay.ts';
@@ -19,7 +18,6 @@ import { showThemePreview } from './theme-preview.ts';
 let overlayEl:    HTMLDivElement | null = null;
 let panelEl:      HTMLDivElement | null = null;
 let scrollEl:     HTMLDivElement | null = null;
-let sparksHeaderBalanceEl: HTMLSpanElement | null = null;
 let sectionRefs: HTMLElement[] = [];
 
 // ─── Icon helpers ──────────────────────────────────────────────────────────
@@ -29,32 +27,45 @@ const CLOSE_X_SVG = `
   <path d="M6 6l12 12M18 6l-12 12"/>
 </svg>`;
 
+// Section-header bolt (small, palette-friendly). Uses the same FA bolt path as
+// the level-select spark counter so the whole app shares one bolt silhouette.
+const FA_BOLT_PATH = 'M338.8-9.9c11.9 8.6 16.3 24.2 10.9 37.8L271.3 224 416 224c13.5 0 25.5 8.4 30.1 21.1s.7 26.9-9.6 35.5l-288 240c-11.3 9.4-27.4 9.9-39.3 1.3s-16.3-24.2-10.9-37.8L176.7 288 32 288c-13.5 0-25.5-8.4-30.1-21.1s-.7-26.9 9.6-35.5l288-240c11.3-9.4 27.4-9.9 39.3-1.3z';
+
 const SPARK_BOLT_SMALL = `
-<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-  <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>
+<svg viewBox="-3 -13 454 528" width="14" height="14" overflow="visible">
+  <defs><linearGradient id="shop-bolt-small-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#00bcd4"/>
+    <stop offset="100%" stop-color="#2196f3"/>
+  </linearGradient></defs>
+  <path d="${FA_BOLT_PATH}" fill="url(#shop-bolt-small-grad)" stroke="#1e4fb8" stroke-width="2" vector-effect="non-scaling-stroke"/>
 </svg>`;
 
-function sparkPackSVG(): string {
+// Large pack-card bolt — matches the level-select top-bar lightning bolt.
+function sparkPackBolt(gradId: string): string {
   return `
-<svg viewBox="0 0 44 64" width="40" height="56">
-  <defs>
-    <linearGradient id="shop-spark-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3a86ff"/>
-      <stop offset="1" stop-color="#00b4d8"/>
-    </linearGradient>
-  </defs>
-  <path d="M26 2 L6 34 H20 L16 62 L38 28 H24 L28 2 Z"
-        fill="url(#shop-spark-grad)" stroke="#1e4fb8" stroke-width="2" stroke-linejoin="round"/>
+<svg viewBox="-3 -13 454 528" width="40" height="40" overflow="visible">
+  <defs><linearGradient id="${gradId}" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#00bcd4"/>
+    <stop offset="100%" stop-color="#2196f3"/>
+  </linearGradient></defs>
+  <path d="${FA_BOLT_PATH}" fill="url(#${gradId})" stroke="#1e4fb8" stroke-width="2" vector-effect="non-scaling-stroke"/>
 </svg>`;
 }
 
+// FA "ad slash" icon — crossed-out ad rectangle. viewBox 0 0 640 512.
 const CROSSED_AD_SVG = `
-<svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="#b17025" stroke-width="2.5" stroke-linecap="round">
-  <rect x="4" y="7" width="24" height="18" rx="2"/>
-  <line x1="6" y1="26" x2="26" y2="6"/>
+<svg viewBox="0 0 640 512" width="32" height="32" fill="#b17025">
+  <path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7l-86.4-67.7 13.8 9.2c9.8 6.5 22.4 7.2 32.9 1.6s16.9-16.4 16.9-28.2l0-256c0-11.8-6.5-22.6-16.9-28.2s-23-5-32.9 1.6l-96 64L448 174.9l0 17.1 0 128 0 5.8-32-25.1L416 128c0-35.3-28.7-64-64-64L113.9 64 38.8 5.1zM407 416.7L32.3 121.5c-.2 2.1-.3 4.3-.3 6.5l0 256c0 35.3 28.7 64 64 64l256 0c23.4 0 43.9-12.6 55-31.3z"/>
 </svg>`;
 
+// FA "palette/brush" icon — viewBox 0 0 384 512. Used for the Browse Themes
+// card icon (32px). A small variant is kept for the section header.
 const PALETTE_SVG = `
+<svg viewBox="0 0 384 512" width="32" height="32" fill="#b17025">
+  <path d="M162.4 6c-1.5-3.6-5-6-8.9-6l-19 0c-3.9 0-7.5 2.4-8.9 6L104.9 57.7c-3.2 8-14.6 8-17.8 0L66.4 6c-1.5-3.6-5-6-8.9-6L48 0C21.5 0 0 21.5 0 48L0 224l0 22.4L0 256l9.6 0 364.8 0 9.6 0 0-9.6 0-22.4 0-176c0-26.5-21.5-48-48-48L230.5 0c-3.9 0-7.5 2.4-8.9 6L200.9 57.7c-3.2 8-14.6 8-17.8 0L162.4 6zM0 288l0 32c0 35.3 28.7 64 64 64l64 0 0 64c0 35.3 28.7 64 64 64s64-28.7 64-64l0-64 64 0c35.3 0 64-28.7 64-64l0-32L0 288zM192 432a16 16 0 1 1 0 32 16 16 0 1 1 0-32z"/>
+</svg>`;
+
+const PALETTE_SVG_SMALL = `
 <svg viewBox="0 0 24 24" width="16" height="16" fill="#b17025">
   <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.3-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4c3.1 0 5.6-2.5 5.6-5.6C23 6.1 18.1 2 12 2zm-6.5 10a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm5 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm4.5 4a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
 </svg>`;
@@ -123,7 +134,7 @@ function buildRemoveAdsSection(): HTMLElement {
 
   const iconEl = document.createElement('div');
   iconEl.innerHTML = CROSSED_AD_SVG;
-  iconEl.style.cssText = 'flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+  iconEl.style.cssText = 'flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;';
 
   const textWrap = document.createElement('div');
   textWrap.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;';
@@ -197,9 +208,24 @@ function buildSparkPackCard(cfg: SparkPackCfg): HTMLElement {
     card.appendChild(badge);
   }
 
+  // Icon row: 1/2/3 lightning bolts depending on pack size, each overlapping
+  // the previous by -10px. The wrapper sits centered on the card.
   const icon = document.createElement('div');
-  icon.innerHTML = sparkPackSVG();
-  icon.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+  icon.style.cssText = [
+    'display:flex', 'flex-direction:row', 'align-items:center', 'justify-content:center',
+    'height:40px', 'width:100%',
+  ].join(';');
+  const boltCount = cfg.sparks === 5 ? 1 : cfg.sparks === 15 ? 2 : 3;
+  for (let i = 0; i < boltCount; i++) {
+    const bolt = document.createElement('div');
+    bolt.style.cssText = [
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'width:40px', 'height:40px', 'flex-shrink:0',
+      i > 0 ? 'margin-left:-10px' : '',
+    ].filter(Boolean).join(';');
+    bolt.innerHTML = sparkPackBolt(`shop-bolt-${cfg.sparks}-${i}`);
+    icon.appendChild(bolt);
+  }
 
   const count = document.createElement('div');
   count.textContent = String(cfg.sparks);
@@ -230,19 +256,7 @@ function buildSparkPacksSection(): HTMLElement {
 
   const header = document.createElement('div');
   header.style.cssText = SECTION_HEADER_STYLE;
-  header.innerHTML = `<span style="color:#3a86ff;display:inline-flex;">${SPARK_BOLT_SMALL}</span><span>Spark Packs</span>`;
-
-  const balance = document.createElement('div');
-  balance.style.cssText = [
-    'display:flex', 'align-items:center', 'gap:5px',
-    `font-family:${FONT}`, 'font-size:13px', 'font-weight:500',
-    'color:#3a86ff', 'margin:0 0 12px',
-  ].join(';');
-  const balText = document.createElement('span');
-  sparksHeaderBalanceEl = balText;
-  balText.textContent = `You have ${getSparkCount()} sparks`;
-  balance.innerHTML = `<span style="display:inline-flex;">${SPARK_BOLT_SMALL}</span>`;
-  balance.appendChild(balText);
+  header.innerHTML = `<span style="display:inline-flex;">${SPARK_BOLT_SMALL}</span><span>Spark Packs</span>`;
 
   const row = document.createElement('div');
   row.style.cssText = [
@@ -253,7 +267,6 @@ function buildSparkPacksSection(): HTMLElement {
   for (const pack of SPARK_PACKS) row.appendChild(buildSparkPackCard(pack));
 
   wrap.appendChild(header);
-  wrap.appendChild(balance);
   wrap.appendChild(row);
   return wrap;
 }
@@ -266,7 +279,7 @@ function buildThemesSection(): HTMLElement {
 
   const header = document.createElement('div');
   header.style.cssText = SECTION_HEADER_STYLE;
-  header.innerHTML = `<span style="display:inline-flex;">${PALETTE_SVG}</span><span>Themes</span>`;
+  header.innerHTML = `<span style="display:inline-flex;">${PALETTE_SVG_SMALL}</span><span>Themes</span>`;
 
   const card = document.createElement('div');
   card.style.cssText = [
@@ -280,11 +293,7 @@ function buildThemesSection(): HTMLElement {
 
   const iconEl = document.createElement('div');
   iconEl.style.cssText = 'flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;';
-  // Larger palette icon (32px)
-  iconEl.innerHTML = `
-<svg viewBox="0 0 24 24" width="32" height="32" fill="#b17025">
-  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.3-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4c3.1 0 5.6-2.5 5.6-5.6C23 6.1 18.1 2 12 2zm-6.5 10a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm5 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm4.5 4a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
-</svg>`;
+  iconEl.innerHTML = PALETTE_SVG;
 
   const textWrap = document.createElement('div');
   textWrap.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;';
@@ -357,18 +366,21 @@ function buildOverlay(): void {
   title.style.cssText = [
     `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
     `color:${C_TEXT}`, 'letter-spacing:-0.01em',
+    'margin-bottom:28px',
   ].join(';');
 
+  // Close button — matches the in-game Reset button: 40x40 circle, recessed bg.
   const closeBtn = document.createElement('button');
   closeBtn.setAttribute('aria-label', 'Close shop');
   closeBtn.innerHTML = CLOSE_X_SVG;
   closeBtn.style.cssText = [
     'position:absolute',
-    'top:calc(env(safe-area-inset-top, 0px) + 8px)', 'right:12px',
+    'top:calc(env(safe-area-inset-top, 0px) + 18px)', 'right:16px',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'background:transparent', 'border:none', 'padding:0',
-    `color:${C_TEXT_SEC}`, 'cursor:pointer',
+    `background:${C_RECESSED}`, 'border:none', 'padding:0',
+    'border-radius:9999px',
+    `color:${C_TEXT}`, 'cursor:pointer',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'outline:none',
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
@@ -423,11 +435,6 @@ function buildOverlay(): void {
 export function showShop(scrollTo?: string): void {
   if (!overlayEl) buildOverlay();
   if (!overlayEl || !panelEl || !scrollEl) return;
-
-  // Refresh live balance each open.
-  if (sparksHeaderBalanceEl) {
-    sparksHeaderBalanceEl.textContent = `You have ${getSparkCount()} sparks`;
-  }
 
   setDailyButtonVisible(false);
   overlayEl.style.display = 'block';

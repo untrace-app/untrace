@@ -31,8 +31,10 @@ const GAME_DATA_PREFIXES: readonly string[] = [
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
-let backdropEl: HTMLDivElement | null = null;
-let cardEl:     HTMLDivElement | null = null;
+let overlayEl: HTMLDivElement | null = null;
+let panelEl:   HTMLDivElement | null = null;
+let scrollEl:  HTMLDivElement | null = null;
+let volumeSliderEl: HTMLInputElement | null = null;
 
 // ─── One-time slider thumb styles (inline CSS can't reach pseudo-elements) ────
 
@@ -54,6 +56,8 @@ function injectSliderStyles(): void {
     '  box-shadow: 0 2px 4px rgba(0,0,0,0.18);',
     '}',
     '.untrace-volume::-moz-range-track { background: transparent; border: none; }',
+    '.untrace-volume.is-disabled::-webkit-slider-thumb { background: #d4c8b0; }',
+    '.untrace-volume.is-disabled::-moz-range-thumb { background: #d4c8b0; }',
   ].join('\n');
   document.head.appendChild(style);
 }
@@ -279,36 +283,44 @@ const TOGGLE_ROW_STYLE = [
   'gap:12px', 'margin-bottom:12px',
 ].join(';');
 
-function buildSoundSection(): HTMLElement {
+const SOUND_VIB_HEADER_STYLE = [
+  `font-family:${FONT_HEADING}`, 'font-size:16px', 'font-weight:600',
+  `color:${C_TEXT}`, 'letter-spacing:-0.01em',
+  'margin:0 0 12px', 'user-select:none',
+].join(';');
+
+/** Combined Sound & Vibration section. Disabling sound greys the slider. */
+function buildSoundAndVibrationSection(): HTMLElement {
   const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
+  section.style.cssText = 'margin:0 0 16px;';
 
   const label = document.createElement('p');
-  label.textContent = 'Sound';
-  label.style.cssText = SECTION_LABEL_STYLE;
+  label.textContent = 'Sound & Vibration';
+  label.style.cssText = SOUND_VIB_HEADER_STYLE;
   section.appendChild(label);
 
-  // ── Sound on/off toggle row ──────────────────────────────────────────────
-  const toggleRow = document.createElement('div');
-  toggleRow.style.cssText = TOGGLE_ROW_STYLE;
+  // ── Sound on/off toggle row — 16px bottom gap before the slider ─────────
+  const soundRow = document.createElement('div');
+  soundRow.style.cssText = TOGGLE_ROW_STYLE + ';margin-bottom:16px;';
 
-  const toggleText = document.createElement('span');
-  toggleText.textContent = 'Sound';
-  toggleText.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
+  const soundText = document.createElement('span');
+  soundText.textContent = 'Sound';
+  soundText.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
 
   const soundToggle = createPillToggle('Sound', !getSavedMuted(), (on) => {
     saveMuted(!on);
     applyAudioSettings();
+    applySliderEnabledState(on);
     if (on) { playBgMusic(); } else { stopBgMusic(); }
   });
 
-  toggleRow.appendChild(toggleText);
-  toggleRow.appendChild(soundToggle);
-  section.appendChild(toggleRow);
+  soundRow.appendChild(soundText);
+  soundRow.appendChild(soundToggle);
+  section.appendChild(soundRow);
 
   // ── Volume slider row ────────────────────────────────────────────────────
   const sliderRow = document.createElement('div');
-  sliderRow.style.cssText = 'display:flex;align-items:center;padding:4px 0;';
+  sliderRow.style.cssText = 'display:flex;align-items:center;padding:4px 0;margin-bottom:16px;';
 
   const slider = document.createElement('input');
   slider.type  = 'range';
@@ -325,12 +337,8 @@ function buildSoundSection(): HTMLElement {
     'touch-action:manipulation',
     `background:linear-gradient(to right, ${C_PRIMARY} 0%, ${C_PRIMARY} ${getSavedVolume()}%, ${C_RECESSED} ${getSavedVolume()}%, ${C_RECESSED} 100%)`,
   ].join(';');
+  volumeSliderEl = slider;
 
-  function applyVolumeToTrack(): void {
-    const v = parseInt(slider.value, 10);
-    slider.style.background =
-      `linear-gradient(to right, ${C_PRIMARY} 0%, ${C_PRIMARY} ${v}%, ${C_RECESSED} ${v}%, ${C_RECESSED} 100%)`;
-  }
   slider.addEventListener('input', () => {
     const v = snapVolume(parseInt(slider.value, 10));
     slider.value = String(v);
@@ -342,38 +350,58 @@ function buildSoundSection(): HTMLElement {
   sliderRow.appendChild(slider);
   section.appendChild(sliderRow);
 
-  return section;
-}
+  // ── Vibration toggle row ─────────────────────────────────────────────────
+  const vibRow = document.createElement('div');
+  vibRow.style.cssText = TOGGLE_ROW_STYLE + ';margin-bottom:0;';
 
-function buildVibrationSection(): HTMLElement {
-  const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
+  const vibText = document.createElement('span');
+  vibText.textContent = 'Vibration';
+  vibText.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
 
-  const label = document.createElement('p');
-  label.textContent = 'Vibration';
-  label.style.cssText = SECTION_LABEL_STYLE;
-
-  const row = document.createElement('div');
-  row.style.cssText = TOGGLE_ROW_STYLE + ';margin-bottom:0;';
-
-  const text = document.createElement('span');
-  text.textContent = 'Vibration';
-  text.style.cssText = TOGGLE_LABEL_TEXT_STYLE;
-
-  const toggle = createPillToggle('Vibration', getSavedVibration(), (on) => {
+  const vibToggle = createPillToggle('Vibration', getSavedVibration(), (on) => {
     saveVibration(on);
   });
 
-  row.appendChild(text);
-  row.appendChild(toggle);
-  section.appendChild(label);
-  section.appendChild(row);
+  vibRow.appendChild(vibText);
+  vibRow.appendChild(vibToggle);
+  section.appendChild(vibRow);
+
+  // Apply initial enabled state from current mute flag.
+  applySliderEnabledState(!getSavedMuted());
+
   return section;
+}
+
+/** Paint the slider fill track with the current volume value. */
+function applyVolumeToTrack(): void {
+  if (!volumeSliderEl) return;
+  const v = parseInt(volumeSliderEl.value, 10);
+  const muted = getSavedMuted();
+  const fill = muted ? '#d4c8b0' : C_PRIMARY;
+  volumeSliderEl.style.background =
+    `linear-gradient(to right, ${fill} 0%, ${fill} ${v}%, ${C_RECESSED} ${v}%, ${C_RECESSED} 100%)`;
+}
+
+/** Grey/disable the volume slider when sound is off. */
+function applySliderEnabledState(on: boolean): void {
+  if (!volumeSliderEl) return;
+  if (on) {
+    volumeSliderEl.classList.remove('is-disabled');
+    volumeSliderEl.style.opacity       = '1';
+    volumeSliderEl.style.pointerEvents = 'auto';
+    volumeSliderEl.style.cursor        = 'pointer';
+  } else {
+    volumeSliderEl.classList.add('is-disabled');
+    volumeSliderEl.style.opacity       = '0.4';
+    volumeSliderEl.style.pointerEvents = 'none';
+    volumeSliderEl.style.cursor        = 'default';
+  }
+  applyVolumeToTrack();
 }
 
 function buildAccessibilitySection(): HTMLElement {
   const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
+  section.style.cssText = 'margin:0 0 16px;';
 
   const label = document.createElement('p');
   label.textContent = 'Accessibility';
@@ -399,7 +427,7 @@ function buildAccessibilitySection(): HTMLElement {
 
 function buildProgressSection(): HTMLElement {
   const section = document.createElement('div');
-  section.style.cssText = 'margin:0 0 20px;';
+  section.style.cssText = 'margin:0 0 16px;';
 
   const label = document.createElement('p');
   label.textContent = 'Progress';
@@ -502,79 +530,102 @@ function buildAboutSection(): HTMLElement {
   return about;
 }
 
-// ─── Build modal ──────────────────────────────────────────────────────────────
+// ─── Close icon (matches the in-game Reset button) ───────────────────────────
 
-function buildModal(ui: HTMLElement): void {
-  backdropEl = document.createElement('div');
-  backdropEl.style.cssText = [
+const CLOSE_X_SVG = `
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+  <path d="M6 6l12 12M18 6l-12 12"/>
+</svg>`;
+
+// ─── Build full-screen settings overlay ──────────────────────────────────────
+
+function buildOverlay(ui: HTMLElement): void {
+  overlayEl = document.createElement('div');
+  overlayEl.style.cssText = [
     'position:fixed', 'inset:0',
-    'background:rgba(255,237,205,0.85)',
-    'backdrop-filter:blur(20px)', '-webkit-backdrop-filter:blur(20px)',
-    'display:none',
-    'align-items:center', 'justify-content:center',
-    'z-index:60',
-    'opacity:0',
-    'transition:opacity 0.22s ease',
-    'will-change:opacity',
-  ].join(';');
-
-  cardEl = document.createElement('div');
-  cardEl.style.cssText = [
-    'position:relative',
-    'background:#feffe5', 'border-radius:24px',
-    'padding:28px 24px 24px', 'max-width:320px', 'width:calc(100% - 48px)',
+    'z-index:60', 'display:none',
     `font-family:${FONT}`,
-    'box-shadow:0 8px 32px rgba(46,47,44,0.08)',
-    'opacity:0', 'transform:translateY(12px)',
-    'transition:opacity 0.28s ease, transform 0.28s cubic-bezier(0.22,1,0.36,1)',
-    'will-change:opacity,transform',
-    'max-height:calc(100vh - 48px)',
-    'overflow-y:auto', '-webkit-overflow-scrolling:touch',
   ].join(';');
 
-  // ── Close X (top-right) ────────────────────────────────────────────────────
+  panelEl = document.createElement('div');
+  panelEl.style.cssText = [
+    'position:absolute', 'inset:0',
+    'background:#ffedcd',
+    'display:flex', 'flex-direction:column',
+    'transform:translateY(100%)',
+    'transition:transform 0.3s ease-out',
+    'will-change:transform',
+  ].join(';');
+
+  // ── Top bar ───────────────────────────────────────────────────────────────
+  const topBar = document.createElement('div');
+  topBar.style.cssText = [
+    'position:relative',
+    'padding-top:calc(env(safe-area-inset-top, 0px) + 16px)',
+    'padding-left:20px', 'padding-right:20px', 'padding-bottom:12px',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'flex-shrink:0',
+  ].join(';');
+
+  const title = document.createElement('div');
+  title.textContent = 'Settings';
+  title.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:700',
+    `color:${C_TEXT}`, 'letter-spacing:-0.01em',
+    'margin-bottom:28px',
+  ].join(';');
+
+  // Close button — matches the in-game Reset button: 40x40 circle, recessed bg.
   const closeBtn = document.createElement('button');
   closeBtn.setAttribute('aria-label', 'Close settings');
-  closeBtn.textContent = '\u00D7';
+  closeBtn.innerHTML = CLOSE_X_SVG;
   closeBtn.style.cssText = [
-    'position:absolute', 'top:8px', 'right:8px',
+    'position:absolute',
+    'top:calc(env(safe-area-inset-top, 0px) + 18px)', 'right:16px',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'background:transparent', 'border:none', 'padding:0',
-    `color:${C_TEXT_SEC}`, `font-family:${FONT}`,
-    'font-size:20px', 'font-weight:500', 'line-height:1',
-    'cursor:pointer', 'outline:none',
+    `background:${C_RECESSED}`, 'border:none', 'padding:0',
+    'border-radius:9999px',
+    `color:${C_TEXT}`, 'cursor:pointer',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
+    'outline:none',
     'transition:transform 0.15s ease-out, filter 0.15s ease-out',
   ].join(';');
   addPressFeedback(closeBtn);
   closeBtn.addEventListener('click', () => { playButtonTap(); hideSettings(); });
 
-  // ── Title ─────────────────────────────────────────────────────────────────
-  const title = document.createElement('h2');
-  title.textContent = 'Settings';
-  title.style.cssText = [
-    `color:${C_TEXT}`,
-    'font-size:20px', 'font-weight:700', 'letter-spacing:-0.01em',
-    `font-family:${FONT_HEADING}`,
-    'margin:0 0 20px', 'text-align:center', 'user-select:none',
+  topBar.appendChild(title);
+  topBar.appendChild(closeBtn);
+
+  // ── Scrollable content ───────────────────────────────────────────────────
+  // Flex column so the about/footer can be pushed to the bottom when content
+  // is shorter than the viewport. When content overflows the spacer collapses
+  // to 0 and the footer sits naturally at the end of the scroll.
+  scrollEl = document.createElement('div');
+  scrollEl.style.cssText = [
+    'flex:1', 'overflow-y:auto', '-webkit-overflow-scrolling:touch',
+    'overscroll-behavior:contain',
+    'padding:4px 20px calc(env(safe-area-inset-bottom, 0px) + 32px)',
+    'display:flex', 'flex-direction:column',
   ].join(';');
 
-  // ── Divider ───────────────────────────────────────────────────────────────
   const divider = document.createElement('div');
-  divider.style.cssText = `height:1px;background:${C_RECESSED};margin:16px 0;`;
+  divider.style.cssText = `height:1px;background:${C_RECESSED};margin:16px 0;flex-shrink:0;`;
 
-  cardEl.appendChild(closeBtn);
-  cardEl.appendChild(title);
-  cardEl.appendChild(buildSoundSection());
-  cardEl.appendChild(buildVibrationSection());
-  cardEl.appendChild(buildAccessibilitySection());
-  cardEl.appendChild(buildProgressSection());
-  cardEl.appendChild(divider);
-  cardEl.appendChild(buildAboutSection());
+  const spacer = document.createElement('div');
+  spacer.style.cssText = 'flex:1 1 auto;min-height:16px;';
 
-  backdropEl.appendChild(cardEl);
-  ui.appendChild(backdropEl);
+  scrollEl.appendChild(buildSoundAndVibrationSection());
+  scrollEl.appendChild(buildAccessibilitySection());
+  scrollEl.appendChild(buildProgressSection());
+  scrollEl.appendChild(spacer);
+  scrollEl.appendChild(divider);
+  scrollEl.appendChild(buildAboutSection());
+
+  panelEl.appendChild(topBar);
+  panelEl.appendChild(scrollEl);
+  overlayEl.appendChild(panelEl);
+  ui.appendChild(overlayEl);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -586,7 +637,7 @@ function buildModal(ui: HTMLElement): void {
 export function initSettings(): void {
   injectSliderStyles();
   const ui = document.getElementById('ui')!;
-  buildModal(ui);
+  buildOverlay(ui);
 
   // Audio context can only start on a user gesture (iOS). audio.ts registers
   // its own touchstart/click handler first; ours runs after it and uses a
@@ -596,31 +647,31 @@ export function initSettings(): void {
   document.addEventListener('click', apply, { once: true });
 }
 
-/** Show the settings modal. */
+/** Show the full-screen settings panel (slides up). */
 export function showSettings(): void {
-  if (!backdropEl || !cardEl) return;
+  if (!overlayEl || !panelEl) return;
   setDailyButtonVisible(false);
-  backdropEl.style.display = 'flex';
-  // Double rAF to let display:flex settle before the transition starts.
+  overlayEl.style.display = 'block';
+  panelEl.style.transition = 'none';
+  panelEl.style.transform  = 'translateY(100%)';
+  if (scrollEl) scrollEl.scrollTop = 0;
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (backdropEl) backdropEl.style.opacity = '1';
-      if (cardEl) {
-        cardEl.style.opacity   = '1';
-        cardEl.style.transform = 'translateY(0)';
-      }
+      if (!panelEl) return;
+      panelEl.style.transition = 'transform 0.3s ease-out';
+      panelEl.style.transform  = 'translateY(0)';
     });
   });
 }
 
-/** Hide the settings modal. */
+/** Hide the settings panel (slides back down). */
 export function hideSettings(): void {
-  if (!backdropEl || !cardEl) return;
-  backdropEl.style.opacity = '0';
-  cardEl.style.opacity     = '0';
-  cardEl.style.transform   = 'translateY(12px)';
+  if (!overlayEl || !panelEl) return;
+  panelEl.style.transition = 'transform 0.3s ease-out';
+  panelEl.style.transform  = 'translateY(100%)';
   setTimeout(() => {
-    if (backdropEl) backdropEl.style.display = 'none';
+    if (overlayEl) overlayEl.style.display = 'none';
     setDailyButtonVisible(true);
-  }, 220);
+  }, 310);
 }

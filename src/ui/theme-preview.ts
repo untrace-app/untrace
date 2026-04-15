@@ -5,6 +5,7 @@
 import {
   FONT, FONT_HEADING,
   DOT_RADIUS, LINE_WIDTH_BASE, GRID_FILL_RATIO,
+  C_TEXT,
 } from '../constants.ts';
 import { playButtonTap } from '../audio/audio.ts';
 import { hapticSnap } from '../haptics.ts';
@@ -181,13 +182,8 @@ function unlockRequirementText(t: ThemeCfg): string {
 
 // ─── Icons ─────────────────────────────────────────────────────────────────
 
-const CLOSE_X_SVG = `
-<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-  <path d="M6 6l12 12M18 6l-12 12"/>
-</svg>`;
-
 const BACK_SVG = `
-<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
   <polyline points="15 6 9 12 15 18"/>
 </svg>`;
 
@@ -201,11 +197,11 @@ const LOCK_SVG = `
 let overlayEl:   HTMLDivElement | null = null;
 let panelEl:     HTMLDivElement | null = null;
 let titleEl:     HTMLDivElement | null = null;
-let closeBtnEl:  HTMLButtonElement | null = null;
 let backBtnEl:   HTMLButtonElement | null = null;
 let previewCanvas: HTMLCanvasElement | null = null;
 let carouselEl:  HTMLDivElement | null = null;
 let actionBtnEl: HTMLButtonElement | null = null;
+let actionWrapEl: HTMLDivElement | null = null;
 let selectedIdx = 0;
 let cardRefs: HTMLElement[] = [];
 
@@ -248,12 +244,14 @@ function drawBoardPreview(t: ThemeCfg): void {
   const gridSpan = smaller * GRID_FILL_RATIO;
 
   // Recessed board background: matches the #board-bg div in index.html —
-  // a rounded rectangle sized to gridSpan + 80px (40px padding each side),
-  // border-radius 20px, centered.
-  const boardSize = gridSpan + 80;
+  // a rounded rectangle sized to gridSpan + padding, centered, clamped so it
+  // always fits inside the canvas. Border-radius is preserved even when the
+  // canvas is tiny so small screens still show the rounded corners.
+  const maxBoard = Math.max(0, smaller - 8);
+  const boardSize = Math.min(gridSpan + 80, maxBoard);
   const boardX = (cssW - boardSize) / 2;
   const boardY = (cssH - boardSize) / 2;
-  const boardR = 20;
+  const boardR = 18;
   ctx.fillStyle = p.recessed;
   ctx.beginPath();
   const rr = Math.min(boardR, boardSize / 2);
@@ -421,9 +419,12 @@ function selectTheme(idx: number): void {
   });
   // Update panel background to match theme
   if (panelEl) panelEl.style.background = t.palette.bg;
+  if (actionWrapEl) actionWrapEl.style.background = t.palette.bg;
   if (titleEl) titleEl.style.color = t.palette.text;
-  if (closeBtnEl) closeBtnEl.style.color = t.palette.textSec;
-  if (backBtnEl)  backBtnEl.style.color  = t.palette.textSec;
+  if (backBtnEl) {
+    backBtnEl.style.background = t.palette.recessed;
+    backBtnEl.style.color      = t.palette.text;
+  }
   drawBoardPreview(t);
   updateActionButton();
   // Scroll card into view
@@ -506,6 +507,20 @@ function rebuildCards(): void {
   }
 }
 
+// ─── Responsive styles ─────────────────────────────────────────────────────
+
+let _stylesInjected = false;
+function injectThemePreviewStyles(): void {
+  if (_stylesInjected) return;
+  _stylesInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `
+.tp-preview { max-height: 55vh; }
+@media (max-height: 700px) { .tp-preview { max-height: 45vh; } }
+`;
+  document.head.appendChild(style);
+}
+
 // ─── Overlay build ─────────────────────────────────────────────────────────
 
 function buildOverlay(): void {
@@ -546,48 +561,40 @@ function buildOverlay(): void {
     'transition:color 0.25s ease-out',
   ].join(';');
 
+  // Back button — matches the "Back to Levels" button from the game top bar:
+  // 40x40 circle, recessed bg, 18px stroke icon. Theme-colored via selectTheme.
   backBtnEl = document.createElement('button');
   backBtnEl.setAttribute('aria-label', 'Back');
   backBtnEl.innerHTML = BACK_SVG;
   backBtnEl.style.cssText = [
     'position:absolute',
-    'top:calc(env(safe-area-inset-top, 0px) + 8px)', 'left:12px',
+    'top:calc(env(safe-area-inset-top, 0px) + 18px)', 'left:16px',
     'width:40px', 'height:40px',
     'display:flex', 'align-items:center', 'justify-content:center',
-    'background:transparent', 'border:none', 'padding:0',
-    'color:#7f7c6c', 'cursor:pointer',
+    'background:#f0d2a8', 'border:none', 'padding:0',
+    'border-radius:9999px',
+    `color:${C_TEXT}`, 'cursor:pointer',
     '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
     'outline:none',
-    'transition:transform 0.15s ease-out, color 0.25s ease-out',
+    'transition:transform 0.15s ease-out, background 0.25s ease-out, color 0.25s ease-out',
   ].join(';');
   addPressFeedback(backBtnEl);
   backBtnEl.addEventListener('click', () => { playButtonTap(); hideThemePreview(); });
 
-  closeBtnEl = document.createElement('button');
-  closeBtnEl.setAttribute('aria-label', 'Close');
-  closeBtnEl.innerHTML = CLOSE_X_SVG;
-  closeBtnEl.style.cssText = [
-    'position:absolute',
-    'top:calc(env(safe-area-inset-top, 0px) + 8px)', 'right:12px',
-    'width:40px', 'height:40px',
-    'display:flex', 'align-items:center', 'justify-content:center',
-    'background:transparent', 'border:none', 'padding:0',
-    'color:#7f7c6c', 'cursor:pointer',
-    '-webkit-tap-highlight-color:transparent', 'touch-action:manipulation',
-    'outline:none',
-    'transition:transform 0.15s ease-out, color 0.25s ease-out',
-  ].join(';');
-  addPressFeedback(closeBtnEl);
-  closeBtnEl.addEventListener('click', () => { playButtonTap(); hideThemePreview(); });
-
   topBar.appendChild(titleEl);
   topBar.appendChild(backBtnEl);
-  topBar.appendChild(closeBtnEl);
 
-  // Board preview area (top 55-60%). Square canvas, centered, no border.
+  // Inject responsive max-height rules for the board preview once. The preview
+  // shrinks on small screens so the carousel + action button always fit.
+  injectThemePreviewStyles();
+
+  // Board preview area — shrinkable. A CSS class handles the responsive
+  // max-height (45vh under 700px, 55vh otherwise). No position:absolute —
+  // pure flex column so nothing overlaps.
   const previewWrap = document.createElement('div');
+  previewWrap.className = 'tp-preview';
   previewWrap.style.cssText = [
-    'flex:0 0 58%', 'width:100%',
+    'flex:1 1 auto', 'min-height:0', 'width:100%',
     'display:flex', 'align-items:center', 'justify-content:center',
     'padding:8px 16px',
     'box-sizing:border-box',
@@ -597,28 +604,30 @@ function buildOverlay(): void {
   previewCanvas.style.cssText = [
     'display:block',
     'aspect-ratio:1 / 1',
-    'height:100%', 'max-height:100%',
-    'max-width:100%',
+    'max-width:100%', 'max-height:100%',
     'background:transparent',
     'border:none', 'outline:none', 'box-shadow:none',
   ].join(';');
   previewWrap.appendChild(previewCanvas);
 
-  // Carousel area
+  // Carousel area — fixed 160px height, never overlaps the board. 16px top
+  // margin provides breathing room between the board preview and the cards.
   const carouselWrap = document.createElement('div');
   carouselWrap.style.cssText = [
-    'flex:1 1 auto', 'width:100%',
+    'flex:0 0 160px', 'width:100%',
     'display:flex', 'align-items:center',
     'min-height:0',
+    'margin-top:16px',
   ].join(';');
 
   carouselEl = document.createElement('div');
   carouselEl.style.cssText = [
-    'display:flex', 'flex-direction:row',
-    'width:100%', 'overflow-x:auto', 'overflow-y:visible',
+    'display:flex', 'flex-direction:row', 'align-items:center',
+    'width:100%', 'height:100%',
+    'overflow-x:auto', 'overflow-y:visible',
     '-webkit-overflow-scrolling:touch',
     'scroll-snap-type:x mandatory',
-    'padding:20px 40%',
+    'padding:10px 40%',
     'box-sizing:border-box',
     'scrollbar-width:none',
   ].join(';');
@@ -626,12 +635,15 @@ function buildOverlay(): void {
 
   carouselWrap.appendChild(carouselEl);
 
-  // Action button pinned to bottom
-  const actionWrap = document.createElement('div');
+  // Action button pinned to bottom. flex-shrink:0 so it keeps its size; the
+  // board shrinks instead. Solid background matches the panel/page bg.
+  actionWrapEl = document.createElement('div');
+  const actionWrap = actionWrapEl;
   actionWrap.style.cssText = [
-    'flex-shrink:0', 'width:100%',
-    'padding:8px 16px calc(env(safe-area-inset-bottom, 0px) + 12px)',
+    'flex:0 0 auto', 'width:100%',
+    'padding:12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px)',
     'box-sizing:border-box',
+    'background:#ffedcd',
   ].join(';');
 
   actionBtnEl = document.createElement('button');
