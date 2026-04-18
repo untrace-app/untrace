@@ -11,7 +11,6 @@ import { playButtonTap } from '../audio/audio.ts';
 import { hapticSnap } from '../haptics.ts';
 import { addPressFeedback } from './overlay.ts';
 import { setDailyButtonVisible } from './level-select.ts';
-import { showThemePreview } from './theme-preview.ts';
 
 // ─── Module state ──────────────────────────────────────────────────────────
 
@@ -271,7 +270,12 @@ function buildSparkPacksSection(): HTMLElement {
   return wrap;
 }
 
-// ─── Section 3: Themes (entry card only) ──────────────────────────────────
+// ─── Section 3: Themes (coming soon — not tappable) ───────────────────────
+
+const LOCK_SVG = `
+<svg viewBox="0 0 448 512" width="11" height="11" fill="currentColor" style="margin-right:3px;opacity:0.7;">
+  <path d="M144 144v48H304V144c0-44.2-35.8-80-80-80s-80 35.8-80 80zM80 192V144C80 64.5 144.5 0 224 0s144 64.5 144 144v48h16c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V256c0-35.3 28.7-64 64-64H80z"/>
+</svg>`;
 
 function buildThemesSection(): HTMLElement {
   const wrap = document.createElement('div');
@@ -285,10 +289,8 @@ function buildThemesSection(): HTMLElement {
   card.style.cssText = [
     `background:${CARD_BG}`, 'border-radius:16px', 'padding:20px',
     'display:flex', 'align-items:center', 'gap:14px',
-    'cursor:pointer', '-webkit-tap-highlight-color:transparent',
-    'touch-action:manipulation',
     'box-shadow:0 2px 8px rgba(46,47,44,0.04)',
-    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
+    'opacity:0.6',
   ].join(';');
 
   const iconEl = document.createElement('div');
@@ -297,32 +299,24 @@ function buildThemesSection(): HTMLElement {
 
   const textWrap = document.createElement('div');
   textWrap.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;';
+
   const title = document.createElement('div');
-  title.textContent = 'Browse Themes';
-  title.style.cssText = `font-family:${FONT};font-size:14px;font-weight:600;color:${C_TEXT};line-height:1.3;`;
+  title.textContent = 'Themes';
+  title.style.cssText = `font-family:${FONT_HEADING};font-size:14px;font-weight:600;color:${C_TEXT};line-height:1.3;`;
+
   const sub = document.createElement('div');
-  sub.textContent = 'Customize your entire game';
-  sub.style.cssText = `font-family:${FONT};font-size:12px;font-weight:400;color:${C_TEXT_SEC};`;
+  sub.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:12px', 'font-weight:500',
+    `color:${C_TEXT_SEC}`,
+    'display:flex', 'align-items:center',
+  ].join(';');
+  sub.innerHTML = `${LOCK_SVG}<span>Coming Soon</span>`;
+
   textWrap.appendChild(title);
   textWrap.appendChild(sub);
 
-  const chevron = document.createElement('div');
-  chevron.style.cssText = `flex-shrink:0;color:${C_TEXT_SEC};display:flex;align-items:center;`;
-  chevron.innerHTML = `
-<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="9 6 15 12 9 18"/>
-</svg>`;
-
   card.appendChild(iconEl);
   card.appendChild(textWrap);
-  card.appendChild(chevron);
-
-  card.addEventListener('click', () => {
-    playButtonTap();
-    hapticSnap();
-    showThemePreview();
-  });
-  attachPress(card);
 
   wrap.appendChild(header);
   wrap.appendChild(card);

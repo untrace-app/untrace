@@ -776,8 +776,11 @@ function _dailyPlayedToday(): boolean {
   return localStorage.getItem(LS_DAILY_LAST_PLAYED) === _todayKey();
 }
 
+const DAILY_ENABLED = false; // set to true to re-enable the daily puzzle button
+
 function _renderDailyButton(): void {
   if (_dailyBtnWrapEl) { _dailyBtnWrapEl.remove(); _dailyBtnWrapEl = null; }
+  if (!DAILY_ENABLED) return;
 
   if (!_dailyStyleEl) {
     _dailyStyleEl = document.createElement('style');
@@ -1145,7 +1148,7 @@ export function showLevelSelect(): void {
   }
   renderPath();
   _applyAutoScroll();
-  _renderDailyButton();
+  _renderDailyButton(); // renders nothing while DAILY_ENABLED is false
   _renderDevButton();
   overlayEl.style.pointerEvents = 'auto';
   requestAnimationFrame(() => {

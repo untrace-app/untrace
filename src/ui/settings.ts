@@ -5,6 +5,7 @@ import { playButtonTap, playBgMusic, stopBgMusic, getDestinationNode } from '../
 import { addPressFeedback } from './overlay.ts';
 import { setDailyButtonVisible } from './level-select.ts';
 import { FONT, FONT_HEADING, C_TEXT, C_TEXT_SEC, C_RECESSED, C_PRIMARY } from '../constants.ts';
+import { showHowToPlay } from './how-to-play.ts';
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
@@ -495,6 +496,68 @@ function buildAboutSection(): HTMLElement {
   return about;
 }
 
+// ─── How to Play entry button ────────────────────────────────────────────────
+
+const HTP_CHEVRON_SVG = `
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="9 6 15 12 9 18"/>
+</svg>`;
+
+function buildHowToPlayButton(): HTMLElement {
+  const btn = document.createElement('button');
+  btn.style.cssText = [
+    'width:100%', 'background:#feffe5', 'border-radius:16px',
+    'padding:16px 20px', 'border:none', 'box-sizing:border-box',
+    'display:flex', 'align-items:center', 'gap:14px',
+    'cursor:pointer', 'touch-action:manipulation',
+    '-webkit-tap-highlight-color:transparent',
+    'margin-bottom:16px',
+    'box-shadow:0 2px 8px rgba(46,47,44,0.04)',
+    'transition:transform 0.15s ease-out, filter 0.15s ease-out',
+  ].join(';');
+  addPressFeedback(btn);
+
+  // Question-mark icon in a circle
+  const circle = document.createElement('div');
+  circle.style.cssText = [
+    'width:36px', 'height:36px', 'border-radius:50%',
+    'background:rgba(251,86,7,0.12)',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'flex-shrink:0',
+  ].join(';');
+  const qMark = document.createElement('span');
+  qMark.textContent = '?';
+  qMark.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:22px', 'font-weight:800',
+    `color:${C_PRIMARY}`, 'line-height:1', 'user-select:none',
+  ].join(';');
+  circle.appendChild(qMark);
+
+  // Label
+  const label = document.createElement('span');
+  label.textContent = 'How to Play';
+  label.style.cssText = [
+    `font-family:${FONT_HEADING}`, 'font-size:16px', 'font-weight:600',
+    `color:${C_TEXT}`, 'flex:1', 'text-align:left', 'user-select:none',
+  ].join(';');
+
+  // Chevron
+  const chevron = document.createElement('div');
+  chevron.style.cssText = `flex-shrink:0;color:${C_TEXT};display:flex;align-items:center;`;
+  chevron.innerHTML = HTP_CHEVRON_SVG;
+
+  btn.appendChild(circle);
+  btn.appendChild(label);
+  btn.appendChild(chevron);
+
+  btn.addEventListener('click', () => {
+    playButtonTap();
+    showHowToPlay();
+  });
+
+  return btn;
+}
+
 // ─── Close icon (matches the in-game Reset button) ───────────────────────────
 
 const CLOSE_X_SVG = `
@@ -586,6 +649,7 @@ function buildOverlay(ui: HTMLElement): void {
   const spacer = document.createElement('div');
   spacer.style.cssText = 'flex:1 1 auto;min-height:16px;';
 
+  scrollEl.appendChild(buildHowToPlayButton());
   scrollEl.appendChild(buildSoundAndVibrationSection());
   scrollEl.appendChild(buildProgressSection());
   scrollEl.appendChild(spacer);

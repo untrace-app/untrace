@@ -253,7 +253,7 @@ function renderResultsCard(): HTMLElement {
   // Moves
   if (result) {
     const moves = document.createElement('div');
-    moves.textContent = `${result.moves} moves (par: ${result.par})`;
+    moves.textContent = `${result.moves} moves (best: ${result.par})`;
     moves.style.cssText = [
       `font-family:${FONT}`,
       'font-size:16px', 'font-weight:500',
@@ -401,7 +401,7 @@ function buildDailyCelebration(
   card.appendChild(buildStarsRow(stars, 44));
 
   const movesLine = document.createElement('div');
-  movesLine.textContent = `${moves} moves (par: ${par})`;
+  movesLine.textContent = `${moves} moves (best: ${par})`;
   movesLine.style.cssText = [
     `font-family:${FONT_HEADING}`,
     'font-size:14px', 'font-weight:500',
@@ -542,8 +542,8 @@ export function handleDailyWin(moves: number, par: number): void {
     localStorage.setItem(LS_DAILY_LAST_PLAYED, today);
     saveDailyResult({ date: today, moves, stars, par });
     streak = advanceStreak();
-    addSparks(1);
-    sparkEarned = 1;
+    if (false) { addSparks(1); } // daily spark reward disabled while feature is hidden
+    sparkEarned = 0;
   } else {
     // Shouldn't normally happen (game won't run if already completed), but
     // keep numbers coherent if it does.
@@ -572,7 +572,7 @@ function buildShareText(): string {
   const starStr = '\u2B50'.repeat(Math.max(0, Math.min(3, stars)));
   return [
     `Untrace Daily #${getCachedDailyNumber()}`,
-    `Moves: ${moves} (Par: ${par})`,
+    `Moves: ${moves} (Best: ${par})`,
     `Rating: ${starStr}`,
     `Streak: ${streak} days`,
     'untrace.app',
